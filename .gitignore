@@ -1,0 +1,9 @@
+node_modules
+.turbo
+.env
+
+*.bak
+.cursor/rules/ruler_cursor_instructions.mdc
+.cursor/rules/ruler_cursor_instructions.mdc.bak
+
+*.DS_Store

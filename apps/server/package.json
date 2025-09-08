@@ -1,0 +1,35 @@
+{
+  "name": "server",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.1",
+    "@trpc/client": "^11.4.2",
+    "@trpc/server": "^11.4.2",
+    "better-auth": "^1.3.4",
+    "dotenv": "^17.2.1",
+    "drizzle-orm": "^0.44.2",
+    "next": "15.3.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "zod": "^4.0.13",
+    "typescript": "^5",
+    "@types/bun": "^1.2.6",
+    "drizzle-kit": "^0.31.2",
+    "@types/ws": "^8.18.1"
+  }
+}

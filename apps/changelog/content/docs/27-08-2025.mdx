@@ -1,0 +1,21 @@
+---
+title: "Setup Monorepo"
+description: "Configured Stack"
+date: "27-08-2025"
+tags: ["Config"]
+version: "1.0"
+---
+
+- **Frontend**: Next.js
+- **API**: tRPC
+- **Backend**: Next.js
+- **Database**: Neon Postgres with Drizzle ORM
+- **Auth**: BetterAuth
+
+```zsh
+bun check-types # type check
+
+bun db:push # push schema to database
+
+bun db:studio # open database studio UI
+```

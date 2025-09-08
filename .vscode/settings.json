@@ -1,0 +1,64 @@
+{
+  "files.exclude": {
+    "**/changelog": true,
+
+    "**/docs": true,
+
+    "**/server": true,
+
+    "**/web": false,
+
+    ".husky": true,
+
+    "**/node_modules": true,
+
+    "bun.lock": true,
+    ".editorconfig": true,
+    "bunfig.toml": true,
+    "turbo.json": true,
+
+    "**/.turbo": true,
+    "**/.next": true,
+    "**/.source": true,
+    "**/drizzle.config.ts": true,
+    "**/next-env.d.ts": true,
+    "**/next.config.*": true,
+    "**/postcss.config.mjs": true,
+    "**/source.config.ts": true,
+    "**/tsconfig.json": true,
+
+    "**/manifest.ts": true,
+    "**/robots.ts": true,
+    "**/sitemap.ts": true
+  },
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[javascript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[graphql]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "emmet.showExpandedAbbreviation": "never",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.biome": "explicit",
+    "source.organizeImports.biome": "explicit"
+  }
+}
