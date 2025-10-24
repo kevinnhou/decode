@@ -4,7 +4,7 @@
 
     "**/docs": true,
 
-    "**/server": true,
+    "**/server": false,
 
     "**/web": false,
 

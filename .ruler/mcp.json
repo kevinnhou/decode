@@ -5,12 +5,9 @@
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp"]
     },
-    "grep": {
-      "url": "https://mcp.grep.app"
-    },
-    "Neon": {
+    "next-devtools": {
       "command": "npx",
-      "args": ["-y", "mcp-remote@latest", "https://mcp.neon.tech/mcp"]
+      "args": ["-y", "next-devtools-mcp@latest"]
     }
   }
 }
