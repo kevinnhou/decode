@@ -1,8 +1,8 @@
 import "@repo/ui/globals.css";
 
 import type { Viewport } from "next";
-
 import localFont from "next/font/local";
+import { Header } from "~/header";
 
 const alliance = localFont({
   src: [
@@ -43,7 +43,12 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          <main className="mx-auto my-[min(4rem,max(0px,calc((100vw-1536px)/2)))] flex min-h-svh max-w-screen-2xl flex-col border border-foreground">
+            <Header />
+            {children}
+          </main>
+        </Providers>
       </body>
     </html>
   );
