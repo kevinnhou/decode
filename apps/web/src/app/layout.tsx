@@ -1,10 +1,22 @@
 import "@repo/ui/globals.css";
 
-import { GeistMono } from "geist/font/mono";
-import { GeistSans } from "geist/font/sans";
 import type { Viewport } from "next";
 
-import Providers from "@/components/providers";
+import localFont from "next/font/local";
+
+const alliance = localFont({
+  src: [
+    {
+      path: "./AllianceNo2-Regular.woff2",
+      weight: "400",
+      style: "normal",
+    },
+  ],
+});
+
+import { Noto_Sans_Mono } from "next/font/google";
+
+import Providers from "~/providers";
 
 export const viewport: Viewport = {
   themeColor: [
@@ -13,6 +25,12 @@ export const viewport: Viewport = {
   ],
 };
 
+const NotoSansMono = Noto_Sans_Mono({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-mono",
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -20,7 +38,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      className={`${GeistSans.className} ${GeistMono.variable} antialiased`}
+      className={`${alliance.className} ${NotoSansMono.variable} antialiased`}
       lang="en"
       suppressHydrationWarning
     >
