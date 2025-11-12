@@ -29,7 +29,9 @@
 
     "**/manifest.ts": true,
     "**/robots.ts": true,
-    "**/sitemap.ts": true
+    "**/sitemap.ts": true,
+
+    "**/AllianceNo2-Regular.woff2": true
   },
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "[javascript]": {
