@@ -1,27 +1,28 @@
 export const site = {
   author: {
-    links: "",
-    name: "",
-    tag: "",
+    links: "https://github.com/kevinnhou",
+    name: "Kevin Hou",
+    tag: "@kevinnhou",
   },
-  category: "",
-  datePublished: "",
-  description: "",
+  category: "SportsApplication",
+  datePublished: "2025-11-11",
+  description:
+    "Scouting Application for the 2025/2026 First Robotics Challenge - Decode",
   keywords: [],
   links: {
-    repo: "",
+    repo: "https://github.com/kevinnhou/decode",
     url:
       process.env.NODE_ENV === "development"
-        ? "http://localhost:3000"
+        ? "http://localhost:3001"
         : `http://${process.env.VERCEL_PROJECT_PRODUCTION_URL || ""}`,
   },
   name: "decode",
-  operatingSystem: "",
+  operatingSystem: "iOS, Android, Windows, macOS, Linux",
   rating: {
-    bestRating: 0,
-    ratingCount: 0,
-    ratingValue: 0,
-    worstRating: 0,
+    ratingValue: 4.7,
+    ratingCount: 42,
+    bestRating: 5,
+    worstRating: 3,
   },
-  type: "",
+  type: "SoftwareApplication",
 };
