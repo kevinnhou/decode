@@ -21,11 +21,12 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "turbo": "^2.5.4",
     "@biomejs/biome": "2.2.0",
-    "ultracite": "5.2.4",
     "husky": "^9.1.7",
-    "lint-staged": "^16.1.2"
+    "lint-staged": "^16.1.2",
+    "schema-dts": "^1.1.5",
+    "turbo": "^2.5.4",
+    "ultracite": "5.2.4"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [
