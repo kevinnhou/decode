@@ -26,16 +26,18 @@
     }
   },
   "include": [
-    "./**/*.ts",
-    "./**/*.tsx",
-    "./.next/types/**/*.ts",
-    "./next-env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "next-env.d.ts",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["./node_modules"],
+  "exclude": ["node_modules", ".next", "dist", "build", ".turbo"],
   "references": [
     {
       "path": "../server"
+    },
+    {
+      "path": "../../packages/ui"
     }
   ]
 }

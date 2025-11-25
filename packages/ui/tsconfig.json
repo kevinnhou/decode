@@ -10,7 +10,8 @@
     "isolatedModules": true,
     "declaration": true,
     "declarationMap": true,
-    "incremental": false,
+    "incremental": true,
+    "composite": true,
     "module": "NodeNext",
     "moduleDetection": "force",
     "moduleResolution": "NodeNext",
@@ -21,6 +22,6 @@
     },
     "jsx": "react-jsx"
   },
-  "include": ["."],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist", "build", ".turbo"]
 }

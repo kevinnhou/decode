@@ -1,5 +1,11 @@
 {
   "compilerOptions": {
     "strictNullChecks": true
-  }
+  },
+  "files": [],
+  "references": [
+    { "path": "./apps/web" },
+    { "path": "./apps/server" },
+    { "path": "./packages/ui" }
+  ]
 }

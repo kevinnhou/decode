@@ -19,7 +19,6 @@
     "db:generate": "turbo -F server db:generate",
     "db:migrate": "turbo -F server db:migrate"
   },
-  "dependencies": {},
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
     "husky": "^9.1.7",

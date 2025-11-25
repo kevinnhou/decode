@@ -1,0 +1,42 @@
+import { z } from "zod";
+
+export const metaSchema = z.object({
+  teamNumber: z.number().int().min(1, "Team Number is required"),
+  qualification: z.number().int().min(1, "Qualification Number is required"),
+  teamName: z.string().optional(),
+  allianceColour: z.enum(["Blue", "Red"]).optional(),
+});
+
+export const formSchema = z.object({
+  meta: metaSchema,
+  autonomousMissed: z.number().int().min(0),
+  autonomousMade: z.number().int().min(0),
+  teleopMissed: z.number().int().min(0),
+  teleopMade: z.number().int().min(0),
+  tags: z.array(z.string()),
+});
+
+export type MetaSchema = z.infer<typeof metaSchema>;
+export type FormValues = z.infer<typeof formSchema>;
+
+export const fieldEventSchema = z.object({
+  event: z.string(),
+  coordinates: z.object({
+    x: z.number(),
+    y: z.number(),
+  }),
+  timestamp: z.iso.time(),
+  count: z.number().int().min(0),
+});
+
+export const fieldSchema = z.array(fieldEventSchema);
+
+export type FieldEventSchema = z.infer<typeof fieldEventSchema>;
+export type FieldSchema = z.infer<typeof fieldSchema>;
+
+export const spreadsheetConfig = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.string().min(1, "Sheet ID is required"),
+});
+
+export type SpreadsheetConfigSchema = z.infer<typeof spreadsheetConfig>;
