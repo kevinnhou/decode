@@ -1,5 +1,7 @@
 {
   "files.exclude": {
+    "**/packages": true,
+
     "**/changelog": true,
 
     "**/docs": true,
@@ -56,6 +58,17 @@
     "editor.defaultFormatter": "biomejs.biome"
   },
   "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.tsserver.maxTsServerMemory": 4096,
+  "typescript.tsserver.watchOptions": {
+    "excludeDirectories": [
+      "**/node_modules",
+      "**/.next",
+      "**/dist",
+      "**/.turbo",
+      "**/.source"
+    ]
+  },
+  "typescript.preferences.includePackageJsonAutoImports": "off",
   "editor.formatOnSave": true,
   "editor.formatOnPaste": true,
   "emmet.showExpandedAbbreviation": "never",
