@@ -48,3 +48,6 @@ next-env.d.ts
 dev-dist
 
 .dev.vars*
+
+public/sw*
+public/swe-worker*
