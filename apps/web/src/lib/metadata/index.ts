@@ -70,6 +70,14 @@ export function generateMetadata(props: MetadataProps = {}): Metadata {
     applicationName: site.name,
     description,
     keywords,
+    appleWebApp: {
+      capable: true,
+      title: site.name,
+      statusBarStyle: "default",
+    },
+    formatDetection: {
+      telephone: false,
+    },
     metadataBase: new URL(baseUrl),
     alternates: {
       canonical: canonicalUrl,
