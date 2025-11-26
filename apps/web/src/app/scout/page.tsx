@@ -22,29 +22,18 @@ import { TagSelector } from "@repo/ui/shadcn/tag-selector";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { getConfig } from "@/lib/spreadsheet";
-import { type FormValues, formSchema } from "@/schema/scouting";
+import { type FormSchema, formSchema } from "@/schema/scouting";
 import { IntegerInput } from "~/form/input";
 import { SpreadsheetConfig } from "~/form/spreadsheet";
 import { submitForm } from "./actions";
 
-const availableTags = [
-  "autonomous",
-  "teleop",
-  "endgame",
-  "penalty",
-  "foul",
-  "defense",
-  "offense",
-  "climb",
-  "shoot",
-  "intake",
-];
+const TAGS = ["penalties", "defense"];
 
 export default function Scout() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<FormValues>({
+  const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       meta: {
@@ -65,7 +54,7 @@ export default function Scout() {
     return inputValue.trim().toLowerCase();
   };
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = async (data: FormSchema) => {
     setIsSubmitting(true);
     try {
       const formData = {
@@ -245,10 +234,10 @@ export default function Scout() {
             name="tags"
             render={() => (
               <FormItem>
-                <FormLabel>Event Tags</FormLabel>
+                <FormLabel>Tags</FormLabel>
                 <FormControl>
                   <TagSelector
-                    availableTags={availableTags}
+                    availableTags={TAGS}
                     createTag={createTag}
                     onChange={(tags) => {
                       setSelectedTags(tags);

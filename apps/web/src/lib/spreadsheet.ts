@@ -1,6 +1,6 @@
 import type { SpreadsheetConfigSchema } from "@/schema/scouting";
 
-const STORAGE_KEY = "spreadsheet_config";
+const STORAGE_KEY = "spreadsheetConfig";
 
 export function getConfig(): SpreadsheetConfigSchema | null {
   if (typeof window === "undefined") {

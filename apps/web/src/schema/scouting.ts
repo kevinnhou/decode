@@ -17,7 +17,7 @@ export const formSchema = z.object({
 });
 
 export type MetaSchema = z.infer<typeof metaSchema>;
-export type FormValues = z.infer<typeof formSchema>;
+export type FormSchema = z.infer<typeof formSchema>;
 
 export const fieldEventSchema = z.object({
   event: z.string(),
@@ -34,9 +34,9 @@ export const fieldSchema = z.array(fieldEventSchema);
 export type FieldEventSchema = z.infer<typeof fieldEventSchema>;
 export type FieldSchema = z.infer<typeof fieldSchema>;
 
-export const spreadsheetConfig = z.object({
+export const spreadsheetConfigSchema = z.object({
   spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
   sheetId: z.string().min(1, "Sheet ID is required"),
 });
 
-export type SpreadsheetConfigSchema = z.infer<typeof spreadsheetConfig>;
+export type SpreadsheetConfigSchema = z.infer<typeof spreadsheetConfigSchema>;

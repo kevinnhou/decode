@@ -54,7 +54,7 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
-          <main className="mx-auto my-[min(4rem,max(0px,calc((100vw-1536px)/2)))] flex min-h-svh max-w-screen-2xl flex-col border border-foreground">
+          <main className="mx-auto my-[min(4rem,max(0px,calc((100vw-1536px)/2)))] flex min-h-svh max-w-screen-2xl flex-col border-foreground 2xl:border">
             <Header />
             {children}
           </main>

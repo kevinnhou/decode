@@ -25,7 +25,7 @@ import { useForm } from "react-hook-form";
 import { getConfig, setConfig } from "@/lib/spreadsheet";
 import {
   type SpreadsheetConfigSchema,
-  spreadsheetConfig,
+  spreadsheetConfigSchema,
 } from "@/schema/scouting";
 
 export function SpreadsheetConfig() {
@@ -33,7 +33,7 @@ export function SpreadsheetConfig() {
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<SpreadsheetConfigSchema>({
-    resolver: zodResolver(spreadsheetConfig),
+    resolver: zodResolver(spreadsheetConfigSchema),
     defaultValues: {
       spreadsheetId: "",
       sheetId: "",
