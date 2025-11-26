@@ -1,6 +1,7 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: PASS */
+
 import type { Metadata } from "next";
-import { site } from "@/config/site";
+import { site } from "@/lib/site";
 
 export interface MetadataProps {
   title?: string;

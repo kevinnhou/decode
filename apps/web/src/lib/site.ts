@@ -14,7 +14,7 @@ export const site = {
     url:
       process.env.NODE_ENV === "development"
         ? "http://localhost:3001"
-        : `http://${process.env.VERCEL_PROJECT_PRODUCTION_URL || ""}`,
+        : `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL || "https://optimise.fyi"}`,
   },
   name: "decode",
   operatingSystem: "iOS, Android, Windows, macOS, Linux",

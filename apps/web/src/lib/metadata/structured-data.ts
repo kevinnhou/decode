@@ -5,7 +5,7 @@ import type {
   SoftwareApplication,
   WithContext,
 } from "schema-dts";
-import { site } from "@/config/site";
+import { site } from "@/lib/site";
 import type { MetadataProps } from "./index";
 
 /**
