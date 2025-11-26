@@ -27,18 +27,7 @@ import { IntegerInput } from "~/form/input";
 import { SpreadsheetConfig } from "~/form/spreadsheet";
 import { submitForm } from "./actions";
 
-const availableTags = [
-  "autonomous",
-  "teleop",
-  "endgame",
-  "penalty",
-  "foul",
-  "defense",
-  "offense",
-  "climb",
-  "shoot",
-  "intake",
-];
+const TAGS = ["penalties", "defense"];
 
 export default function Scout() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -245,10 +234,10 @@ export default function Scout() {
             name="tags"
             render={() => (
               <FormItem>
-                <FormLabel>Event Tags</FormLabel>
+                <FormLabel>Tags</FormLabel>
                 <FormControl>
                   <TagSelector
-                    availableTags={availableTags}
+                    availableTags={TAGS}
                     createTag={createTag}
                     onChange={(tags) => {
                       setSelectedTags(tags);
