@@ -2,14 +2,14 @@
 
 import { google } from "googleapis";
 import { z } from "zod";
-import { type FormValues, formSchema } from "@/schema/scouting";
+import { type FormSchema, formSchema } from "@/schema/scouting";
 
 type SubmissionResult =
   | { success: true; message: string }
   | { success: false; message: string };
 
 export async function submitForm(
-  data: FormValues,
+  data: FormSchema,
   spreadsheetId?: string,
   sheetId?: string
 ): Promise<SubmissionResult> {
