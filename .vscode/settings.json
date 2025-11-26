@@ -1,6 +1,6 @@
 {
   "files.exclude": {
-    "**/packages": true,
+    "**/packages": false,
 
     "**/changelog": true,
 
@@ -32,6 +32,7 @@
     "**/manifest.ts": true,
     "**/robots.ts": true,
     "**/sitemap.ts": true,
+    "**/favicon.ico": true,
 
     "**/AllianceNo2-Regular.woff2": true
   },
