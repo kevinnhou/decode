@@ -57,7 +57,7 @@ export function Toggle() {
             return (
               <button
                 className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-left transition-colors",
+                  "flex items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors",
                   "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   isActive &&
                     "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
