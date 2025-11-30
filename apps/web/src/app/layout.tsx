@@ -1,5 +1,6 @@
 import "@repo/ui/globals.css";
 
+import { SidebarInset, SidebarProvider } from "@repo/ui/shadcn/sidebar";
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_Mono } from "next/font/google";
 import localFont from "next/font/local";
@@ -7,6 +8,9 @@ import Script from "next/script";
 import { generateMetadata, generateStructuredData } from "@/lib/metadata";
 import { Header } from "~/header";
 import Providers from "~/providers";
+import { RootTransition } from "~/root-transition";
+
+import { AppSidebar } from "~/sidebar/app";
 
 export const viewport: Viewport = {
   themeColor: [
@@ -54,10 +58,15 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
-          <main className="mx-auto my-[min(4rem,max(0px,calc((100vw-1536px)/2)))] flex min-h-svh max-w-screen-2xl flex-col border-foreground 2xl:border">
-            <Header />
-            {children}
-          </main>
+          <RootTransition>
+            <SidebarProvider className="flex flex-col">
+              <Header />
+              <div className="flex flex-1">
+                <AppSidebar />
+                <SidebarInset>{children}</SidebarInset>
+              </div>
+            </SidebarProvider>
+          </RootTransition>
         </Providers>
       </body>
     </html>
