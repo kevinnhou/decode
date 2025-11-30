@@ -12,6 +12,7 @@
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.23.24",
     "input-otp": "^1.4.2",
+    "js-cookie": "^3.0.5",
     "lucide-react": "^0.542.0",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",
@@ -30,6 +31,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.16",
     "@turbo/gen": "^2.5.8",
+    "@types/js-cookie": "^3.0.6",
     "@types/node": "^20.19.23",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
