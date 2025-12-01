@@ -1,5 +1,5 @@
-/** biome-ignore-all lint/style/noNestedTernary: pass */
-/** biome-ignore-all lint/complexity/noExcessiveCognitiveComplexity: pass */
+/** biome-ignore-all lint/style/noNestedTernary: PASS */
+/** biome-ignore-all lint/complexity/noExcessiveCognitiveComplexity: PASS */
 
 "use client";
 
@@ -150,7 +150,7 @@ function MobileNavigation() {
 
 export function Header() {
   return (
-    <header className="flex h-14 w-full items-center justify-between border-foreground border-b px-10 py-4 lg:px-20">
+    <header className="relative z-50 flex h-14 shrink-0 items-center justify-between border-foreground border-b bg-background px-10 py-4 lg:px-20">
       <DesktopNavigation />
       <MobileNavigation />
     </header>

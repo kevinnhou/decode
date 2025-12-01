@@ -56,14 +56,16 @@ export default function RootLayout({
           type="application/ld+json"
         />
       </head>
-      <body>
+      <body className="overflow-hidden">
         <Providers>
           <RootTransition>
-            <SidebarProvider className="flex flex-col">
+            <SidebarProvider className="flex h-full flex-col">
               <Header />
-              <div className="flex flex-1">
+              <div className="flex flex-1 overflow-hidden">
                 <AppSidebar />
-                <SidebarInset>{children}</SidebarInset>
+                <SidebarInset className="overflow-y-auto">
+                  {children}
+                </SidebarInset>
               </div>
             </SidebarProvider>
           </RootTransition>
