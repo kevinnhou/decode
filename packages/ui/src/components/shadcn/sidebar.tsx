@@ -155,14 +155,23 @@ function Sidebar({
   variant = "sidebar",
   collapsible = "offcanvas",
   className,
+  pathname,
   children,
   ...props
 }: React.ComponentProps<"div"> & {
   side?: "left" | "right";
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
+  pathname?: string | null;
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+
+  const showSidebar =
+    (pathname?.includes("/scout") ?? false)
+
+  if (!showSidebar) {
+    return null;
+  }
 
   if (collapsible === "none") {
     return (
