@@ -76,7 +76,6 @@ export const Dropzone = ({
 
   return (
     <DropzoneContext.Provider
-      key={JSON.stringify(src)}
       value={{ src, accept, maxSize, minSize, maxFiles }}
     >
       <Button

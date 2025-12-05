@@ -24,7 +24,7 @@ export default function Scout() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldEvents, setFieldEvents] = useState<FieldSchema>([]);
-  const [teamsMap, setTeamsMap] = useState<Record<string, string>>(() =>
+  const [teamsMap, setTeamsMapState] = useState<Record<string, string>>(() =>
     getTeamsMap()
   );
 
@@ -108,7 +108,7 @@ export default function Scout() {
   const watchedTeamNumber = form.watch("meta.teamNumber");
 
   const handleTeamMapLoad = useCallback((map: Record<string, string>) => {
-    setTeamsMap((prev) => ({ ...prev, ...map }));
+    setTeamsMapState((prev) => ({ ...prev, ...map }));
   }, []);
 
   useEffect(() => {
