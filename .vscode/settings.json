@@ -2,8 +2,6 @@
   "files.exclude": {
     "**/packages": false,
 
-    "**/changelog": true,
-
     "**/docs": true,
 
     "**/server": false,
