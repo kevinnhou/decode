@@ -30,7 +30,7 @@ interface FieldInputProps {
 
 type FieldKey = "autonomousMade" | "autonomousMissed" | "teleopMade" | "teleopMissed";
 
-const EVENT_TO_FORM_KEY: Record<string, FieldKey> = {
+export const EVENT_TO_FORM_KEY: Record<string, FieldKey> = {
   autonomous_made: "autonomousMade",
   autonomous_missed: "autonomousMissed",
   teleop_made: "teleopMade",

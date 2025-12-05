@@ -18,6 +18,7 @@ import { SpreadsheetConfig } from "~/form/spreadsheet";
 import { setSidebarContent } from "~/sidebar/slot";
 import { submitUnified } from "./actions";
 import { toast } from "sonner";
+import { EVENT_TO_FORM_KEY } from "~/form/field-input";
 
 export default function Scout() {
   const { mode } = useInputMode();
@@ -76,16 +77,6 @@ export default function Scout() {
       const eventToRemove = fieldEvents[index];
       const newEvents = fieldEvents.filter((_, i) => i !== index);
       setFieldEvents(newEvents);
-
-      const EVENT_TO_FORM_KEY: Record<
-        string,
-        "autonomousMade" | "autonomousMissed" | "teleopMade" | "teleopMissed"
-      > = {
-        autonomous_made: "autonomousMade",
-        autonomous_missed: "autonomousMissed",
-        teleop_made: "teleopMade",
-        teleop_missed: "teleopMissed",
-      };
 
       const formKey = EVENT_TO_FORM_KEY[eventToRemove.event];
       if (formKey) {
