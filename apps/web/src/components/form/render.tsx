@@ -32,9 +32,14 @@ import { IntegerInput } from "~/form/input";
 interface FormFieldsProps {
   selectedTags: string[];
   onTagsChange: (tags: string[]) => void;
+  groups?: string[];
 }
 
-export function FormFields({ selectedTags, onTagsChange }: FormFieldsProps) {
+export function FormFields({
+  selectedTags,
+  onTagsChange,
+  groups,
+}: FormFieldsProps) {
   const form = useFormContext();
 
   function renderInputField(field: InputField) {
@@ -187,13 +192,17 @@ export function FormFields({ selectedTags, onTagsChange }: FormFieldsProps) {
     return null;
   }
 
+  const visibleGroups = groups ?? FIELD_GROUPS.map((group) => group.id);
+
   return (
     <>
-      {FIELD_GROUPS.map((group) => (
-        <div className={group.className} key={group.id}>
-          {group.fields.map(renderField)}
-        </div>
-      ))}
+      {FIELD_GROUPS.filter((group) => visibleGroups.includes(group.id)).map(
+        (group) => (
+          <div className={group.className} key={group.id}>
+            {group.fields.map(renderField)}
+          </div>
+        ),
+      )}
     </>
   );
 }

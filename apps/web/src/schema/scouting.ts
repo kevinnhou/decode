@@ -25,7 +25,7 @@ export const fieldEventSchema = z.object({
     x: z.number(),
     y: z.number(),
   }),
-  timestamp: z.iso.time(),
+  timestamp: z.string().datetime(),
   count: z.number().int().min(0),
 });
 
@@ -40,3 +40,15 @@ export const spreadsheetConfigSchema = z.object({
 });
 
 export type SpreadsheetConfigSchema = z.infer<typeof spreadsheetConfigSchema>;
+
+export const unifiedSubmissionSchema = z.object({
+  meta: metaSchema,
+  autonomousMissed: z.number().int().min(0),
+  autonomousMade: z.number().int().min(0),
+  teleopMissed: z.number().int().min(0),
+  teleopMade: z.number().int().min(0),
+  tags: z.array(z.string()),
+  fieldEvents: fieldSchema.optional(),
+});
+
+export type UnifiedSubmissionSchema = z.infer<typeof unifiedSubmissionSchema>;
