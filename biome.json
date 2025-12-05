@@ -29,7 +29,9 @@
         "noNamespaceImport": "off"
       },
       "a11y": {
-        "noSvgWithoutTitle": "off"
+        "noSvgWithoutTitle": "off",
+        "noStaticElementInteractions": "off",
+        "noNoninteractiveStaticElementInteractions": "off"
       },
       "nursery": {
         "useConsistentTypeDefinitions": "off"

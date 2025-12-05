@@ -1,21 +1,23 @@
 import { useSyncExternalStore } from "react";
 import {
   getInputMode,
+  type InputMode,
   setInputMode,
   subscribeInputMode,
-  type InputMode,
 } from "@/lib/input-mode";
 
 export function useInputMode(): {
   mode: InputMode;
   setMode: (mode: InputMode) => void;
 } {
-  const mode = useSyncExternalStore(subscribeInputMode, getInputMode, getInputMode);
+  const mode = useSyncExternalStore(
+    subscribeInputMode,
+    getInputMode,
+    getInputMode
+  );
 
   return {
     mode,
     setMode: setInputMode,
   };
 }
-
-
