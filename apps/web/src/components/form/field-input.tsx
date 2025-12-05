@@ -94,43 +94,6 @@ export function FieldInput({
     setPendingEvent(null);
   }
 
-  function handleRemoveEvent(index: number) {
-    const eventToRemove = events[index];
-    const newEvents = events.filter((_, i) => i !== index);
-    onEventsChange(newEvents);
-
-    const formKey = EVENT_TO_FORM_KEY[eventToRemove.event];
-    if (formKey) {
-      const currentValue = (form.getValues(formKey) as number) ?? 0;
-      form.setValue(formKey, Math.max(0, currentValue - eventToRemove.count), {
-        shouldValidate: true,
-      });
-    }
-  }
-
-  function handleClearEvents() {
-    const totals = events.reduce(
-      (acc, event) => {
-        const formKey = EVENT_TO_FORM_KEY[event.event];
-        if (formKey) {
-          acc[formKey] = (acc[formKey] ?? 0) + event.count;
-        }
-        return acc;
-      },
-      {} as Partial<Record<FieldKey, number>>
-    );
-
-    for (const [formKey, count] of Object.entries(totals)) {
-      const key = formKey as FieldKey;
-      const currentValue = (form.getValues(key) as number) ?? 0;
-      form.setValue(key, Math.max(0, currentValue - count), {
-        shouldValidate: true,
-      });
-    }
-
-    onEventsChange([]);
-  }
-
   return (
     <div className="space-y-4">
 
@@ -153,27 +116,21 @@ export function FieldInput({
           src="/field.webp"
           width={1200}
         />
-        {(() => {
-          // Convert normalized coordinates back to viewport pixels for rendering
-          const rect = imageRef.current?.getBoundingClientRect();
-          if (!rect) return null;
+        {events.map((event, index) => {
+          const leftPercent = (event.coordinates.x / ORIGINAL_IMAGE_WIDTH) * 100;
+          const topPercent = (event.coordinates.y / ORIGINAL_IMAGE_HEIGHT) * 100;
 
-          return events.map((event, index) => {
-            const viewportX = (event.coordinates.x / ORIGINAL_IMAGE_WIDTH) * rect.width;
-            const viewportY = (event.coordinates.y / ORIGINAL_IMAGE_HEIGHT) * rect.height;
-
-            return (
-              <div
-                key={index}
-                className="pointer-events-none absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-red-500 bg-red-500/50"
-                style={{
-                  left: `${viewportX}px`,
-                  top: `${viewportY}px`,
-                }}
-              />
-            );
-          });
-        })()}
+          return (
+            <div
+              key={index}
+              className="pointer-events-none absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-red-500 bg-red-500/50"
+              style={{
+                left: `${leftPercent}%`,
+                top: `${topPercent}%`,
+              }}
+            />
+          );
+        })}
       </div>
 
       <Dialog
