@@ -9,7 +9,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 const COOKIE_NAME = "active_theme";
-const DEFAULT_THEME = "claude";
+const DEFAULT_THEME = "paper";
 
 function setThemeCookie(theme: string) {
   if (typeof window === "undefined") return;

@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { SIDEBAR_EXIT_MS } from "~/root-transition";
 import { ThemeSwitcher } from "./theme";
 import { Toggle } from "./toggle";
+import { SidebarContentSlot } from "./slot";
 
 const MS_PER_SECOND = 1000;
 const ENTER_DELAY_MS = 300;
@@ -73,7 +74,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarHeader>
               <Toggle />
             </SidebarHeader>
-            <SidebarContent />
+            <SidebarContent>
+              <SidebarContentSlot />
+            </SidebarContent>
             <SidebarFooter>
               <ThemeSwitcher />
             </SidebarFooter>

@@ -2,14 +2,17 @@
 
 import { google } from "googleapis";
 import { z } from "zod";
-import { type FormSchema, formSchema } from "@/schema/scouting";
+import {
+  type UnifiedSubmissionSchema,
+  unifiedSubmissionSchema,
+} from "@/schema/scouting";
 
 type SubmissionResult =
   | { success: true; message: string }
   | { success: false; message: string };
 
-export async function submitForm(
-  data: FormSchema,
+export async function submitUnified(
+  data: UnifiedSubmissionSchema,
   spreadsheetId?: string,
   sheetId?: string
 ): Promise<SubmissionResult> {
@@ -21,7 +24,7 @@ export async function submitForm(
   }
 
   try {
-    const validatedData = formSchema.parse(data);
+    const validatedData = unifiedSubmissionSchema.parse(data);
 
     const auth = new google.auth.GoogleAuth({
       credentials: {
@@ -52,6 +55,7 @@ export async function submitForm(
             validatedData.teleopMissed,
             validatedData.teleopMade,
             JSON.stringify(validatedData.tags),
+            validatedData.fieldEvents ? JSON.stringify(validatedData.fieldEvents) : "",
           ],
         ],
       },
@@ -59,7 +63,7 @@ export async function submitForm(
       valueInputOption: "RAW",
     });
 
-    return { success: true, message: "Form submitted successfully" };
+    return { success: true, message: "Data submitted successfully" };
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errors = error.issues
@@ -70,6 +74,6 @@ export async function submitForm(
 
     const message =
       error instanceof Error ? error.message : "Unknown error occurred.";
-    return { success: false, message: `Form submission failed: ${message}` };
+    return { success: false, message: `Submission failed: ${message}` };
   }
 }
