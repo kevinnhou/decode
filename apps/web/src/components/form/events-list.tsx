@@ -32,17 +32,14 @@ export function FieldEventsList({
             return (
               <div
                 key={index}
-                className="group flex items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors"
+                className="group flex justify-between items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors"
               >
-                <span className="rounded bg-primary/10 px-1.5 py-0.5 font-medium text-primary">
+                <div className="rounded bg-primary/10 px-1.5 py-0.5 font-medium text-primary">
                   {eventLabel}
-                </span>
                 {event.count > 1 && (
-                  <span className="text-muted-foreground">×{event.count}</span>
+                  <span className="text-muted-foreground"> \ {event.count}</span>
                 )}
-                <span className="ml-auto font-mono text-muted-foreground">
-                  {event.count}
-                </span>
+                </div>
                 <Button
                   className="size-5 rounded p-0 opacity-0 transition-opacity group-hover:opacity-100"
                   onClick={() => onRemoveEvent(index)}
