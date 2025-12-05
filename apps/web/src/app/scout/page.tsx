@@ -87,36 +87,6 @@ export default function Scout() {
     }
   };
 
-  function handleClearEvents  () {
-    const EVENT_TO_FORM_KEY: Record<string, "autonomousMade" | "autonomousMissed" | "teleopMade" | "teleopMissed"> = {
-      autonomous_made: "autonomousMade",
-      autonomous_missed: "autonomousMissed",
-      teleop_made: "teleopMade",
-      teleop_missed: "teleopMissed",
-    };
-
-    const totals = fieldEvents.reduce(
-      (acc, event) => {
-        const formKey = EVENT_TO_FORM_KEY[event.event];
-        if (formKey) {
-          acc[formKey] = (acc[formKey] ?? 0) + event.count;
-        }
-        return acc;
-      },
-      {} as Partial<Record<"autonomousMade" | "autonomousMissed" | "teleopMade" | "teleopMissed", number>>
-    );
-
-    for (const [formKey, count] of Object.entries(totals)) {
-      const key = formKey as "autonomousMade" | "autonomousMissed" | "teleopMade" | "teleopMissed";
-      const currentValue = (form.getValues(key) as number) ?? 0;
-      form.setValue(key, Math.max(0, currentValue - count), {
-        shouldValidate: true,
-      });
-    }
-
-    setFieldEvents([]);
-  };
-
   useEffect(() => {
     setSidebarContent(
       <FieldEventsList
@@ -128,7 +98,7 @@ export default function Scout() {
     return () => {
       setSidebarContent(null);
     };
-  }, [fieldEvents, handleRemoveEvent, handleClearEvents]);
+  }, [fieldEvents, handleRemoveEvent]);
 
   return (
     <div className="container mx-auto max-w-6xl py-15">
