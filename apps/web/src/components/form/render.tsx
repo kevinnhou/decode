@@ -201,7 +201,7 @@ export function FormFields({
           <div className={group.className} key={group.id}>
             {group.fields.map(renderField)}
           </div>
-        ),
+        )
       )}
     </>
   );

@@ -54,8 +54,10 @@ export async function submitUnified(
             validatedData.autonomousMade,
             validatedData.teleopMissed,
             validatedData.teleopMade,
-            JSON.stringify(validatedData.tags),
-            validatedData.fieldEvents ? JSON.stringify(validatedData.fieldEvents) : "",
+            validatedData.tags.join(", "),
+            validatedData.fieldEvents
+              ? JSON.stringify(validatedData.fieldEvents)
+              : "",
           ],
         ],
       },

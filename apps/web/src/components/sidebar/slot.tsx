@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 let currentContent: ReactNode = null;
 const subscribers = new Set<(content: ReactNode) => void>();
