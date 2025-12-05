@@ -34,6 +34,19 @@ import {
   spreadsheetConfigSchema,
 } from "@/schema/scouting";
 
+function extractSpreadsheetId(input: string): string {
+  if (!(input.includes("/") || input.includes(":"))) {
+    return input.trim();
+  }
+
+  const urlMatch = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (urlMatch?.[1]) {
+    return urlMatch[1];
+  }
+
+  return input.trim();
+}
+
 type ConfigProps = {
   onTeamMapLoad: (map: Record<string, string>) => void;
   loadedCount?: number;
@@ -99,7 +112,16 @@ export function Config({ onTeamMapLoad, loadedCount = 0 }: ConfigProps) {
                   <FormItem>
                     <FormLabel>Spreadsheet ID</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter Spreadsheet ID" {...field} />
+                      <Input
+                        placeholder="Enter Spreadsheet ID or URL"
+                        {...field}
+                        onChange={(e) => {
+                          const extractedId = extractSpreadsheetId(
+                            e.target.value
+                          );
+                          field.onChange(extractedId);
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
