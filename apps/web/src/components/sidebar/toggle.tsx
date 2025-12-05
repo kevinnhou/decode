@@ -6,53 +6,39 @@ import {
   SidebarGroupContent,
   useSidebar,
 } from "@repo/ui/shadcn/sidebar";
-// biome-ignore lint/suspicious/noShadowRestrictedNames: PASS
-import { Form, Map } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Form, Map as MapIcon } from "lucide-react";
+import { useInputMode } from "@/hooks/use-input-mode";
 
 export function Toggle() {
-  const router = useRouter();
-  const pathname = usePathname();
   const { state } = useSidebar();
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  const isCollapsed = isClient ? state === "collapsed" : false;
-  const isOffline = isClient ? pathname?.includes("offline") : false;
+  const { mode, setMode } = useInputMode();
+  const isCollapsed = state === "collapsed";
 
   const modes = [
     {
       name: "Form Input",
       description: "Traditional data entry",
       icon: Form,
-      route: isOffline ? "/scout/~offline" : "/scout",
+      value: "form" as const,
     },
     {
       name: "Field Input",
       description: "Map view for data entry",
-      icon: Map,
-      route: isOffline ? "/dashboard/~offline" : "/dashboard",
+      icon: MapIcon,
+      value: "field" as const,
     },
   ];
 
-  // route => state
-
-  function handleModeChange(route: string) {
-    router.push(route);
+  function handleModeChange(value: "form" | "field") {
+    setMode(value);
   }
 
   return (
     <SidebarGroup>
       <SidebarGroupContent>
         <div className="flex flex-col gap-2 px-1">
-          {modes.map((mode) => {
-            const isActive = isClient
-              ? pathname?.startsWith(mode.route)
-              : false;
+          {modes.map((modeOption) => {
+            const isActive = mode === modeOption.value;
 
             return (
               <button
@@ -63,8 +49,8 @@ export function Toggle() {
                     "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
                   isCollapsed && "justify-center px-2"
                 )}
-                key={mode.name}
-                onClick={() => handleModeChange(mode.route)}
+                key={modeOption.name}
+                onClick={() => handleModeChange(modeOption.value)}
                 type="button"
               >
                 <div
@@ -75,14 +61,14 @@ export function Toggle() {
                       : "border-sidebar-border"
                   )}
                 >
-                  <mode.icon className="size-4" />
+                  <modeOption.icon className="size-4" />
                 </div>
 
                 {!isCollapsed && (
                   <div className="flex flex-col">
-                    <span className="font-medium text-sm">{mode.name}</span>
+                    <span className="font-medium text-sm">{modeOption.name}</span>
                     <span className="text-muted-foreground text-xs">
-                      {mode.description}
+                      {modeOption.description}
                     </span>
                   </div>
                 )}

@@ -1,0 +1,226 @@
+"use client";
+
+import { Button } from "@repo/ui/shadcn/button";
+import { Dialog, DialogTitle, DialogContent, DialogFooter } from "@repo/ui/shadcn/dialog";
+import { FormLabel } from "@repo/ui/shadcn/form";
+import { useState, useRef } from "react";
+import type { UseFormReturn } from "react-hook-form";
+import Image from "next/image";
+import type { FieldEventSchema, FieldSchema, FormSchema } from "@/schema/scouting";
+
+const EVENT_TYPES = [
+  "autonomous_made",
+  "autonomous_missed",
+  "teleop_made",
+  "teleop_missed",
+] as const;
+
+type EventType = (typeof EVENT_TYPES)[number];
+
+interface PendingEvent {
+  x: number;
+  y: number;
+}
+
+interface FieldInputProps {
+  events: FieldSchema;
+  form: UseFormReturn<FormSchema>;
+  onEventsChange: (events: FieldSchema) => void;
+}
+
+type FieldKey = "autonomousMade" | "autonomousMissed" | "teleopMade" | "teleopMissed";
+
+const EVENT_TO_FORM_KEY: Record<string, FieldKey> = {
+  autonomous_made: "autonomousMade",
+  autonomous_missed: "autonomousMissed",
+  teleop_made: "teleopMade",
+  teleop_missed: "teleopMissed",
+};
+
+export function FieldInput({
+  events,
+  form,
+  onEventsChange,
+}: FieldInputProps) {
+  const [PendingEvent, setPendingEvent] = useState<PendingEvent | null>(null);
+  const [dialogEventType, setDialogEventType] =
+    useState<EventType>("teleop_made");
+  const [dialogCount, setDialogCount] = useState<number>(1);
+  const imageRef = useRef<HTMLDivElement>(null);
+
+  function handleFieldClick(event: React.MouseEvent<HTMLDivElement>) {
+    if (!imageRef.current) return;
+
+    const rect = imageRef.current.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    setPendingEvent({ x, y });
+    setDialogEventType("teleop_made");
+    setDialogCount(1);
+  }
+
+  function handleDialogConfirm() {
+    if (!PendingEvent) return;
+
+    const newEvent: FieldEventSchema = {
+      event: dialogEventType,
+      coordinates: { x: PendingEvent.x, y: PendingEvent.y },
+      timestamp: new Date().toISOString(),
+      count: dialogCount,
+    };
+
+    const newEvents = [...events, newEvent];
+    onEventsChange(newEvents);
+
+    const formKey = EVENT_TO_FORM_KEY[dialogEventType];
+    if (formKey) {
+      const currentValue = (form.getValues(formKey) as number) ?? 0;
+      form.setValue(formKey, currentValue + dialogCount, {
+        shouldValidate: true,
+      });
+    }
+
+    setPendingEvent(null);
+  }
+
+  function handleDialogCancel() {
+    setPendingEvent(null);
+  }
+
+  function handleRemoveEvent(index: number) {
+    const eventToRemove = events[index];
+    const newEvents = events.filter((_, i) => i !== index);
+    onEventsChange(newEvents);
+
+    const formKey = EVENT_TO_FORM_KEY[eventToRemove.event];
+    if (formKey) {
+      const currentValue = (form.getValues(formKey) as number) ?? 0;
+      form.setValue(formKey, Math.max(0, currentValue - eventToRemove.count), {
+        shouldValidate: true,
+      });
+    }
+  }
+
+  function handleClearEvents() {
+    const totals = events.reduce(
+      (acc, event) => {
+        const formKey = EVENT_TO_FORM_KEY[event.event];
+        if (formKey) {
+          acc[formKey] = (acc[formKey] ?? 0) + event.count;
+        }
+        return acc;
+      },
+      {} as Partial<Record<FieldKey, number>>
+    );
+
+    for (const [formKey, count] of Object.entries(totals)) {
+      const key = formKey as FieldKey;
+      const currentValue = (form.getValues(key) as number) ?? 0;
+      form.setValue(key, Math.max(0, currentValue - count), {
+        shouldValidate: true,
+      });
+    }
+
+    onEventsChange([]);
+  }
+
+  return (
+    <div className="space-y-4">
+
+      <div
+        ref={imageRef}
+        className="relative w-full cursor-crosshair overflow-hidden rounded-lg border"
+        onClick={handleFieldClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+          }
+        }}
+      >
+        <Image
+          alt="Field"
+          className="w-full"
+          height={800}
+          src="/field.webp"
+          width={1200}
+        />
+        {events.map((event, index) => (
+          <div
+            key={index}
+            className="pointer-events-none absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-red-500 bg-red-500/50"
+            style={{
+              left: `${event.coordinates.x}px`,
+              top: `${event.coordinates.y}px`,
+            }}
+          />
+        ))}
+      </div>
+
+      <Dialog
+        onOpenChange={(open) => !open && handleDialogCancel()}
+        open={PendingEvent !== null}
+      >
+        <DialogContent className="w-full max-w-sm rounded-xl p-4 sm:p-5">
+        <DialogTitle>Add Event</DialogTitle>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {EVENT_TYPES.map((type) => {
+                  const label = type
+                    .replace(/_/g, " ")
+                    .replace(/\b\w/g, (l) => l.toUpperCase());
+                  const isActive = dialogEventType === type;
+
+                  return (
+                    <Button
+                      key={type}
+                      className="h-11 w-full justify-center rounded-xl text-sm sm:text-base"
+                      onClick={() => setDialogEventType(type)}
+                      type="button"
+                      variant={isActive ? "default" : "outline"}
+                    >
+                      {label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Count
+              </FormLabel>
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-3 gap-2">
+                  {[1, 2, 3].map((amount) => {
+                    const isActive = dialogCount === amount;
+                    return (
+                      <Button
+                        key={amount}
+                        className="h-11 w-full justify-center rounded-xl text-sm font-mono"
+                        onClick={() => setDialogCount(amount)}
+                        type="button"
+                        variant={isActive ? "default" : "outline"}
+                      >
+                        {amount}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="mt-3 flex w-full">
+            <Button onClick={handleDialogConfirm} className="w-full" type="button">
+              Add Event
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+    </div>
+  );
+}
+
