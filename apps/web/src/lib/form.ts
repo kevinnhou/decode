@@ -67,7 +67,7 @@ export type InputModeValue =
   | "email"
   | "url";
 
-export const TAGS = ["penalties", "defense"];
+export const TAGS = ["penalties", "defense", "climb"];
 
 export const FIELD_GROUPS: FieldGroup[] = [
   {
