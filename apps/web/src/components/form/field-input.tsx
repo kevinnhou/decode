@@ -48,14 +48,20 @@ export function FieldInput({
   const [dialogCount, setDialogCount] = useState<number>(1);
   const imageRef = useRef<HTMLDivElement>(null);
 
+  const ORIGINAL_IMAGE_WIDTH = 2547;
+  const ORIGINAL_IMAGE_HEIGHT = 2547;
+
   function handleFieldClick(event: React.MouseEvent<HTMLDivElement>) {
     if (!imageRef.current) return;
 
     const rect = imageRef.current.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
 
-    setPendingEvent({ x, y });
+    const normalizedX = (clickX / rect.width) * ORIGINAL_IMAGE_WIDTH;
+    const normalizedY = (clickY / rect.height) * ORIGINAL_IMAGE_HEIGHT;
+
+    setPendingEvent({ x: normalizedX, y: normalizedY });
     setDialogEventType("teleop_made");
     setDialogCount(1);
   }
@@ -147,16 +153,27 @@ export function FieldInput({
           src="/field.webp"
           width={1200}
         />
-        {events.map((event, index) => (
-          <div
-            key={index}
-            className="pointer-events-none absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-red-500 bg-red-500/50"
-            style={{
-              left: `${event.coordinates.x}px`,
-              top: `${event.coordinates.y}px`,
-            }}
-          />
-        ))}
+        {(() => {
+          // Convert normalized coordinates back to viewport pixels for rendering
+          const rect = imageRef.current?.getBoundingClientRect();
+          if (!rect) return null;
+
+          return events.map((event, index) => {
+            const viewportX = (event.coordinates.x / ORIGINAL_IMAGE_WIDTH) * rect.width;
+            const viewportY = (event.coordinates.y / ORIGINAL_IMAGE_HEIGHT) * rect.height;
+
+            return (
+              <div
+                key={index}
+                className="pointer-events-none absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-red-500 bg-red-500/50"
+                style={{
+                  left: `${viewportX}px`,
+                  top: `${viewportY}px`,
+                }}
+              />
+            );
+          });
+        })()}
       </div>
 
       <Dialog
