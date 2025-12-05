@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@repo/ui/shadcn/button";
 import { Form } from "@repo/ui/shadcn/form";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FormFields } from "~/form/render";
 import { FieldInput } from "~/form/field-input";
@@ -17,6 +17,7 @@ import { getInitialFormValues } from "@/utils/form";
 import { SpreadsheetConfig } from "~/form/spreadsheet";
 import { setSidebarContent } from "~/sidebar/slot";
 import { submitUnified } from "./actions";
+import { toast } from "sonner";
 
 export default function Scout() {
   const { mode } = useInputMode();
@@ -37,7 +38,7 @@ export default function Scout() {
 
     setIsSubmitting(true);
     try {
-      await submitUnified(
+      const result = await submitUnified(
         {
           meta: data.meta,
           autonomousMade: data.autonomousMade,
@@ -51,10 +52,14 @@ export default function Scout() {
         config.sheetId,
       );
 
-
-      form.reset(getInitialFormValues());
-      setSelectedTags([]);
-      setFieldEvents([]);
+      if (result.success) {
+        toast.success(result.message);
+        form.reset(getInitialFormValues());
+        setSelectedTags([]);
+        setFieldEvents([]);
+      } else {
+        toast.error(result.message);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -66,26 +71,32 @@ export default function Scout() {
     setFieldEvents([]);
   }
 
-  function handleRemoveEvent(index: number) {
-    const eventToRemove = fieldEvents[index];
-    const newEvents = fieldEvents.filter((_, i) => i !== index);
-    setFieldEvents(newEvents);
+  const handleRemoveEvent = useCallback(
+    (index: number) => {
+      const eventToRemove = fieldEvents[index];
+      const newEvents = fieldEvents.filter((_, i) => i !== index);
+      setFieldEvents(newEvents);
 
-    const EVENT_TO_FORM_KEY: Record<string, "autonomousMade" | "autonomousMissed" | "teleopMade" | "teleopMissed"> = {
-      autonomous_made: "autonomousMade",
-      autonomous_missed: "autonomousMissed",
-      teleop_made: "teleopMade",
-      teleop_missed: "teleopMissed",
-    };
+      const EVENT_TO_FORM_KEY: Record<
+        string,
+        "autonomousMade" | "autonomousMissed" | "teleopMade" | "teleopMissed"
+      > = {
+        autonomous_made: "autonomousMade",
+        autonomous_missed: "autonomousMissed",
+        teleop_made: "teleopMade",
+        teleop_missed: "teleopMissed",
+      };
 
-    const formKey = EVENT_TO_FORM_KEY[eventToRemove.event];
-    if (formKey) {
-      const currentValue = (form.getValues(formKey) as number) ?? 0;
-      form.setValue(formKey, Math.max(0, currentValue - eventToRemove.count), {
-        shouldValidate: true,
-      });
-    }
-  };
+      const formKey = EVENT_TO_FORM_KEY[eventToRemove.event];
+      if (formKey) {
+        const currentValue = (form.getValues(formKey) as number) ?? 0;
+        form.setValue(formKey, Math.max(0, currentValue - eventToRemove.count), {
+          shouldValidate: true,
+        });
+      }
+    },
+    [fieldEvents, form],
+  );
 
   useEffect(() => {
     setSidebarContent(
