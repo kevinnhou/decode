@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/complexity/noVoid: PASS */
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -5,26 +6,27 @@ import { Button } from "@repo/ui/shadcn/button";
 import { Form } from "@repo/ui/shadcn/form";
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { FormFields } from "~/form/render";
-import { FieldInput } from "~/form/field-input";
-import { FieldEventsList } from "~/form/events-list";
+import { toast } from "sonner";
 import { useInputMode } from "@/hooks/use-input-mode";
-import { getConfig } from "@/lib/spreadsheet";
-import type { FieldSchema } from "@/schema/scouting";
-import type { FormSchema } from "@/schema/scouting";
+import { getConfig, getTeamsMap, setTeamsMap } from "@/lib/config";
+import type { FieldSchema, FormSchema } from "@/schema/scouting";
 import { formSchema } from "@/schema/scouting";
 import { getInitialFormValues } from "@/utils/form";
-import { SpreadsheetConfig } from "~/form/spreadsheet";
+import { Config } from "~/form/config";
+import { FieldEventsList } from "~/form/events-list";
+import { EVENT_TO_FORM_KEY, FieldInput } from "~/form/field-input";
+import { FormFields } from "~/form/render";
 import { setSidebarContent } from "~/sidebar/slot";
 import { submitUnified } from "./actions";
-import { toast } from "sonner";
-import { EVENT_TO_FORM_KEY } from "~/form/field-input";
 
 export default function Scout() {
   const { mode } = useInputMode();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldEvents, setFieldEvents] = useState<FieldSchema>([]);
+  const [teamsMap, setTeamsMapState] = useState<Record<string, string>>(() =>
+    getTeamsMap()
+  );
 
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
@@ -33,7 +35,7 @@ export default function Scout() {
 
   async function onSubmit(data: FormSchema) {
     const config = getConfig();
-    if (!config?.spreadsheetId || !config?.sheetId) {
+    if (!(config?.spreadsheetId && config?.sheetId)) {
       return;
     }
 
@@ -50,7 +52,7 @@ export default function Scout() {
           fieldEvents: fieldEvents.length > 0 ? fieldEvents : undefined,
         },
         config.spreadsheetId,
-        config.sheetId,
+        config.sheetId
       );
 
       if (result.success) {
@@ -81,26 +83,53 @@ export default function Scout() {
       const formKey = EVENT_TO_FORM_KEY[eventToRemove.event];
       if (formKey) {
         const currentValue = (form.getValues(formKey) as number) ?? 0;
-        form.setValue(formKey, Math.max(0, currentValue - eventToRemove.count), {
-          shouldValidate: true,
-        });
+        form.setValue(
+          formKey,
+          Math.max(0, currentValue - eventToRemove.count),
+          {
+            shouldValidate: true,
+          }
+        );
       }
     },
-    [fieldEvents, form],
+    [fieldEvents, form]
   );
 
   useEffect(() => {
     setSidebarContent(
-      <FieldEventsList
-        events={fieldEvents}
-        onRemoveEvent={handleRemoveEvent}
-      />
+      <FieldEventsList events={fieldEvents} onRemoveEvent={handleRemoveEvent} />
     );
 
     return () => {
       setSidebarContent(null);
     };
   }, [fieldEvents, handleRemoveEvent]);
+
+  const watchedTeamNumber = form.watch("meta.teamNumber");
+
+  const handleTeamMapLoad = useCallback((map: Record<string, string>) => {
+    setTeamsMapState((prev) => ({ ...prev, ...map }));
+  }, []);
+
+  useEffect(() => {
+    setTeamsMap(teamsMap);
+  }, [teamsMap]);
+
+  useEffect(() => {
+    if (!watchedTeamNumber) {
+      return;
+    }
+
+    const mappedName = teamsMap[String(watchedTeamNumber)];
+    if (!mappedName) {
+      return;
+    }
+
+    form.setValue("meta.teamName", mappedName, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [form, teamsMap, watchedTeamNumber]);
 
   return (
     <div className="container mx-auto max-w-6xl py-15">
@@ -130,7 +159,7 @@ export default function Scout() {
           )}
 
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Button
                 className="rounded-xl font-mono"
                 disabled={isSubmitting}
@@ -140,13 +169,14 @@ export default function Scout() {
               >
                 Reset
               </Button>
-              <SpreadsheetConfig />
+              <Config
+                loadedCount={Object.keys(teamsMap).length}
+                onTeamMapLoad={handleTeamMapLoad}
+              />
             </div>
             <Button
               className="w-full rounded-xl font-mono sm:w-auto"
-              disabled={
-                isSubmitting
-              }
+              disabled={isSubmitting}
               type="submit"
             >
               {isSubmitting ? "SUBMITTING..." : "SUBMIT"}

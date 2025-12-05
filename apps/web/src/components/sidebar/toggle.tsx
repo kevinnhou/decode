@@ -66,7 +66,9 @@ export function Toggle() {
 
                 {!isCollapsed && (
                   <div className="flex flex-col">
-                    <span className="font-medium text-sm">{modeOption.name}</span>
+                    <span className="font-medium text-sm">
+                      {modeOption.name}
+                    </span>
                     <span className="text-muted-foreground text-xs">
                       {modeOption.description}
                     </span>

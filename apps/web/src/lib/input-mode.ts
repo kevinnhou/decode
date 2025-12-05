@@ -28,5 +28,3 @@ export function subscribeInputMode(listener: Listener): () => void {
     listeners.delete(listener);
   };
 }
-
-

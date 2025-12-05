@@ -11,9 +11,9 @@ import { AnimatePresence, motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { SIDEBAR_EXIT_MS } from "~/root-transition";
+import { SidebarContentSlot } from "./slot";
 import { ThemeSwitcher } from "./theme";
 import { Toggle } from "./toggle";
-import { SidebarContentSlot } from "./slot";
 
 const MS_PER_SECOND = 1000;
 const ENTER_DELAY_MS = 300;
