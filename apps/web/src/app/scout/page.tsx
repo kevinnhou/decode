@@ -103,17 +103,21 @@ export default function Scout() {
   useEffect(() => {
     if (mode === "field") {
       setSidebarContent(
-        <div className="space-y-4 p-4">
-          <MatchTimer
-            timeRemaining={timer.timeRemaining}
-            state={timer.state}
-            start={timer.start}
-            pause={timer.pause}
-            resume={timer.resume}
-            reset={timer.reset}
-            formatTime={timer.formatTime}
-          />
-          <EventsList events={fieldEvents} onRemoveEvent={handleRemoveEvent} />
+        <div className="flex h-full max-h-[calc(100svh-var(--header-height))] flex-col gap-4 overflow-hidden p-4">
+          <div className="shrink-0">
+            <MatchTimer
+              timeRemaining={timer.timeRemaining}
+              state={timer.state}
+              start={timer.start}
+              pause={timer.pause}
+              resume={timer.resume}
+              reset={timer.reset}
+              formatTime={timer.formatTime}
+            />
+          </div>
+          <div className="min-h-0 flex-1">
+            <EventsList events={fieldEvents} onRemoveEvent={handleRemoveEvent} />
+          </div>
         </div>
       );
     } else {
@@ -181,6 +185,8 @@ export default function Scout() {
               form={form}
               onEventsChange={setFieldEvents}
               getEventTimestamp={timer.getEventTimestamp}
+              timeRemaining={timer.timeRemaining}
+              timerState={timer.state}
             />
           ) : (
             <FormFields
