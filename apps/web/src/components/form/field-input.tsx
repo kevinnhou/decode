@@ -64,7 +64,7 @@ export function FieldInput({
   timeRemaining,
   timerState,
 }: FieldInputProps) {
-  const [PendingEvent, setPendingEvent] = useState<PendingEvent | null>(null);
+  const [pendingEvent, setPendingEvent] = useState<PendingEvent | null>(null);
   const [dialogEventType, setDialogEventType] =
     useState<EventType>("teleop_made");
   const [dialogCount, setDialogCount] = useState<number>(1);
@@ -80,7 +80,7 @@ export function FieldInput({
     : (EVENT_TYPES as readonly EventType[]);
 
   useEffect(() => {
-    if (PendingEvent !== null && isTimerStarted) {
+    if (pendingEvent !== null && isTimerStarted) {
       const isValidType = (availableEventTypes as readonly string[]).includes(
         dialogEventType
       );
@@ -91,7 +91,7 @@ export function FieldInput({
         setDialogEventType(defaultEventType);
       }
     }
-  }, [timeRemaining, PendingEvent, dialogEventType, availableEventTypes, isAutonomous, isTimerStarted]);
+  }, [timeRemaining, pendingEvent, dialogEventType, availableEventTypes, isAutonomous, isTimerStarted]);
 
   const ORIGINAL_IMAGE_WIDTH = 2547;
   const ORIGINAL_IMAGE_HEIGHT = 2547;
@@ -118,11 +118,11 @@ export function FieldInput({
   }
 
   function handleDialogConfirm() {
-    if (!PendingEvent) return;
+    if (!pendingEvent) return;
 
     const newEvent: FieldEventSchema = {
       event: dialogEventType,
-      coordinates: { x: PendingEvent.x, y: PendingEvent.y },
+      coordinates: { x: pendingEvent.x, y: pendingEvent.y },
       timestamp: getEventTimestamp(),
       count: dialogCount,
     };
@@ -187,7 +187,7 @@ export function FieldInput({
 
       <Dialog
         onOpenChange={(open) => !open && handleDialogCancel()}
-        open={PendingEvent !== null}
+        open={pendingEvent !== null}
       >
         <DialogContent className="w-full max-w-sm rounded-xl p-4 sm:p-5">
           <DialogTitle>Add Event</DialogTitle>
