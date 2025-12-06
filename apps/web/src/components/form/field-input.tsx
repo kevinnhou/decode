@@ -35,6 +35,7 @@ interface FieldInputProps {
   events: FieldSchema;
   form: UseFormReturn<FormSchema>;
   onEventsChange: (events: FieldSchema) => void;
+  getEventTimestamp: () => string;
 }
 
 type FieldKey =
@@ -50,7 +51,12 @@ export const EVENT_TO_FORM_KEY: Record<string, FieldKey> = {
   teleop_missed: "teleopMissed",
 };
 
-export function FieldInput({ events, form, onEventsChange }: FieldInputProps) {
+export function FieldInput({
+  events,
+  form,
+  onEventsChange,
+  getEventTimestamp,
+}: FieldInputProps) {
   const [PendingEvent, setPendingEvent] = useState<PendingEvent | null>(null);
   const [dialogEventType, setDialogEventType] =
     useState<EventType>("teleop_made");
@@ -81,7 +87,7 @@ export function FieldInput({ events, form, onEventsChange }: FieldInputProps) {
     const newEvent: FieldEventSchema = {
       event: dialogEventType,
       coordinates: { x: PendingEvent.x, y: PendingEvent.y },
-      timestamp: new Date().toISOString(),
+      timestamp: getEventTimestamp(),
       count: dialogCount,
     };
 

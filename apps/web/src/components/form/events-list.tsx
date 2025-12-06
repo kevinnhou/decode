@@ -3,17 +3,17 @@
 import { Button } from "@repo/ui/shadcn/button";
 import type { FieldSchema } from "@/schema/scouting";
 
-interface FieldEventsListProps {
+interface EventsListProps {
   events: FieldSchema;
   onRemoveEvent: (index: number) => void;
 }
 
-export function FieldEventsList({
+export function EventsList({
   events,
   onRemoveEvent,
-}: FieldEventsListProps) {
+}: EventsListProps) {
   return (
-    <div className="space-y-2 p-4">
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
         {events.length > 0 && (
           <>
@@ -24,7 +24,7 @@ export function FieldEventsList({
         )}
       </div>
       {events.length > 0 && (
-        <div className="max-h-[calc(100svh-var(--header-height)-12rem)] space-y-0.5 overflow-y-auto rounded-md border-l bg-muted/30 p-1.5">
+        <div className="max-h-[calc(100svh-var(--header-height)-20rem)] space-y-0.5 overflow-y-auto rounded-md border-l bg-muted/30 p-1.5">
           {events.map((event, index) => {
             const eventLabel = event.event
               .replace(/_/g, " ")

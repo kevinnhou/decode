@@ -100,7 +100,7 @@ export function Config({ onTeamMapLoad, loadedCount = 0 }: ConfigProps) {
       </DialogTrigger>
       <DialogContent className="rounded-xl">
         <DialogHeader>
-          <DialogTitle>Spreadsheet Config</DialogTitle>
+          <DialogTitle>Config</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form className="space-y-5" onSubmit={form.handleSubmit(onSubmit)}>
