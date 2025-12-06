@@ -13,8 +13,8 @@ export function EventsList({
   onRemoveEvent,
 }: EventsListProps) {
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
+    <div className="flex h-full flex-col space-y-2">
+      <div className="shrink-0 flex items-center justify-between">
         {events.length > 0 && (
           <>
             <span className="font-medium text-muted-foreground text-xs">
@@ -24,7 +24,7 @@ export function EventsList({
         )}
       </div>
       {events.length > 0 && (
-        <div className="max-h-[calc(100svh-var(--header-height)-20rem)] space-y-0.5 overflow-y-auto rounded-md border-l bg-muted/30 p-1.5">
+        <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto rounded-md border-l bg-muted/30 p-1.5">
           {events.map((event, index) => {
             const eventLabel = event.event
               .replace(/_/g, " ")
