@@ -16,6 +16,7 @@ import type {
   FieldSchema,
   FormSchema,
 } from "@/schema/scouting";
+import type { TimerState } from "@/hooks/use-match-timer";
 
 const EVENT_TYPES = [
   "autonomous_made",
@@ -30,8 +31,6 @@ interface PendingEvent {
   x: number;
   y: number;
 }
-
-type TimerState = "idle" | "running" | "paused" | "finished";
 
 interface FieldInputProps {
   events: FieldSchema;

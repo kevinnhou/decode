@@ -4,7 +4,7 @@ const INITIAL_TIME_SECONDS = 150; // 2:30
 const PAUSE_TIME_SECONDS = 120; // 2:00
 const FINAL_TIME_SECONDS = 0;
 
-type TimerState = "idle" | "running" | "paused" | "finished";
+export type TimerState = "idle" | "running" | "paused" | "finished";
 
 interface UseMatchTimerReturn {
   timeRemaining: number;
