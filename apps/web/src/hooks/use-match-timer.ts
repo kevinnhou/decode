@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const INITIAL_TIME_SECONDS = 150; // 2:30
 const PAUSE_TIME_SECONDS = 120; // 2:00
@@ -23,66 +23,97 @@ export function useMatchTimer(): UseMatchTimerReturn {
   const [timeRemaining, setTimeRemaining] = useState(INITIAL_TIME_SECONDS);
   const [state, setState] = useState<TimerState>("idle");
   const [startTimestamp, setStartTimestamp] = useState<string | null>(null);
-  const intervalRef = useRef<number | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const pausedTimeRef = useRef<number>(0);
   const hasAutoPausedRef = useRef<boolean>(false);
+  const lastDisplayedSecondRef = useRef<number>(INITIAL_TIME_SECONDS);
+  const stateRef = useRef<TimerState>("idle");
 
-  const clearInterval = useCallback(() => {
-    if (intervalRef.current !== null) {
-      window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  const cancelAnimationFrame = useCallback(() => {
+    if (animationFrameRef.current !== null) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
     }
   }, []);
 
   const formatTime = useCallback((seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
+    const rounded = Math.floor(seconds);
+    const mins = Math.floor(rounded / 60);
+    const secs = rounded % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   }, []);
 
-  const start = useCallback(() => {
-    if (state === "running") {
+  const updateTimerRef = useRef<(() => void) | undefined>(undefined);
+
+  updateTimerRef.current = () => {
+    if (stateRef.current !== "running") {
       return;
     }
 
-    if (state === "idle") {
+    const now = Date.now();
+    const elapsed = (now - (startTimeRef.current ?? now)) / 1000;
+    const remaining = INITIAL_TIME_SECONDS - elapsed;
+    const roundedRemaining = Math.floor(remaining);
+
+    if (roundedRemaining !== lastDisplayedSecondRef.current) {
+      lastDisplayedSecondRef.current = roundedRemaining;
+      setTimeRemaining(remaining);
+    }
+
+    if (
+      !hasAutoPausedRef.current &&
+      remaining <= PAUSE_TIME_SECONDS &&
+      remaining > FINAL_TIME_SECONDS
+    ) {
+      setTimeRemaining(PAUSE_TIME_SECONDS);
+      setState("paused");
+      pausedTimeRef.current = elapsed;
+      hasAutoPausedRef.current = true;
+      cancelAnimationFrame();
+      return;
+    }
+
+    if (remaining <= FINAL_TIME_SECONDS) {
+      setTimeRemaining(FINAL_TIME_SECONDS);
+      setState("finished");
+      cancelAnimationFrame();
+      return;
+    }
+
+    if (updateTimerRef.current) {
+      animationFrameRef.current = window.requestAnimationFrame(
+        updateTimerRef.current
+      );
+    }
+  };
+
+  const start = useCallback(() => {
+    if (stateRef.current === "running") {
+      return;
+    }
+
+    if (stateRef.current === "idle") {
       setStartTimestamp(new Date().toISOString());
       hasAutoPausedRef.current = false;
+      lastDisplayedSecondRef.current = INITIAL_TIME_SECONDS;
     }
 
     setState("running");
     startTimeRef.current = Date.now() - pausedTimeRef.current * 1000;
-
-    intervalRef.current = window.setInterval(() => {
-      const now = Date.now();
-      const elapsed = (now - (startTimeRef.current ?? now)) / 1000;
-      const remaining = INITIAL_TIME_SECONDS - elapsed;
-
-      // auto pause at 2:00
-      if (
-        !hasAutoPausedRef.current &&
-        remaining <= PAUSE_TIME_SECONDS &&
-        remaining > FINAL_TIME_SECONDS
-      ) {
-        setTimeRemaining(PAUSE_TIME_SECONDS);
-        setState("paused");
-        pausedTimeRef.current = elapsed;
-        hasAutoPausedRef.current = true;
-        clearInterval();
-      } else if (remaining <= FINAL_TIME_SECONDS) {
-        // Timer finished
-        setTimeRemaining(FINAL_TIME_SECONDS);
-        setState("finished");
-        clearInterval();
-      } else {
-        setTimeRemaining(remaining);
-      }
-    }, 100);
-  }, [state, clearInterval]);
+    if (updateTimerRef.current) {
+      animationFrameRef.current = window.requestAnimationFrame(
+        updateTimerRef.current
+      );
+    }
+  }, []);
 
   const pause = useCallback(() => {
-    if (state !== "running") {
+    if (stateRef.current !== "running") {
       return;
     }
 
@@ -91,49 +122,44 @@ export function useMatchTimer(): UseMatchTimerReturn {
     pausedTimeRef.current = elapsed;
 
     setState("paused");
-    clearInterval();
-  }, [state, clearInterval]);
+    cancelAnimationFrame();
+  }, [cancelAnimationFrame]);
 
   const resume = useCallback(() => {
-    if (state !== "paused") {
+    if (stateRef.current !== "paused") {
       return;
     }
 
     setState("running");
     startTimeRef.current = Date.now() - pausedTimeRef.current * 1000;
-
-    intervalRef.current = window.setInterval(() => {
-      const now = Date.now();
-      const elapsed = (now - (startTimeRef.current ?? now)) / 1000;
-      const remaining = INITIAL_TIME_SECONDS - elapsed;
-
-      if (remaining <= FINAL_TIME_SECONDS) {
-        setTimeRemaining(FINAL_TIME_SECONDS);
-        setState("finished");
-        clearInterval();
-      } else {
-        setTimeRemaining(remaining);
-      }
-    }, 100);
-  }, [state, clearInterval]);
+    if (updateTimerRef.current) {
+      animationFrameRef.current = window.requestAnimationFrame(
+        updateTimerRef.current
+      );
+    }
+  }, []);
 
   const reset = useCallback(() => {
-    clearInterval();
+    cancelAnimationFrame();
     setTimeRemaining(INITIAL_TIME_SECONDS);
     setState("idle");
     setStartTimestamp(null);
     startTimeRef.current = null;
     pausedTimeRef.current = 0;
     hasAutoPausedRef.current = false;
-  }, [clearInterval]);
+    lastDisplayedSecondRef.current = INITIAL_TIME_SECONDS;
+  }, [cancelAnimationFrame]);
 
   useEffect(() => {
     return () => {
-      clearInterval();
+      cancelAnimationFrame();
     };
-  }, [clearInterval]);
+  }, [cancelAnimationFrame]);
 
-  const elapsedTime = INITIAL_TIME_SECONDS - timeRemaining;
+  const elapsedTime = useMemo(
+    () => INITIAL_TIME_SECONDS - timeRemaining,
+    [timeRemaining]
+  );
 
   const getEventTimestamp = useCallback((): string => {
     const currentElapsed = INITIAL_TIME_SECONDS - timeRemaining;
@@ -153,5 +179,3 @@ export function useMatchTimer(): UseMatchTimerReturn {
     getEventTimestamp,
   };
 }
-
-
