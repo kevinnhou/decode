@@ -16,7 +16,7 @@ import type {
   FieldSchema,
   FormSchema,
 } from "@/schema/scouting";
-import type { TimerState } from "@/hooks/use-match-timer";
+import { PAUSE_TIME_SECONDS, type TimerState } from "@/hooks/use-match-timer";
 
 const EVENT_TYPES = [
   "autonomous_made",
@@ -53,8 +53,6 @@ export const EVENT_TO_FORM_KEY: Record<string, FieldKey> = {
   teleop_made: "teleopMade",
   teleop_missed: "teleopMissed",
 };
-
-const PAUSE_TIME_SECONDS = 120; // 2:00
 
 export function FieldInput({
   events,

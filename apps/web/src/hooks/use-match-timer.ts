@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const INITIAL_TIME_SECONDS = 150; // 2:30
-const PAUSE_TIME_SECONDS = 120; // 2:00
+export const PAUSE_TIME_SECONDS = 120; // 2:00
 const FINAL_TIME_SECONDS = 0;
 
 export type TimerState = "idle" | "running" | "paused" | "finished";
