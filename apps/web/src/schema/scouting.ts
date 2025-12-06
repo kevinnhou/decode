@@ -25,7 +25,7 @@ export const fieldEventSchema = z.object({
     x: z.number(),
     y: z.number(),
   }),
-  timestamp: z.string().datetime(),
+  timestamp: z.string().regex(/^\d{1,2}:\d{2}$/, "Timestamp must be in MM:SS format"),
   count: z.number().int().min(0),
 });
 
