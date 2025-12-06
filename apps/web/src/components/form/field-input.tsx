@@ -9,7 +9,7 @@ import {
 } from "@repo/ui/shadcn/dialog";
 import { FormLabel } from "@repo/ui/shadcn/form";
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type {
   FieldEventSchema,
@@ -31,11 +31,15 @@ interface PendingEvent {
   y: number;
 }
 
+type TimerState = "idle" | "running" | "paused" | "finished";
+
 interface FieldInputProps {
   events: FieldSchema;
   form: UseFormReturn<FormSchema>;
   onEventsChange: (events: FieldSchema) => void;
   getEventTimestamp: () => string;
+  timeRemaining: number;
+  timerState: TimerState;
 }
 
 type FieldKey =
@@ -51,17 +55,44 @@ export const EVENT_TO_FORM_KEY: Record<string, FieldKey> = {
   teleop_missed: "teleopMissed",
 };
 
+const PAUSE_TIME_SECONDS = 120; // 2:00
+
 export function FieldInput({
   events,
   form,
   onEventsChange,
   getEventTimestamp,
+  timeRemaining,
+  timerState,
 }: FieldInputProps) {
   const [PendingEvent, setPendingEvent] = useState<PendingEvent | null>(null);
   const [dialogEventType, setDialogEventType] =
     useState<EventType>("teleop_made");
   const [dialogCount, setDialogCount] = useState<number>(1);
   const imageRef = useRef<HTMLDivElement>(null);
+
+  const isTimerStarted = timerState !== "idle";
+  const isAutonomous = timeRemaining > PAUSE_TIME_SECONDS;
+  
+  const availableEventTypes = isTimerStarted
+    ? isAutonomous
+      ? (["autonomous_made", "autonomous_missed"] as const)
+      : (["teleop_made", "teleop_missed"] as const)
+    : (EVENT_TYPES as readonly EventType[]);
+
+  useEffect(() => {
+    if (PendingEvent !== null && isTimerStarted) {
+      const isValidType = (availableEventTypes as readonly string[]).includes(
+        dialogEventType
+      );
+      if (!isValidType) {
+        const defaultEventType: EventType = isAutonomous
+          ? "autonomous_made"
+          : "teleop_made";
+        setDialogEventType(defaultEventType);
+      }
+    }
+  }, [timeRemaining, PendingEvent, dialogEventType, availableEventTypes, isAutonomous, isTimerStarted]);
 
   const ORIGINAL_IMAGE_WIDTH = 2547;
   const ORIGINAL_IMAGE_HEIGHT = 2547;
@@ -76,8 +107,14 @@ export function FieldInput({
     const normalizedX = (clickX / rect.width) * ORIGINAL_IMAGE_WIDTH;
     const normalizedY = (clickY / rect.height) * ORIGINAL_IMAGE_HEIGHT;
 
+    const defaultEventType: EventType = isTimerStarted
+      ? isAutonomous
+        ? "autonomous_made"
+        : "teleop_made"
+      : "teleop_made";
+
     setPendingEvent({ x: normalizedX, y: normalizedY });
-    setDialogEventType("teleop_made");
+    setDialogEventType(defaultEventType);
     setDialogCount(1);
   }
 
@@ -158,7 +195,7 @@ export function FieldInput({
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {EVENT_TYPES.map((type) => {
+                {availableEventTypes.map((type) => {
                   const label = type
                     .replace(/_/g, " ")
                     .replace(/\b\w/g, (l) => l.toUpperCase());

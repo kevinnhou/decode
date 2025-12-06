@@ -181,6 +181,8 @@ export default function Scout() {
               form={form}
               onEventsChange={setFieldEvents}
               getEventTimestamp={timer.getEventTimestamp}
+              timeRemaining={timer.timeRemaining}
+              timerState={timer.state}
             />
           ) : (
             <FormFields
