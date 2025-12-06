@@ -9,7 +9,7 @@ import {
 } from "@repo/ui/shadcn/dialog";
 import { FormLabel } from "@repo/ui/shadcn/form";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type {
   FieldEventSchema,
@@ -71,11 +71,14 @@ export function FieldInput({
   const isTimerStarted = timerState !== "idle";
   const isAutonomous = timeRemaining > PAUSE_TIME_SECONDS;
   
-  const availableEventTypes = isTimerStarted
-    ? isAutonomous
+  const availableEventTypes = useMemo(() => {
+    if (!isTimerStarted) {
+      return EVENT_TYPES as readonly EventType[];
+    }
+    return isAutonomous
       ? (["autonomous_made", "autonomous_missed"] as const)
-      : (["teleop_made", "teleop_missed"] as const)
-    : (EVENT_TYPES as readonly EventType[]);
+      : (["teleop_made", "teleop_missed"] as const);
+  }, [isTimerStarted, isAutonomous]);
 
   useEffect(() => {
     if (pendingEvent !== null && isTimerStarted) {
