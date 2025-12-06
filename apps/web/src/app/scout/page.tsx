@@ -7,14 +7,16 @@ import { Form } from "@repo/ui/shadcn/form";
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { useMatchTimer } from "@/hooks/use-match-timer";
 import { useInputMode } from "@/hooks/use-input-mode";
 import { getConfig, getTeamsMap, setTeamsMap } from "@/lib/config";
 import type { FieldSchema, FormSchema } from "@/schema/scouting";
 import { formSchema } from "@/schema/scouting";
 import { getInitialFormValues } from "@/utils/form";
 import { Config } from "~/form/config";
-import { FieldEventsList } from "~/form/events-list";
+import { EventsList } from "~/form/events-list";
 import { EVENT_TO_FORM_KEY, FieldInput } from "~/form/field-input";
+import { MatchTimer } from "~/form/match-timer";
 import { FormFields } from "~/form/render";
 import { setSidebarContent } from "~/sidebar/slot";
 import { submitUnified } from "./actions";
@@ -27,6 +29,7 @@ export default function Scout() {
   const [teamsMap, setTeamsMapState] = useState<Record<string, string>>(() =>
     getTeamsMap()
   );
+  const timer = useMatchTimer();
 
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
@@ -60,6 +63,7 @@ export default function Scout() {
         form.reset(getInitialFormValues());
         setSelectedTags([]);
         setFieldEvents([]);
+        timer.reset();
       } else {
         toast.error(result.message);
       }
@@ -72,6 +76,7 @@ export default function Scout() {
     form.reset(getInitialFormValues());
     setSelectedTags([]);
     setFieldEvents([]);
+    timer.reset();
   }
 
   const handleRemoveEvent = useCallback(
@@ -96,14 +101,40 @@ export default function Scout() {
   );
 
   useEffect(() => {
-    setSidebarContent(
-      <FieldEventsList events={fieldEvents} onRemoveEvent={handleRemoveEvent} />
-    );
+    if (mode === "field") {
+      setSidebarContent(
+        <div className="space-y-4 p-4">
+          <MatchTimer
+            timeRemaining={timer.timeRemaining}
+            state={timer.state}
+            start={timer.start}
+            pause={timer.pause}
+            resume={timer.resume}
+            reset={timer.reset}
+            formatTime={timer.formatTime}
+          />
+          <EventsList events={fieldEvents} onRemoveEvent={handleRemoveEvent} />
+        </div>
+      );
+    } else {
+      setSidebarContent(null);
+    }
 
     return () => {
       setSidebarContent(null);
     };
-  }, [fieldEvents, handleRemoveEvent]);
+  }, [
+    fieldEvents,
+    handleRemoveEvent,
+    mode,
+    timer.timeRemaining,
+    timer.state,
+    timer.start,
+    timer.pause,
+    timer.resume,
+    timer.reset,
+    timer.formatTime,
+  ]);
 
   const watchedTeamNumber = form.watch("meta.teamNumber");
 
@@ -149,6 +180,7 @@ export default function Scout() {
               events={fieldEvents}
               form={form}
               onEventsChange={setFieldEvents}
+              getEventTimestamp={timer.getEventTimestamp}
             />
           ) : (
             <FormFields
