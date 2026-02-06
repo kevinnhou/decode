@@ -17,6 +17,7 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { authClient } from "@/lib/auth-client";
@@ -31,11 +32,14 @@ type SignupValues = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
   const router = useRouter();
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const form = useForm<SignupValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: { name: "", email: "", password: "" },
   });
+
+  const isLoading = form.formState.isSubmitting || isRedirecting;
 
   async function onSubmit(values: SignupValues) {
     try {
@@ -46,6 +50,7 @@ export default function SignupPage() {
         return;
       }
 
+      setIsRedirecting(true);
       router.push("/scout");
       router.refresh();
     } catch {
@@ -125,10 +130,10 @@ export default function SignupPage() {
 
               <Button
                 className="w-full gap-2 rounded-xl font-mono"
-                disabled={form.formState.isSubmitting}
+                disabled={isLoading}
                 type="submit"
               >
-                {form.formState.isSubmitting ? (
+                {isLoading ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
                   <>
