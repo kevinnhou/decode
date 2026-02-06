@@ -1,12 +1,13 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: PASS */
 import { createClient, type GenericCtx } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
-import { betterAuth } from "better-auth";
+import { betterAuth } from "better-auth/minimal";
 import { ConvexError, v } from "convex/values";
 import { components } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
+import authConfig from "./auth.config";
 import { roleValidator } from "./schema";
 
 // biome-ignore lint/style/noNonNullAssertion: PASS
@@ -14,14 +15,8 @@ const siteUrl = process.env.SITE_URL!;
 
 export const authComponent = createClient<DataModel>(components.betterAuth);
 
-function createAuth(
-  ctx: GenericCtx<DataModel>,
-  { optionsOnly }: { optionsOnly?: boolean } = { optionsOnly: false }
-) {
-  return betterAuth({
-    logger: {
-      disabled: optionsOnly,
-    },
+export const createAuth = (ctx: GenericCtx<DataModel>) =>
+  betterAuth({
     baseURL: siteUrl,
     trustedOrigins: [siteUrl],
     database: authComponent.adapter(ctx as any),
@@ -29,11 +24,8 @@ function createAuth(
       enabled: true,
       requireEmailVerification: false,
     },
-    plugins: [convex()],
+    plugins: [convex({ authConfig })],
   });
-}
-
-export { createAuth };
 
 // --- Auth queries ---
 

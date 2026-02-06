@@ -1,7 +1,9 @@
 "use server";
 
+import { api } from "@decode/backend/convex/_generated/api";
 import { google } from "googleapis";
 import { z } from "zod";
+import { fetchAuthQuery, isAuthenticated } from "@/lib/convex";
 import {
   type UnifiedSubmissionSchema,
   unifiedSubmissionSchema,
@@ -11,11 +13,42 @@ type SubmissionResult =
   | { success: true; message: string }
   | { success: false; message: string };
 
+/**
+ * Resolve the current scout's attribution from their Convex user profile.
+ * Returns null if the user is not authenticated or has no profile.
+ */
+async function getScoutAttribution() {
+  if (!(await isAuthenticated())) {
+    return null;
+  }
+
+  const profile = await fetchAuthQuery(api.auth.getCurrentUserProfile);
+  if (!profile) {
+    return null;
+  }
+
+  return {
+    organisationId: profile.organisationId as string,
+    scoutUserId: profile.userId,
+    scoutName: profile.displayName,
+    createdAt: Date.now(),
+  };
+}
+
 export async function submitUnified(
   data: UnifiedSubmissionSchema,
   spreadsheetId?: string,
   sheetId?: string
 ): Promise<SubmissionResult> {
+  // --- Auth gate: require authenticated user with a profile ---
+  const attribution = await getScoutAttribution();
+  if (!attribution) {
+    return {
+      success: false,
+      message: "You must be signed in and belong to an organisation to submit.",
+    };
+  }
+
   if (!(spreadsheetId && sheetId)) {
     return {
       success: false,
@@ -58,6 +91,11 @@ export async function submitUnified(
             validatedData.fieldEvents
               ? JSON.stringify(validatedData.fieldEvents)
               : "",
+            // Scout attribution columns (server-attached)
+            attribution.scoutUserId,
+            attribution.scoutName,
+            attribution.organisationId,
+            new Date(attribution.createdAt).toISOString(),
           ],
         ],
       },

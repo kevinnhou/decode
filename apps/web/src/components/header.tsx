@@ -51,16 +51,12 @@ function DesktopNavigation() {
       <div className="flex items-center gap-4 lg:gap-8">
         <Link
           className="font-extralight font-mono text-foreground/90 text-md tracking-wide transition-colors hover:text-foreground max-md:hidden"
-          href={"/auth/login" as Route}
+          href={"/login" as Route}
           prefetch={true}
         >
           LOGIN
         </Link>
-        <Link
-          className="contents"
-          href={"/auth/signup" as Route}
-          prefetch={true}
-        >
+        <Link className="contents" href={"/signup" as Route} prefetch={true}>
           <Button type="button">SIGN UP</Button>
         </Link>
       </div>
