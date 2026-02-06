@@ -167,7 +167,7 @@ function Sidebar({
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 
   const showSidebar =
-    (pathname?.includes("/scout") ?? false)
+    ((pathname?.includes("/match") || pathname?.includes("/pit")) ?? false)
 
   if (!showSidebar) {
     return null;
