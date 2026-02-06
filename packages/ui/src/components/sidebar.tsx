@@ -1,24 +1,24 @@
 "use client";
 
-import { Button } from "@decode/ui/components/button.js";
-import { Input } from "@decode/ui/components/input.js";
-import { Separator } from "@decode/ui/components/separator.js";
+import { useIsMobile } from "@decode/ui/hooks/use-mobile";
+import { cn } from "@decode/ui/lib/utils";
+import { Button } from "@decode/ui/components/button";
+import { Input } from "@decode/ui/components/input";
+import { Separator } from "@decode/ui/components/separator";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@decode/ui/components/sheet.js";
-import { Skeleton } from "@decode/ui/components/skeleton.js";
+} from "@decode/ui/components/sheet";
+import { Skeleton } from "@decode/ui/components/skeleton";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@decode/ui/components/tooltip.js";
-import { useIsMobile } from "@decode/ui/hooks/use-mobile";
-import { cn } from "@decode/ui/lib/utils";
+} from "@decode/ui/components/tooltip";
 import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import { Slot as SlotPrimitive } from "radix-ui";
@@ -88,11 +88,9 @@ function SidebarProvider({
   );
 
   // Helper to toggle the sidebar.
-  const toggleSidebar = React.useCallback(
-    () =>
-      isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open),
-    [isMobile, setOpen, setOpenMobile]
-  );
+  const toggleSidebar = React.useCallback(() => {
+    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
+  }, [isMobile, setOpen, setOpenMobile]);
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
@@ -157,14 +155,23 @@ function Sidebar({
   variant = "sidebar",
   collapsible = "offcanvas",
   className,
+  pathname,
   children,
   ...props
 }: React.ComponentProps<"div"> & {
   side?: "left" | "right";
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
+  pathname?: string | null;
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+
+  const showSidebar =
+    (pathname?.includes("/scout") ?? false)
+
+  if (!showSidebar) {
+    return null;
+  }
 
   if (collapsible === "none") {
     return (
@@ -608,10 +615,9 @@ function SidebarMenuSkeleton({
   showIcon?: boolean;
 }) {
   // Random width between 50 to 90%.
-  const width = React.useMemo(
-    () => `${Math.floor(Math.random() * 40) + 50}%`,
-    []
-  );
+  const width = React.useMemo(() => {
+    return `${Math.floor(Math.random() * 40) + 50}%`;
+  }, []);
 
   return (
     <div

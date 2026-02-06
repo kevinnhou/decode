@@ -1,5 +1,16 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "linter": {
+    "rules": {
+      "style": {
+        "useConsistentTypeDefinitions": "off",
+        "noNestedTernary": "off"
+      },
+      "performance": {
+        "useTopLevelRegex": "off"
+      }
+    }
+  },
   "files": {
     "ignoreUnknown": false,
     "includes": [

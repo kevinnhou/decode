@@ -17,7 +17,7 @@
     "noUncheckedIndexedAccess": true,
     "baseUrl": ".",
     "paths": {
-      "@next-mono/ui/*": ["./src/*"]
+      "@decode/ui/*": ["./src/*"]
     },
     "jsx": "react-jsx"
   },
