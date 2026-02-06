@@ -59,7 +59,8 @@ export function Config({ onTeamMapLoad, loadedCount = 0 }: ConfigProps) {
   const [isTeamMapLoading, setIsTeamMapLoading] = useState(false);
 
   const form = useForm<SpreadsheetConfigSchema>({
-    resolver: zodResolver(spreadsheetConfigSchema),
+    // biome-ignore lint/suspicious/noExplicitAny: PASS
+    resolver: zodResolver(spreadsheetConfigSchema as any),
     defaultValues: {
       spreadsheetId: "",
       sheetId: "",
