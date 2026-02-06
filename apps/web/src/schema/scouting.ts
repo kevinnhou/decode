@@ -1,5 +1,18 @@
 import { z } from "zod";
 
+// --- Scout attribution (server-attached, not client-supplied) ---
+
+export const scoutAttributionSchema = z.object({
+  organisationId: z.string().min(1, "Organisation ID is required"),
+  scoutUserId: z.string().min(1, "Scout user ID is required"),
+  scoutName: z.string().min(1, "Scout name is required"),
+  createdAt: z.number(),
+});
+
+export type ScoutAttribution = z.infer<typeof scoutAttributionSchema>;
+
+// --- Meta ---
+
 export const metaSchema = z.object({
   teamNumber: z.number().int().min(1, "Team Number is required"),
   qualification: z.number().int().min(1, "Qualification Number is required"),
@@ -54,3 +67,16 @@ export const unifiedSubmissionSchema = z.object({
 });
 
 export type UnifiedSubmissionSchema = z.infer<typeof unifiedSubmissionSchema>;
+
+/**
+ * Full submission payload: client form data + server-attached attribution.
+ * The attribution fields are merged server-side in the submit action,
+ * not supplied by the client.
+ */
+export const attributedSubmissionSchema = unifiedSubmissionSchema.merge(
+  scoutAttributionSchema
+);
+
+export type AttributedSubmissionSchema = z.infer<
+  typeof attributedSubmissionSchema
+>;

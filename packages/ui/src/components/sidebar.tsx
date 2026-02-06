@@ -167,7 +167,7 @@ function Sidebar({
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 
   const showSidebar =
-    (pathname?.includes("/scout") ?? false)
+    ((pathname?.includes("/match") || pathname?.includes("/pit")) ?? false)
 
   if (!showSidebar) {
     return null;
@@ -354,7 +354,7 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
 function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("flex flex-col gap-2 p-2", className)}
+      className={cn("flex flex-col p-2", className)}
       data-sidebar="footer"
       data-slot="sidebar-footer"
       {...props}

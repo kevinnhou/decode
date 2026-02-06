@@ -5,6 +5,7 @@ import type { Metadata, Viewport } from "next";
 import { Noto_Sans_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import Script from "next/script";
+import { getToken } from "@/lib/convex";
 import { generateMetadata, generateStructuredData } from "@/lib/metadata";
 import { Header } from "~/header";
 import Providers from "~/providers";
@@ -37,11 +38,13 @@ const alliance = localFont({
 
 export const metadata: Metadata = generateMetadata();
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const convexToken = await getToken();
+
   return (
     <html
       className={`${alliance.className} ${NotoSansMono.variable} antialiased`}
@@ -57,7 +60,7 @@ export default function RootLayout({
         />
       </head>
       <body className="overflow-hidden">
-        <Providers>
+        <Providers convexToken={convexToken}>
           <RootTransition>
             <SidebarProvider className="flex h-full flex-col">
               <Header />

@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@convex-dev/better-auth": "catalog:",
+    "@convex-dev/better-auth": "^0.10.10",
     "@decode/backend": "workspace:*",
     "@decode/ui": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
