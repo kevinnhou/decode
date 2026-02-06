@@ -1,31 +1,37 @@
 {
-  "name": "docs",
+  "name": "@decode/docs",
   "version": "0.0.0",
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "next dev --turbo --port=4000",
+    "dev": "next dev --port=4000",
     "start": "next start",
+    "types:check": "fumadocs-mdx && tsc --noEmit",
     "postinstall": "fumadocs-mdx"
   },
   "dependencies": {
-    "@repo/ui": "workspace:*",
-    "fumadocs-core": "15.7.1",
-    "fumadocs-mdx": "11.8.0",
-    "fumadocs-ui": "15.7.1",
-    "geist": "^1.4.2",
-    "next": "15.5.7",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "@decode/ui": "workspace:*",
+    "class-variance-authority": "^0.7.1",
+    "fumadocs-core": "16.2.3",
+    "fumadocs-mdx": "14.1.0",
+    "fumadocs-ui": "16.2.3",
+    "katex": "^0.16.22",
+    "lucide-react": "^0.552.0",
+    "next": "16.0.7",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
-    "@types/node": "24.3.0",
-    "@types/react": "^19.1.10",
-    "@types/react-dom": "^19.1.7",
-    "typescript": "^5.9.2",
+    "@tailwindcss/postcss": "^4.1.16",
     "@types/mdx": "^2.0.13",
-    "@tailwindcss/postcss": "^4.1.12",
-    "tailwindcss": "^4.1.12",
-    "postcss": "^8.5.6"
+    "@types/node": "^24.10.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "postcss": "^8.5.6",
+    "schema-dts": "^1.1.5",
+    "tailwindcss": "^4.1.16",
+    "typescript": "^5.9.3"
   }
 }

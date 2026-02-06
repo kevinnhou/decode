@@ -16,10 +16,17 @@
 /out/
 /build/
 /dist/
+.vinxi
 .output
+.react-router/
+.tanstack/
+.nitro/
 
 # Deployment
 .vercel
+.netlify
+.wrangler
+.alchemy
 
 # Environment & local files
 .env*
@@ -47,7 +54,7 @@ next-env.d.ts
 # Other
 dev-dist
 
+.wrangler
 .dev.vars*
 
-public/sw*
-public/swe-worker*
+.open-next

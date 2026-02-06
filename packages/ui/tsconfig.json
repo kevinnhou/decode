@@ -10,18 +10,17 @@
     "isolatedModules": true,
     "declaration": true,
     "declarationMap": true,
-    "incremental": true,
-    "composite": true,
+    "incremental": false,
     "module": "NodeNext",
     "moduleDetection": "force",
     "moduleResolution": "NodeNext",
     "noUncheckedIndexedAccess": true,
     "baseUrl": ".",
     "paths": {
-      "@repo/ui/*": ["./src/*"]
+      "@next-mono/ui/*": ["./src/*"]
     },
     "jsx": "react-jsx"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["node_modules", "dist", "build", ".turbo"]
+  "include": ["."],
+  "exclude": ["node_modules", "dist"]
 }

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext", "webworker"],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -12,40 +12,25 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
-    "types": ["@serwist/next/typings"],
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "~/*": ["./src/components/*"],
-      "@ui/*": ["../../packages/ui/src/*"]
-    }
+      "@/*": ["./src/*"]
+    },
+    "strictNullChecks": true
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "next-env.d.ts",
-    ".next/types/**/*.ts"
+    "./next-env.d.ts",
+    "./**/*.ts",
+    "./**/*.tsx",
+    "./.next/types/**/*.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    ".next",
-    "dist",
-    "build",
-    ".turbo",
-    "public/sw.js"
-  ],
-  "references": [
-    {
-      "path": "../server"
-    },
-    {
-      "path": "../../packages/ui"
-    }
-  ]
+  "exclude": ["./node_modules"]
 }

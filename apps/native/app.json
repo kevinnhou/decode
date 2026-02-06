@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "scheme": "pinfire",
+    "userInterfaceStyle": "automatic",
+    "orientation": "default",
+    "web": {
+      "bundler": "metro"
+    },
+    "name": "pinfire",
+    "slug": "pinfire",
+    "plugins": ["expo-font"],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

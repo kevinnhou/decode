@@ -11,10 +11,9 @@
   },
   "iconLibrary": "lucide",
   "aliases": {
-    "components": "@repo/ui/components",
-    "utils": "@repo/ui/lib/utils",
-    "hooks": "@repo/ui/hooks",
-    "lib": "@repo/ui/lib",
-    "ui": "@repo/ui/shadcn"
+    "components": "@decode/ui/components",
+    "utils": "@decode/ui/lib/utils",
+    "hooks": "@decode/ui/hooks",
+    "lib": "@decode/ui/lib"
   }
 }

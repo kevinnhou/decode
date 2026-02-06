@@ -1,38 +1,37 @@
 {
   "files.exclude": {
-    "**/packages": false,
-
-    "**/docs": true,
-
-    "**/server": false,
-
-    "**/web": false,
-
-    ".husky": true,
+    "**/.claude": true,
+    "**/.codex": true,
+    "**/.cursor": true,
+    "**/.husky": true,
 
     "**/node_modules": true,
-
-    "bun.lock": true,
-    ".editorconfig": true,
-    "bunfig.toml": true,
-    "turbo.json": true,
-
-    "**/.turbo": true,
     "**/.next": true,
-    "**/.source": true,
-    "**/drizzle.config.ts": true,
+    "**/.turbo": true,
+
     "**/next-env.d.ts": true,
     "**/next.config.*": true,
-    "**/postcss.config.mjs": true,
-    "**/source.config.ts": true,
+    "**/postcss.config.*": true,
     "**/tsconfig.json": true,
 
-    "**/manifest.ts": true,
-    "**/robots.ts": true,
-    "**/sitemap.ts": true,
-    "**/favicon.ico": true,
+    "**/.source": true,
+    "**/source.config.ts": true,
 
-    "**/AllianceNo2-Regular.woff2": true
+    "**/.expo": true,
+    "**/assets": true,
+    "**/app.json": true,
+    "**/expo-env.d.ts": true,
+    "**/global.css": true,
+    "**/metro.config.js": true,
+    "**/uniwind-types.d.ts": true,
+
+    "**/bunfig.toml": true,
+    "**/bun.lock": true,
+
+    "**/.mcp.json": true,
+    "**/AGENTS.*": true,
+    "**/CLAUDE.*": true,
+    "**/turbo.json": true
   },
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "[javascript]": {
@@ -53,21 +52,13 @@
   "[jsonc]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
+  "[css]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
   "[graphql]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
   "typescript.tsdk": "node_modules/typescript/lib",
-  "typescript.tsserver.maxTsServerMemory": 4096,
-  "typescript.tsserver.watchOptions": {
-    "excludeDirectories": [
-      "**/node_modules",
-      "**/.next",
-      "**/dist",
-      "**/.turbo",
-      "**/.source"
-    ]
-  },
-  "typescript.preferences.includePackageJsonAutoImports": "off",
   "editor.formatOnSave": true,
   "editor.formatOnPaste": true,
   "emmet.showExpandedAbbreviation": "never",

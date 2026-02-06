@@ -1,11 +1,9 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.2.0/schema.json",
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "files": {
     "ignoreUnknown": false,
     "includes": [
       "**",
-      "!bun.lock",
-      "!**/*.css",
       "!**/.next",
       "!**/dist",
       "!**/.turbo",
@@ -13,30 +11,10 @@
       "!**/.vscode",
       "!**/routeTree.gen.ts",
       "!**/.source",
-      "!packages/ui/src/components/shadcn/*"
+      "!**/_generated",
+      "!packages/ui/src/components/*",
+      "!**/*.css"
     ]
   },
-  "javascript": {
-    "formatter": {
-      "jsxQuoteStyle": "double",
-      "quoteProperties": "asNeeded",
-      "quoteStyle": "double"
-    }
-  },
-  "linter": {
-    "rules": {
-      "performance": {
-        "noNamespaceImport": "off"
-      },
-      "a11y": {
-        "noSvgWithoutTitle": "off",
-        "noStaticElementInteractions": "off",
-        "noNoninteractiveStaticElementInteractions": "off"
-      },
-      "nursery": {
-        "useConsistentTypeDefinitions": "off"
-      }
-    }
-  },
-  "extends": ["ultracite"]
+  "extends": ["ultracite/core", "ultracite/next"]
 }

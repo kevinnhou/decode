@@ -1,20 +1,8 @@
-const {
-  PHASE_DEVELOPMENT_SERVER,
-  PHASE_PRODUCTION_BUILD,
-} = require("next/constants");
+import type { NextConfig } from "next";
 
-module.exports = async (phase) => {
-  const nextConfig = {
-    transpilePackages: ["@repo/ui"],
-  };
-
-  if (phase === PHASE_DEVELOPMENT_SERVER || phase === PHASE_PRODUCTION_BUILD) {
-    const withSerwist = (await import("@serwist/next")).default({
-      swSrc: "lib/sw.ts",
-      swDest: "public/sw.js",
-    });
-    return withSerwist(nextConfig);
-  }
-
-  return nextConfig;
+const nextConfig: NextConfig = {
+  typedRoutes: true,
+  reactCompiler: true,
 };
+
+export default nextConfig;
