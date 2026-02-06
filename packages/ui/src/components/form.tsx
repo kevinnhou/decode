@@ -1,6 +1,6 @@
 "use client";
 
-import { Label } from "@decode/ui/components/label.js";
+import { Label } from "@decode/ui/components/label";
 import { cn } from "@decode/ui/lib/utils";
 import { type Label as LabelPrimitive, Slot as SlotPrimitive } from "radix-ui";
 import * as React from "react";

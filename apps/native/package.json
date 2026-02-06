@@ -43,7 +43,7 @@
     "tailwind-variants": "^3.2.2",
     "tailwindcss": "^4.1.18",
     "uniwind": "^1.2.2",
-    "zod": "^4.1.12",
+    "zod": "catalog:",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
