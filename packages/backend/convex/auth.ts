@@ -15,6 +15,10 @@ const siteUrl = process.env.SITE_URL!;
 
 export const authComponent = createClient<DataModel>(components.betterAuth);
 
+/**
+ * @param ctx - The Convex generic context (mutation/action)
+ * @returns Configured Better Auth instance
+ */
 export const createAuth = (ctx: GenericCtx<DataModel>) =>
   betterAuth({
     baseURL: siteUrl,
@@ -27,8 +31,15 @@ export const createAuth = (ctx: GenericCtx<DataModel>) =>
     plugins: [convex({ authConfig })],
   });
 
-// --- Auth queries ---
+// --- Queries ---
 
+/**
+ * Returns the currently authenticated user from Better Auth or null if not signed in.
+ *
+ * @param ctx - The Convex query context
+ * @param _args - No arguments
+ * @returns The auth user or null
+ */
 export const getCurrentUser = query({
   args: {},
   returns: v.any(),
@@ -37,6 +48,13 @@ export const getCurrentUser = query({
   },
 });
 
+/**
+ * Returns the current user's profile (organisation, role, display name) or null if not signed in or no profile.
+ *
+ * @param ctx - The Convex query context
+ * @param _args - No arguments
+ * @returns The user profile or null
+ */
 export const getCurrentUserProfile = query({
   args: {},
   returns: v.any(),
@@ -46,18 +64,23 @@ export const getCurrentUserProfile = query({
   },
 });
 
-// --- Auth helpers ---
+// --- Helpers ---
 
 /**
- * Resolve the authenticated Better Auth user. Returns null if not signed in.
+ * Fetches the authenticated user for the current request from Better Auth.
+ *
+ * @param ctx - The Convex query context
+ * @returns The auth user or null
  */
 export async function getAuthUser(ctx: QueryCtx) {
   return await authComponent.getAuthUser(ctx as any);
 }
 
 /**
- * Resolve the current user's profile (userProfiles row).
- * Returns null if no profile exists yet (e.g. user hasn't joined an org).
+ * Loads the user profile for the current auth user (organisation, role, display name).
+ *
+ * @param ctx - The Convex query context
+ * @returns The user profile or null if not authenticated or no profile exists
  */
 export async function resolveUserProfile(ctx: QueryCtx) {
   const authUser = await getAuthUser(ctx);
@@ -74,7 +97,11 @@ export async function resolveUserProfile(ctx: QueryCtx) {
 }
 
 /**
- * Require an authenticated user profile. Throws if not signed in or no profile.
+ * Ensures the current user is authenticated and has a user profile; throws otherwise.
+ *
+ * @param ctx - The Convex query context
+ * @returns The auth user and their profile
+ * @throws ConvexError if not authenticated or no profile (e.g. not in an organisation)
  */
 export async function requireUserProfile(ctx: QueryCtx) {
   const authUser = await getAuthUser(ctx);
@@ -105,8 +132,12 @@ const ROLE_HIERARCHY: Record<Role, number> = {
 };
 
 /**
- * Require the user has at least the given role level.
- * admin > leadScout > scout
+ * Ensures the current user has at least the given role level (admin > leadScout > scout).
+ *
+ * @param ctx - The Convex query context
+ * @param minimumRole - Minimum role required: "admin", "leadScout", or "scout"
+ * @returns The auth user and their profile
+ * @throws ConvexError if not authenticated, no profile or insufficient role
  */
 export async function requireRole(ctx: QueryCtx, minimumRole: Role) {
   const { authUser, profile } = await requireUserProfile(ctx);
@@ -123,8 +154,17 @@ export async function requireRole(ctx: QueryCtx, minimumRole: Role) {
   return { authUser, profile };
 }
 
-// --- Organisation mutations ---
+// --- Org Mutations ---
 
+/**
+ * Creates a new organisation and assigns the current user as admin. User must not already belong to an organisation.
+ *
+ * @param ctx - The Convex mutation context
+ * @param args.name - Organisation display name
+ * @param args.slug - Unique URL-friendly identifier
+ * @returns The new organisation ID and generated invite code
+ * @throws ConvexError if not authenticated, already in an org or slug is taken
+ */
 export const createOrganisation = mutation({
   args: {
     name: v.string(),
@@ -136,7 +176,6 @@ export const createOrganisation = mutation({
       throw new ConvexError("Not authenticated");
     }
 
-    // Check if user already has a profile (already in an org)
     const existingProfile = await ctx.db
       .query("userProfiles")
       .withIndex("by_userId", (q) => q.eq("userId", authUser._id))
@@ -146,7 +185,6 @@ export const createOrganisation = mutation({
       throw new ConvexError("You already belong to an organisation.");
     }
 
-    // Check slug uniqueness
     const existingSlug = await ctx.db
       .query("organisations")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
@@ -156,7 +194,6 @@ export const createOrganisation = mutation({
       throw new ConvexError("An organisation with this slug already exists.");
     }
 
-    // Generate a random invite code
     const inviteCode = generateInviteCode();
 
     const now = Date.now();
@@ -169,7 +206,6 @@ export const createOrganisation = mutation({
       updatedAt: now,
     });
 
-    // Create the founding user's profile as admin
     await ctx.db.insert("userProfiles", {
       userId: authUser._id,
       organisationId: orgId,
@@ -183,6 +219,14 @@ export const createOrganisation = mutation({
   },
 });
 
+/**
+ * Joins the current user to an organisation using an invite code. User must not already belong to an organisation.
+ *
+ * @param ctx - The Convex mutation context
+ * @param args.inviteCode - Invite code from the organisation
+ * @returns The organisation ID and name
+ * @throws ConvexError if not authenticated, already in an org or invalid invite code
+ */
 export const joinOrganisation = mutation({
   args: {
     inviteCode: v.string(),
@@ -193,7 +237,6 @@ export const joinOrganisation = mutation({
       throw new ConvexError("Not authenticated");
     }
 
-    // Check if user already has a profile
     const existingProfile = await ctx.db
       .query("userProfiles")
       .withIndex("by_userId", (q) => q.eq("userId", authUser._id))
@@ -203,7 +246,6 @@ export const joinOrganisation = mutation({
       throw new ConvexError("You already belong to an organisation.");
     }
 
-    // Find org by invite code
     const org = await ctx.db
       .query("organisations")
       .withIndex("by_inviteCode", (q) => q.eq("inviteCode", args.inviteCode))
@@ -228,8 +270,16 @@ export const joinOrganisation = mutation({
   },
 });
 
-// --- Role management ---
+// --- Role Management ---
 
+/**
+ * Updates a user's role within the caller's organisation. Caller must be an admin; target must be in the same organisation.
+ *
+ * @param ctx - The Convex mutation context
+ * @param args.targetUserId - ID of the user whose role to change
+ * @param args.newRole - New role: "admin", "leadScout", or "scout"
+ * @throws ConvexError if caller is not admin, target not found or target not in same organisation
+ */
 export const updateUserRole = mutation({
   args: {
     targetUserId: v.string(),
@@ -238,7 +288,6 @@ export const updateUserRole = mutation({
   async handler(ctx, args) {
     const { profile: adminProfile } = await requireRole(ctx, "admin");
 
-    // Find the target user's profile in the same org
     const targetProfile = await ctx.db
       .query("userProfiles")
       .withIndex("by_userId", (q) => q.eq("userId", args.targetUserId))
@@ -264,6 +313,11 @@ export const updateUserRole = mutation({
 
 // --- Utilities ---
 
+/**
+ * Generates an 8-character invite code (uppercase letters and digits, excluding ambiguous characters).
+ *
+ * @returns A random invite code string
+ */
 function generateInviteCode(): string {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
   let code = "";

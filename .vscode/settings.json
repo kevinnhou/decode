@@ -30,8 +30,7 @@
 
     "**/.mcp.json": true,
     "**/AGENTS.*": true,
-    "**/CLAUDE.*": true,
-    "**/turbo.json": true
+    "**/CLAUDE.*": true
   },
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "[javascript]": {

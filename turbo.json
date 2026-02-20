@@ -5,7 +5,12 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "env": ["GOOGLE_PRIVATE_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_EMAIL"],
+      "env": [
+        "GOOGLE_PRIVATE_KEY",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_EMAIL",
+        "CONVEX_DEPLOY_KEY"
+      ],
       "outputs": ["dist/**"]
     },
     "lint": {
