@@ -60,7 +60,6 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4 py-12">
       <div className="grid w-full max-w-4xl gap-12 md:grid-cols-2 md:gap-16">
-        {/* Left — Branding */}
         <div className="flex flex-col justify-center space-y-6 max-md:items-center max-md:text-center">
           <Logo className="h-16 w-16 text-foreground" />
           <div className="space-y-2">
@@ -73,7 +72,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Right — Form */}
         <div className="flex flex-col justify-center">
           <Form {...form}>
             <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>

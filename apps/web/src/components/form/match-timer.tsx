@@ -106,7 +106,6 @@ export function MatchTimer({
         </div>
       </div>
 
-      {/* Progress indicator background (optional, maybe too much?) */}
       <div
         className="absolute bottom-0 left-0 h-1 bg-primary/20 transition-all duration-1000 ease-linear"
         style={{ width: `${(timeRemaining / 150) * 100}%` }}
