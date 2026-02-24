@@ -62,6 +62,7 @@ export function Config({ onTeamMapLoad, loadedCount = 0 }: ConfigProps) {
     // biome-ignore lint/suspicious/noExplicitAny: PASS
     resolver: zodResolver(spreadsheetConfigSchema as any),
     defaultValues: {
+      eventCode: "",
       spreadsheetId: "",
       sheetId: "",
     },
@@ -74,6 +75,7 @@ export function Config({ onTeamMapLoad, loadedCount = 0 }: ConfigProps) {
         form.reset(config);
       } else {
         form.reset({
+          eventCode: "",
           spreadsheetId: "",
           sheetId: "",
         });
@@ -108,10 +110,23 @@ export function Config({ onTeamMapLoad, loadedCount = 0 }: ConfigProps) {
             <div className="space-y-4">
               <FormField
                 control={form.control}
+                name="eventCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Event Code</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g, AUSC..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name="spreadsheetId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Spreadsheet ID</FormLabel>
+                    <FormLabel>Spreadsheet ID (optional)</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Enter Spreadsheet ID or URL"
@@ -133,7 +148,7 @@ export function Config({ onTeamMapLoad, loadedCount = 0 }: ConfigProps) {
                 name="sheetId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Sheet ID</FormLabel>
+                    <FormLabel>Sheet ID (optional)</FormLabel>
                     <FormControl>
                       <Input placeholder="Enter Sheet ID" {...field} />
                     </FormControl>

@@ -38,7 +38,8 @@ export default function MatchScouting() {
 
   async function onSubmit(data: FormSchema) {
     const config = getConfig();
-    if (!(config?.spreadsheetId && config?.sheetId)) {
+    if (!config?.eventCode) {
+      toast.error("Event code is required. Please configure in settings.");
       return;
     }
 
@@ -54,6 +55,7 @@ export default function MatchScouting() {
           tags: selectedTags,
           fieldEvents: fieldEvents.length > 0 ? fieldEvents : undefined,
         },
+        config.eventCode,
         config.spreadsheetId,
         config.sheetId
       );
