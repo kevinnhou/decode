@@ -98,7 +98,16 @@ export async function resolveUserProfile(ctx: QueryCtx) {
     .withIndex("by_userId", (q) => q.eq("userId", authUser._id))
     .unique();
 
-  return profile;
+  if (!profile) {
+    return null;
+  }
+
+  const organisation = await ctx.db.get(profile.organisationId);
+
+  return {
+    ...profile,
+    organisationName: organisation?.name ?? null,
+  };
 }
 
 /**
@@ -313,6 +322,42 @@ export const updateUserRole = mutation({
       role: args.newRole,
       updatedAt: Date.now(),
     });
+  },
+});
+
+/**
+ * Updates the current user's display name.
+ *
+ * @param ctx - The Convex mutation context
+ * @param args.displayName - New display name
+ * @throws ConvexError if not authenticated or no profile exists
+ */
+export const updateDisplayName = mutation({
+  args: {
+    displayName: v.string(),
+  },
+  returns: v.any(),
+  async handler(ctx, args) {
+    const authUser = await getAuthUser(ctx);
+    if (!authUser) {
+      throw new ConvexError("Not authenticated");
+    }
+
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_userId", (q) => q.eq("userId", authUser._id))
+      .unique();
+
+    if (!profile) {
+      throw new ConvexError("User profile not found.");
+    }
+
+    await ctx.db.patch(profile._id, {
+      displayName: args.displayName,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
   },
 });
 
