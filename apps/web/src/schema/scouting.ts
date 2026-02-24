@@ -50,8 +50,9 @@ export type FieldEventSchema = z.infer<typeof fieldEventSchema>;
 export type FieldSchema = z.infer<typeof fieldSchema>;
 
 export const spreadsheetConfigSchema = z.object({
-  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
-  sheetId: z.string().min(1, "Sheet ID is required"),
+  eventCode: z.string().min(1, "Event code is required"),
+  spreadsheetId: z.string().optional(),
+  sheetId: z.string().optional(),
 });
 
 export type SpreadsheetConfigSchema = z.infer<typeof spreadsheetConfigSchema>;
