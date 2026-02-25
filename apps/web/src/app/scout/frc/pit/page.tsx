@@ -9,6 +9,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  useFormField,
 } from "@decode/ui/components/form";
 import { Input } from "@decode/ui/components/input";
 import {
@@ -56,6 +57,27 @@ const intakeMethodOptions = [
   { id: "depot", label: "Depot" },
   { id: "outpost", label: "Outpost/Human Player" },
 ] as const;
+
+function CheckboxLabelRow({
+  children,
+  label,
+  className = "space-x-3",
+}: {
+  children: React.ReactNode;
+  label: string;
+  className?: string;
+}) {
+  const { formItemId } = useFormField();
+  return (
+    <label
+      className={`flex w-full cursor-pointer flex-row items-center ${className}`}
+      htmlFor={formItemId}
+    >
+      {children}
+      <span className="flex-1 cursor-pointer leading-none">{label}</span>
+    </label>
+  );
+}
 
 function Section({
   title,
@@ -785,16 +807,15 @@ export default function PitScouting() {
                           const currentValue = field.value || [];
                           return (
                             <FormItem className="flex flex-row items-center space-x-2 space-y-0 rounded-lg bg-muted/40 px-3 py-2.5">
-                              <label
-                                className="flex w-full cursor-pointer flex-row items-center space-x-2"
-                                htmlFor={`intake-${method.id}`}
+                              <CheckboxLabelRow
+                                className="space-x-2"
+                                label={method.label}
                               >
                                 <FormControl>
                                   <Checkbox
                                     checked={currentValue.includes(
                                       method.id as "floor" | "depot" | "outpost"
                                     )}
-                                    id={`intake-${method.id}`}
                                     onCheckedChange={(checked) => {
                                       const value = method.id as
                                         | "floor"
@@ -813,10 +834,7 @@ export default function PitScouting() {
                                     }}
                                   />
                                 </FormControl>
-                                <FormLabel className="mt-0! cursor-pointer font-normal">
-                                  {method.label}
-                                </FormLabel>
-                              </label>
+                              </CheckboxLabelRow>
                             </FormItem>
                           );
                         }}
@@ -863,23 +881,14 @@ export default function PitScouting() {
                   name="canPassTrench"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-lg bg-muted/40 px-3 py-2.5">
-                      <label
-                        className="flex w-full cursor-pointer flex-row items-center space-x-3"
-                        htmlFor="can-pass-trench"
-                      >
+                      <CheckboxLabelRow label="Can Pass Trench">
                         <FormControl>
                           <Checkbox
                             checked={field.value}
-                            id="can-pass-trench"
                             onCheckedChange={field.onChange}
                           />
                         </FormControl>
-                        <div className="flex-1 leading-none">
-                          <FormLabel className="mt-0! cursor-pointer">
-                            Can Pass Trench
-                          </FormLabel>
-                        </div>
-                      </label>
+                      </CheckboxLabelRow>
                     </FormItem>
                   )}
                 />
@@ -889,23 +898,14 @@ export default function PitScouting() {
                   name="canCrossBump"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-lg bg-muted/40 px-3 py-2.5">
-                      <label
-                        className="flex w-full cursor-pointer flex-row items-center space-x-3"
-                        htmlFor="can-cross-bump"
-                      >
+                      <CheckboxLabelRow label="Can Cross Bump">
                         <FormControl>
                           <Checkbox
                             checked={field.value}
-                            id="can-cross-bump"
                             onCheckedChange={field.onChange}
                           />
                         </FormControl>
-                        <div className="flex-1 leading-none">
-                          <FormLabel className="mt-0! cursor-pointer">
-                            Can Cross Bump
-                          </FormLabel>
-                        </div>
-                      </label>
+                      </CheckboxLabelRow>
                     </FormItem>
                   )}
                 />
