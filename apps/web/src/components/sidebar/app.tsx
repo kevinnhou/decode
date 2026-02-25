@@ -10,6 +10,7 @@ import {
 } from "@decode/ui/components/sidebar";
 import { cn } from "@decode/ui/lib/utils";
 import { usePathname } from "next/navigation";
+import { PitSections } from "./pit-sections";
 import { ScoutType } from "./scout-type";
 import { SidebarContentSlot } from "./slot";
 import { ThemeSwitcher } from "./theme";
@@ -24,6 +25,10 @@ const SIDEBAR_HEADER_CONFIGS: SidebarHeaderConfig[] = [
   {
     pattern: /\/scout\/(ftc|frc)\/match$/,
     component: <Toggle />,
+  },
+  {
+    pattern: /\/scout\/frc\/pit$/,
+    component: <PitSections />,
   },
 ];
 

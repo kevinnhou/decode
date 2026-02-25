@@ -152,18 +152,26 @@ export default defineSchema({
       })
     ),
     drivetrainType: v.optional(
-      v.union(
-        v.literal("swerve"),
-        v.literal("tank"),
-        v.literal("mecanum"),
-        v.literal("other")
-      )
+      v.union(v.literal("swerve"), v.literal("tank"), v.literal("other"))
     ),
     photos: v.optional(v.array(v.string())),
     notes: v.optional(v.string()),
     // FTC pit fields (to be defined later)
-    // FRC pit fields (to be added later)
-    // hopperCapacity, shootingSpeed, intakeMethods, canPassTrench, etc.
+    // FRC pit fields
+    hopperCapacity: v.optional(v.number()),
+    shootingSpeed: v.optional(v.number()),
+    intakeMethods: v.optional(
+      v.array(
+        v.union(v.literal("floor"), v.literal("depot"), v.literal("outpost"))
+      )
+    ),
+    canPassTrench: v.optional(v.boolean()),
+    canCrossBump: v.optional(v.boolean()),
+    maxClimbLevel: v.optional(
+      v.union(v.literal(0), v.literal(1), v.literal(2), v.literal(3))
+    ),
+    autoCapabilities: v.optional(v.string()),
+    weight: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

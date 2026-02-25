@@ -102,15 +102,25 @@ export const submitPit = mutation({
       })
     ),
     drivetrainType: v.optional(
-      v.union(
-        v.literal("swerve"),
-        v.literal("tank"),
-        v.literal("mecanum"),
-        v.literal("other")
-      )
+      v.union(v.literal("swerve"), v.literal("tank"), v.literal("other"))
     ),
     photos: v.optional(v.array(v.string())),
     notes: v.optional(v.string()),
+    // FRC pit fields
+    hopperCapacity: v.optional(v.number()),
+    shootingSpeed: v.optional(v.number()),
+    intakeMethods: v.optional(
+      v.array(
+        v.union(v.literal("floor"), v.literal("depot"), v.literal("outpost"))
+      )
+    ),
+    canPassTrench: v.optional(v.boolean()),
+    canCrossBump: v.optional(v.boolean()),
+    maxClimbLevel: v.optional(
+      v.union(v.literal(0), v.literal(1), v.literal(2), v.literal(3))
+    ),
+    autoCapabilities: v.optional(v.string()),
+    weight: v.optional(v.number()),
   },
   async handler(ctx, args) {
     const { profile } = await requireUserProfile(ctx);
@@ -130,11 +140,35 @@ export const submitPit = mutation({
       drivetrainType: args.drivetrainType,
       photos: args.photos,
       notes: args.notes,
+      // FRC pit fields
+      hopperCapacity: args.hopperCapacity,
+      shootingSpeed: args.shootingSpeed,
+      intakeMethods: args.intakeMethods,
+      canPassTrench: args.canPassTrench,
+      canCrossBump: args.canCrossBump,
+      maxClimbLevel: args.maxClimbLevel,
+      autoCapabilities: args.autoCapabilities,
+      weight: args.weight,
       createdAt: now,
       updatedAt: now,
     });
 
     return submissionId;
+  },
+});
+
+/**
+ * Generate an upload URL for pit scouting photos.
+ * Requires authentication.
+ *
+ * @param ctx - The Convex mutation context
+ * @returns Upload URL for the file
+ */
+export const generatePitPhotoUploadUrl = mutation({
+  args: {},
+  async handler(ctx) {
+    await requireUserProfile(ctx);
+    return await ctx.storage.generateUploadUrl();
   },
 });
 
