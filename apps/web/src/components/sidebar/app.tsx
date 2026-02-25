@@ -15,6 +15,30 @@ import { SidebarContentSlot } from "./slot";
 import { ThemeSwitcher } from "./theme";
 import { Toggle } from "./toggle";
 
+interface SidebarHeaderConfig {
+  pattern: RegExp;
+  component: React.ReactNode;
+}
+
+const SIDEBAR_HEADER_CONFIGS: SidebarHeaderConfig[] = [
+  {
+    pattern: /\/scout\/(ftc|frc)\/match$/,
+    component: <Toggle />,
+  },
+];
+
+function DynamicSidebarHeader({ pathname }: { pathname: string }) {
+  const matchedConfig = SIDEBAR_HEADER_CONFIGS.find((config) =>
+    config.pattern.test(pathname)
+  );
+
+  if (!matchedConfig) {
+    return null;
+  }
+
+  return <>{matchedConfig.component}</>;
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   return (
@@ -26,7 +50,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {...props}
     >
       <SidebarHeader>
-        <Toggle />
+        <DynamicSidebarHeader pathname={pathname} />
       </SidebarHeader>
       <SidebarContent>
         <SidebarContentSlot />
