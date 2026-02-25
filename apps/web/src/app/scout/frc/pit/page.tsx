@@ -88,10 +88,7 @@ function Section({
 }) {
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="font-bold text-2xl tracking-tight">{title}</h2>
-        <div className="h-px w-full bg-border" />
-      </div>
+      <h2 className="font-bold text-2xl tracking-tight">{title}</h2>
       {children}
     </div>
   );
