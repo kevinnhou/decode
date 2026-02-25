@@ -108,6 +108,8 @@ export default function PitScouting() {
     new Set()
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoPreviewsRef = useRef(photoPreviews);
+  photoPreviewsRef.current = photoPreviews;
 
   const form = useForm<FrcPitFormSchema>({
     resolver: zodResolver(frcPitFormSchema),
@@ -272,11 +274,11 @@ export default function PitScouting() {
 
   useEffect(
     () => () => {
-      for (const photo of photoPreviews) {
+      for (const photo of photoPreviewsRef.current) {
         URL.revokeObjectURL(photo.previewUrl);
       }
     },
-    [photoPreviews]
+    []
   );
 
   const handleContinue = useCallback(
