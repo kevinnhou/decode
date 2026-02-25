@@ -81,3 +81,34 @@ export const attributedSubmissionSchema = unifiedSubmissionSchema.merge(
 export type AttributedSubmissionSchema = z.infer<
   typeof attributedSubmissionSchema
 >;
+
+// --- FRC Pit Scouting ---
+
+export const frcPitFormSchema = z.object({
+  teamNumber: z.number().int().min(1, "Team number is required"),
+  photos: z.array(z.string()).optional(),
+  robotDimensions: z
+    .object({
+      length: z.number().min(0).optional(),
+      width: z.number().min(0).optional(),
+      height: z.number().min(0).optional(),
+    })
+    .optional(),
+  drivetrainType: z.enum(["swerve", "tank", "other"]).optional(),
+  weight: z.number().min(0).optional(),
+  hopperCapacity: z.number().int().min(0).optional(),
+  shootingSpeed: z.number().min(0).optional(),
+  intakeMethods: z
+    .array(z.enum(["floor", "depot", "outpost"]))
+    .optional()
+    .default([]),
+  canPassTrench: z.boolean().optional().default(false),
+  canCrossBump: z.boolean().optional().default(false),
+  maxClimbLevel: z
+    .union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)])
+    .optional(),
+  autoCapabilities: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export type FrcPitFormSchema = z.infer<typeof frcPitFormSchema>;

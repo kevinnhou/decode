@@ -2,12 +2,7 @@
 
 import { api } from "@decode/backend/convex/_generated/api";
 import { Button } from "@decode/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@decode/ui/components/card";
+import { Card, CardContent } from "@decode/ui/components/card";
 import { Input } from "@decode/ui/components/input";
 import { useMutation, useQuery } from "convex/react";
 import { Building2, Check, LogOut, Mail, Pencil, User, X } from "lucide-react";
@@ -76,9 +71,6 @@ export default function ProfilePage() {
 
       <div className="grid gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
-          </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
