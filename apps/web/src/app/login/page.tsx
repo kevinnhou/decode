@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { GoogleSignIn } from "@/components/google-sign-in";
 import { authClient } from "@/lib/auth-client";
 
 const loginSchema = z.object({
@@ -125,6 +126,8 @@ export default function LoginPage() {
                   </>
                 )}
               </Button>
+
+              <GoogleSignIn callbackURL="/scout" disabled={isLoading} />
             </form>
           </Form>
 
