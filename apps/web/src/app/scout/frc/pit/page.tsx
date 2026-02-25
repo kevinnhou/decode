@@ -1,6 +1,5 @@
 "use client";
 
-import { api } from "@decode/backend/convex/_generated/api";
 import { Button } from "@decode/ui/components/button";
 import { Checkbox } from "@decode/ui/components/checkbox";
 import {
@@ -23,14 +22,13 @@ import { Textarea } from "@decode/ui/components/textarea";
 import { useForm } from "@decode/ui/lib/react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronLeft, ChevronRight, UploadIcon, X } from "lucide-react";
-import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { getConfig } from "@/lib/config";
-import { fetchAuthMutation } from "@/lib/convex";
 import { type FrcPitFormSchema, frcPitFormSchema } from "@/schema/scouting";
 import { Config } from "~/form/config";
 import { setPitSectionsState } from "~/sidebar/pit-sections";
+import { getPhotoUploadUrl, submitPit } from "./actions";
 
 type SectionConfig = {
   id: string;
@@ -38,9 +36,11 @@ type SectionConfig = {
 };
 
 type UploadedPhotoPreview = {
-  storageId: string;
+  id: string;
+  storageId?: string;
   previewUrl: string;
   fileName: string;
+  status: "uploading" | "uploaded" | "failed";
 };
 
 const sectionConfig: SectionConfig[] = [
@@ -78,7 +78,6 @@ function Section({
 export default function PitScouting() {
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [photos, setPhotos] = useState<string[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<UploadedPhotoPreview[]>(
     []
   );
@@ -123,8 +122,6 @@ export default function PitScouting() {
 
       setIsUploading(true);
       try {
-        const uploadedPreviews: UploadedPhotoPreview[] = [];
-
         for (const file of Array.from(files)) {
           if (!file.type.startsWith("image/")) {
             toast.error(`${file.name} is not an image file`);
@@ -132,12 +129,20 @@ export default function PitScouting() {
           }
 
           const previewUrl = URL.createObjectURL(file);
+          const previewId = crypto.randomUUID();
+
+          setPhotoPreviews((prev) => [
+            ...prev,
+            {
+              id: previewId,
+              previewUrl,
+              fileName: file.name,
+              status: "uploading",
+            },
+          ]);
 
           try {
-            const uploadUrl = await fetchAuthMutation(
-              api.submissions.generatePitPhotoUploadUrl,
-              {}
-            );
+            const uploadUrl = await getPhotoUploadUrl();
 
             const uploadResponse = await fetch(uploadUrl, {
               method: "POST",
@@ -155,28 +160,30 @@ export default function PitScouting() {
               storageId: string;
             };
 
-            uploadedPreviews.push({
-              storageId,
-              previewUrl,
-              fileName: file.name,
+            setPhotoPreviews((prev) =>
+              prev.map((photo) =>
+                photo.id === previewId
+                  ? { ...photo, storageId, status: "uploaded" }
+                  : photo
+              )
+            );
+
+            const existingPhotos = form.getValues("photos") ?? [];
+            form.setValue("photos", [...existingPhotos, storageId], {
+              shouldDirty: true,
             });
           } catch (error) {
-            URL.revokeObjectURL(previewUrl);
+            setPhotoPreviews((prev) =>
+              prev.map((photo) =>
+                photo.id === previewId ? { ...photo, status: "failed" } : photo
+              )
+            );
             const message =
               error instanceof Error
                 ? error.message
                 : `Failed to upload ${file.name}`;
             toast.error(message);
           }
-        }
-
-        if (uploadedPreviews.length > 0) {
-          setPhotos((prev) => [
-            ...prev,
-            ...uploadedPreviews.map((photo) => photo.storageId),
-          ]);
-          setPhotoPreviews((prev) => [...prev, ...uploadedPreviews]);
-          toast.success(`Uploaded ${uploadedPreviews.length} photo(s)`);
         }
       } catch (error) {
         const message =
@@ -186,19 +193,30 @@ export default function PitScouting() {
         setIsUploading(false);
       }
     },
-    []
+    [form]
   );
 
-  const handleRemovePhoto = useCallback((index: number) => {
-    setPhotoPreviews((prev) => {
-      const removedPhoto = prev[index];
-      if (removedPhoto) {
-        URL.revokeObjectURL(removedPhoto.previewUrl);
-      }
-      return prev.filter((_, i) => i !== index);
-    });
-    setPhotos((prev) => prev.filter((_, i) => i !== index));
-  }, []);
+  const handleRemovePhoto = useCallback(
+    (index: number) => {
+      setPhotoPreviews((prev) => {
+        const removedPhoto = prev[index];
+        if (removedPhoto) {
+          URL.revokeObjectURL(removedPhoto.previewUrl);
+
+          if (removedPhoto.storageId) {
+            const existingPhotos = form.getValues("photos") ?? [];
+            form.setValue(
+              "photos",
+              existingPhotos.filter((id) => id !== removedPhoto.storageId),
+              { shouldDirty: true }
+            );
+          }
+        }
+        return prev.filter((_, i) => i !== index);
+      });
+    },
+    [form]
+  );
 
   const onReset = useCallback(() => {
     setPhotoPreviews((prev) => {
@@ -227,7 +245,6 @@ export default function PitScouting() {
       autoCapabilities: "",
       notes: "",
     });
-    setPhotos([]);
     setActiveSectionIndex(0);
   }, [form]);
 
@@ -244,10 +261,7 @@ export default function PitScouting() {
     // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Form submission with validation and data transformation
     async () => {
       const config = getConfig();
-      if (!config?.eventCode) {
-        toast.error("Event code is required. Please configure in settings.");
-        return;
-      }
+      const eventCode = config?.eventCode?.trim() || "UNKNOWN";
 
       if (isLastSection) {
         const isValid = await form.trigger();
@@ -259,9 +273,9 @@ export default function PitScouting() {
         setIsSubmitting(true);
         try {
           const values = form.getValues();
-          await fetchAuthMutation(api.submissions.submitPit, {
+          await submitPit({
             competitionType: "FRC",
-            eventCode: config.eventCode,
+            eventCode,
             eventName: undefined,
             teamNumber: values.teamNumber,
             source: "web",
@@ -276,7 +290,10 @@ export default function PitScouting() {
                   }
                 : undefined,
             drivetrainType: values.drivetrainType,
-            photos: photos.length > 0 ? photos : undefined,
+            photos:
+              values.photos && values.photos.length > 0
+                ? values.photos
+                : undefined,
             notes: values.notes || undefined,
             hopperCapacity: values.hopperCapacity,
             shootingSpeed: values.shootingSpeed,
@@ -308,7 +325,7 @@ export default function PitScouting() {
         );
       }
     },
-    [isLastSection, form, photos, onReset]
+    [isLastSection, form, onReset]
   );
 
   const handlePrevious = useCallback(() => {
@@ -407,9 +424,7 @@ export default function PitScouting() {
           className="space-y-8 px-4 md:px-8"
           onSubmit={async (e) => {
             e.preventDefault();
-            if (isLastSection) {
-              await handleContinue();
-            }
+            await handleContinue();
           }}
         >
           <div className="space-y-2">
@@ -464,14 +479,14 @@ export default function PitScouting() {
                       {photoPreviews.map((photo, index) => (
                         <div
                           className="group relative overflow-hidden rounded-lg border bg-muted"
-                          key={`${photo.storageId}-${index}`}
+                          key={photo.id}
                         >
-                          <Image
+                          {/** biome-ignore lint/performance/noImgElement: PASS */}
+                          <img
                             alt={photo.fileName}
                             className="h-24 w-full object-cover"
                             height={96}
                             src={photo.previewUrl}
-                            unoptimized
                             width={160}
                           />
                           <button
@@ -485,6 +500,16 @@ export default function PitScouting() {
                             <p className="truncate text-[10px]">
                               {photo.fileName}
                             </p>
+                            {photo.status === "uploading" ? (
+                              <p className="text-[10px] text-muted-foreground">
+                                Uploading...
+                              </p>
+                            ) : null}
+                            {photo.status === "failed" ? (
+                              <p className="text-[10px] text-destructive">
+                                Upload failed
+                              </p>
+                            ) : null}
                           </div>
                         </div>
                       ))}
@@ -495,7 +520,10 @@ export default function PitScouting() {
                     className="hidden"
                     disabled={isUploading}
                     multiple
-                    onChange={(e) => handlePhotoUpload(e.target.files)}
+                    onChange={(e) => {
+                      handlePhotoUpload(e.target.files);
+                      e.currentTarget.value = "";
+                    }}
                     ref={fileInputRef}
                     type="file"
                   />
@@ -688,7 +716,7 @@ export default function PitScouting() {
                         <FormLabel>Hopper Capacity</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Number of game pieces"
+                            placeholder="Number of game elements"
                             type="number"
                             {...field}
                             onChange={(e) => {
@@ -719,7 +747,7 @@ export default function PitScouting() {
                         <FormLabel>Shooting Speed</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="m/s or fps"
+                            placeholder="~ Balls/Second"
                             type="number"
                             {...field}
                             onChange={(e) => {
@@ -802,7 +830,7 @@ export default function PitScouting() {
                   name="maxClimbLevel"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Max Climb Level</FormLabel>
+                      <FormLabel>Climb Level</FormLabel>
                       <Select
                         onValueChange={(value) => field.onChange(Number(value))}
                         value={field.value?.toString()}
