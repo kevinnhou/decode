@@ -1,4 +1,5 @@
 import type { ZodType } from "zod";
+import type { FrcMatchSubmissionSchema } from "@/schema/scouting";
 import { formSchema, metaSchema } from "@/schema/scouting";
 
 export type FieldName =
@@ -158,3 +159,32 @@ export const FIELD_GROUPS: FieldGroup[] = [
     ],
   },
 ];
+
+export type FrcMatchFieldName =
+  | "meta.teamNumber"
+  | "meta.matchNumber"
+  | "meta.matchStage"
+  | "meta.allianceColour"
+  | "meta.teamName"
+  | "climbLevel"
+  | "climbDuration"
+  | "notes";
+
+export const FRC_PERIODS = [
+  { key: "auto" as const, label: "AUTO" },
+  { key: "transition" as const, label: "Transition" },
+  { key: "shift1" as const, label: "Shift 1" },
+  { key: "shift2" as const, label: "Shift 2" },
+  { key: "shift3" as const, label: "Shift 3" },
+  { key: "shift4" as const, label: "Shift 4" },
+  { key: "endGame" as const, label: "End Game" },
+] as const;
+
+export const FRC_CLIMB_LEVELS = [
+  { value: 0, label: "No Climb" },
+  { value: 1, label: "Level 1" },
+  { value: 2, label: "Level 2" },
+  { value: 3, label: "Level 3" },
+] as const;
+
+export type FrcMatchFormValues = FrcMatchSubmissionSchema;

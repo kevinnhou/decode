@@ -1,5 +1,36 @@
 import type { DefaultValues } from "@decode/ui/lib/react-hook-form";
-import type { FieldSchema, FormSchema } from "@/schema/scouting";
+import type {
+  FieldSchema,
+  FormSchema,
+  FrcMatchSubmissionSchema,
+} from "@/schema/scouting";
+
+const INITIAL_PERIOD_DATA = {
+  auto: { scoring: 0, feeding: 0, defense: 0 },
+  transition: { scoring: 0, feeding: 0, defense: 0 },
+  shift1: { scoring: 0, feeding: 0, defense: 0 },
+  shift2: { scoring: 0, feeding: 0, defense: 0 },
+  shift3: { scoring: 0, feeding: 0, defense: 0 },
+  shift4: { scoring: 0, feeding: 0, defense: 0 },
+  endGame: { scoring: 0, feeding: 0, defense: 0 },
+};
+
+export function getInitialFrcFormValues(): DefaultValues<FrcMatchSubmissionSchema> {
+  return {
+    meta: {
+      teamNumber: undefined,
+      matchNumber: undefined,
+      matchStage: "qual",
+      allianceColour: "Red",
+      teamName: undefined,
+    },
+    inputMode: "form",
+    periodData: INITIAL_PERIOD_DATA,
+    climbLevel: 0,
+    climbDuration: 0,
+    notes: "",
+  };
+}
 
 export function getInitialFormValues(): DefaultValues<FormSchema> {
   return {

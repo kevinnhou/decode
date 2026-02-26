@@ -120,8 +120,98 @@ export default defineSchema({
         })
       )
     ),
-    // FRC match fields (to be added later)
-    // shootingBursts, autoPath, climbLevel, climbDuration, playedDefense, notes
+    // FRC match fields (form mode)
+    climbLevel: v.optional(
+      v.union(v.literal(0), v.literal(1), v.literal(2), v.literal(3))
+    ),
+    climbDuration: v.optional(v.number()),
+    // FRC match fields (field mode)
+    frcFieldEvents: v.optional(
+      v.array(
+        v.object({
+          coordinates: v.object({ x: v.number(), y: v.number() }),
+          startTimestamp: v.string(),
+          endTimestamp: v.string(),
+          duration: v.number(),
+          period: v.union(
+            v.literal("AUTO"),
+            v.literal("TRANSITION"),
+            v.literal("SHIFT_1"),
+            v.literal("SHIFT_2"),
+            v.literal("SHIFT_3"),
+            v.literal("SHIFT_4"),
+            v.literal("END_GAME")
+          ),
+          eventType: v.union(
+            v.literal("shooting"),
+            v.literal("intake"),
+            v.literal("defense"),
+            v.literal("climb")
+          ),
+          action: v.optional(
+            v.union(v.literal("scoring"), v.literal("feeding"))
+          ),
+          source: v.optional(
+            v.union(
+              v.literal("floor"),
+              v.literal("depot"),
+              v.literal("outpost")
+            )
+          ),
+          climbLevel: v.optional(
+            v.union(v.literal(1), v.literal(2), v.literal(3))
+          ),
+        })
+      )
+    ),
+    autoPath: v.optional(
+      v.array(
+        v.object({
+          coordinates: v.object({ x: v.number(), y: v.number() }),
+          timestamp: v.string(),
+        })
+      )
+    ),
+    periodData: v.optional(
+      v.object({
+        auto: v.object({
+          scoring: v.number(),
+          feeding: v.number(),
+          defense: v.number(),
+        }),
+        transition: v.object({
+          scoring: v.number(),
+          feeding: v.number(),
+          defense: v.number(),
+        }),
+        shift1: v.object({
+          scoring: v.number(),
+          feeding: v.number(),
+          defense: v.number(),
+        }),
+        shift2: v.object({
+          scoring: v.number(),
+          feeding: v.number(),
+          defense: v.number(),
+        }),
+        shift3: v.object({
+          scoring: v.number(),
+          feeding: v.number(),
+          defense: v.number(),
+        }),
+        shift4: v.object({
+          scoring: v.number(),
+          feeding: v.number(),
+          defense: v.number(),
+        }),
+        endGame: v.object({
+          scoring: v.number(),
+          feeding: v.number(),
+          defense: v.number(),
+        }),
+      })
+    ),
+    notes: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
