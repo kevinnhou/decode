@@ -79,6 +79,136 @@ export const submitMatchFTC = mutation({
   },
 });
 
+const frcFieldEventValidator = v.object({
+  coordinates: v.object({ x: v.number(), y: v.number() }),
+  startTimestamp: v.string(),
+  endTimestamp: v.string(),
+  duration: v.number(),
+  period: v.union(
+    v.literal("AUTO"),
+    v.literal("TRANSITION"),
+    v.literal("SHIFT_1"),
+    v.literal("SHIFT_2"),
+    v.literal("SHIFT_3"),
+    v.literal("SHIFT_4"),
+    v.literal("END_GAME")
+  ),
+  eventType: v.union(
+    v.literal("shooting"),
+    v.literal("intake"),
+    v.literal("defense"),
+    v.literal("climb")
+  ),
+  action: v.optional(v.union(v.literal("scoring"), v.literal("feeding"))),
+  source: v.optional(
+    v.union(v.literal("floor"), v.literal("depot"), v.literal("outpost"))
+  ),
+  climbLevel: v.optional(v.union(v.literal(1), v.literal(2), v.literal(3))),
+});
+
+const frcAutoPathPointValidator = v.object({
+  coordinates: v.object({ x: v.number(), y: v.number() }),
+  timestamp: v.string(),
+});
+
+const periodDataValidator = v.object({
+  auto: v.object({
+    scoring: v.number(),
+    feeding: v.number(),
+    defense: v.number(),
+  }),
+  transition: v.object({
+    scoring: v.number(),
+    feeding: v.number(),
+    defense: v.number(),
+  }),
+  shift1: v.object({
+    scoring: v.number(),
+    feeding: v.number(),
+    defense: v.number(),
+  }),
+  shift2: v.object({
+    scoring: v.number(),
+    feeding: v.number(),
+    defense: v.number(),
+  }),
+  shift3: v.object({
+    scoring: v.number(),
+    feeding: v.number(),
+    defense: v.number(),
+  }),
+  shift4: v.object({
+    scoring: v.number(),
+    feeding: v.number(),
+    defense: v.number(),
+  }),
+  endGame: v.object({
+    scoring: v.number(),
+    feeding: v.number(),
+    defense: v.number(),
+  }),
+});
+
+/**
+ * Submit an FRC match scouting record.
+ * Server-side attribution (organisationId, scoutUserId, scoutName) is attached from the authenticated user profile.
+ *
+ * @param ctx - The Convex mutation context
+ * @param args - Match submission data from the client
+ * @returns The newly created match submission ID
+ */
+export const submitMatch = mutation({
+  args: {
+    eventCode: v.string(),
+    eventName: v.optional(v.string()),
+    teamNumber: v.number(),
+    matchNumber: v.number(),
+    matchStage: matchStageValidator,
+    allianceColour: allianceColourValidator,
+    source: v.optional(sourceValidator),
+    // FRC match fields
+    climbLevel: v.union(v.literal(0), v.literal(1), v.literal(2), v.literal(3)),
+    climbDuration: v.number(),
+    notes: v.optional(v.string()),
+    // Form mode
+    periodData: v.optional(periodDataValidator),
+    // Field mode
+    frcFieldEvents: v.optional(v.array(frcFieldEventValidator)),
+    autoPath: v.optional(v.array(frcAutoPathPointValidator)),
+  },
+  async handler(ctx, args) {
+    const { profile } = await requireUserProfile(ctx);
+
+    const inputMode = args.periodData !== undefined ? "form" : "field";
+
+    const now = Date.now();
+    const submissionId = await ctx.db.insert("matchSubmissions", {
+      organisationId: profile.organisationId,
+      competitionType: "FRC",
+      eventCode: args.eventCode,
+      eventName: args.eventName,
+      teamNumber: args.teamNumber,
+      scoutUserId: profile.userId,
+      scoutName: profile.displayName,
+      source: args.source,
+      matchNumber: args.matchNumber,
+      matchStage: args.matchStage,
+      allianceColour: args.allianceColour,
+      inputMode,
+      climbLevel: args.climbLevel,
+      climbDuration: args.climbDuration,
+      periodData: args.periodData,
+      frcFieldEvents: args.frcFieldEvents,
+      autoPath: args.autoPath,
+      notes: args.notes,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return submissionId;
+  },
+});
+
 /**
  * Submit a pit scouting record (FTC or FRC).
  * Server-side attribution (organisationId, scoutUserId, scoutName) is attached from the authenticated user profile.

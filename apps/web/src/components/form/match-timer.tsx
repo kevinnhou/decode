@@ -3,8 +3,26 @@
 import { Button } from "@decode/ui/components/button";
 import { cn } from "@decode/ui/lib/utils";
 import { Pause, Play, RotateCcw } from "lucide-react";
+import type { FrcPeriod } from "@/hooks/use-match-timer";
 
 type TimerState = "idle" | "running" | "paused" | "finished";
+
+const FRC_PERIODS: FrcPeriod[] = [
+  "AUTO",
+  "TRANSITION",
+  "SHIFT_1",
+  "SHIFT_2",
+  "SHIFT_3",
+  "SHIFT_4",
+  "END_GAME",
+];
+
+function formatPeriodLabel(period: FrcPeriod): string {
+  if (period.startsWith("SHIFT_")) {
+    return period.replace("SHIFT_", "S");
+  }
+  return period.replace("_", " ");
+}
 
 interface MatchTimerProps {
   timeRemaining: number;
@@ -110,6 +128,41 @@ export function MatchTimer({
         className="absolute bottom-0 left-0 h-1 bg-primary/20 transition-all duration-1000 ease-linear"
         style={{ width: `${(timeRemaining / 150) * 100}%` }}
       />
+    </div>
+  );
+}
+
+interface MatchTimerFRCProps extends MatchTimerProps {
+  getCurrentPeriod: () => FrcPeriod;
+}
+
+export function MatchTimerFRC({
+  getCurrentPeriod,
+  ...props
+}: MatchTimerFRCProps) {
+  const currentPeriod = getCurrentPeriod();
+
+  return (
+    <div className="space-y-2">
+      <MatchTimer {...props} />
+      <div className="flex flex-wrap gap-1">
+        {FRC_PERIODS.map((period) => {
+          const isActive = period === currentPeriod;
+          return (
+            <span
+              className={cn(
+                "rounded px-2 py-0.5 font-medium font-mono text-[10px] uppercase",
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted/50 text-muted-foreground"
+              )}
+              key={period}
+            >
+              {formatPeriodLabel(period)}
+            </span>
+          );
+        })}
+      </div>
     </div>
   );
 }
