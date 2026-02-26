@@ -175,7 +175,7 @@ export function FieldInput({
           alt="Field"
           className="w-full"
           height={800}
-          src="/field.webp"
+          src="/ftc-field.webp"
           width={1200}
         />
         {events.map((event) => {
