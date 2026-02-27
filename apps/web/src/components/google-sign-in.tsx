@@ -33,6 +33,7 @@ export function GoogleSignIn({
 
       if (result?.error) {
         toast.error(result.error.message ?? "Sign in with Google failed");
+        setIsSigningIn(false);
       }
     } catch (err) {
       toast.error(
@@ -41,8 +42,6 @@ export function GoogleSignIn({
       setIsSigningIn(false);
     }
   }
-
-  const isDisabled = disabled || isSigningIn;
 
   return (
     <div className="space-y-4">
@@ -57,7 +56,7 @@ export function GoogleSignIn({
 
       <Button
         className="w-full gap-2 rounded-xl font-mono"
-        disabled={isDisabled}
+        disabled={disabled || isSigningIn}
         onClick={handleGoogleSignIn}
         type="button"
         variant="outline"
