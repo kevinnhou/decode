@@ -128,7 +128,7 @@ export function ActionToast({
               onAction();
               onDismiss();
             }}
-            className="h-7 strink-0 px-3 text-xs"
+            className="h-7 shrink-0 px-3 text-xs"
           >
             {actionLabel}
           </Button>
@@ -158,7 +158,7 @@ export function SuccessToast({
 }: BaseProps & { className?: string }) {
   return (
     <ToastWrapper variant="success" className={className}>
-      <div className="mt-0.5 strink-0">
+      <div className="mt-0.5 shrink-0">
         <CircleCheckIcon className="size-4 text-green-600 dark:text-green-400" />
       </div>
 
@@ -187,7 +187,7 @@ export function ErrorToast({
 }: ErrorToastProps & { onDismiss: () => void }) {
   return (
     <ToastWrapper variant="error" className={className}>
-      <div className="mt-0.5 strink-0">
+      <div className="mt-0.5 shrink-0">
         <CircleAlertIcon className="size-4 text-red-600 dark:text-red-400" />
       </div>
 
@@ -211,7 +211,7 @@ export function ErrorToast({
               retry.onRetry();
               onDismiss();
             }}
-            className="h-7 strink-0 px-3 text-muted-foreground text-xs hover:text-foreground"
+            className="h-7 shrink-0 px-3 text-muted-foreground text-xs hover:text-foreground"
           >
             {retry.label}
           </Button>
@@ -232,7 +232,7 @@ export function WarningToast({
 }: WarningToastProps & { onDismiss: () => void }) {
   return (
     <ToastWrapper variant="warning" className={className}>
-      <div className="mt-0.5 strink-0">
+      <div className="mt-0.5 shrink-0">
         <TriangleAlertIcon className="size-4 text-amber-600 dark:text-amber-400" />
       </div>
 
@@ -256,7 +256,7 @@ export function WarningToast({
               action.onAction();
               onDismiss();
             }}
-            className="h-7 strink-0 px-3 text-muted-foreground text-xs hover:text-foreground"
+            className="h-7 shrink-0 px-3 text-muted-foreground text-xs hover:text-foreground"
           >
             {action.label}
           </Button>
@@ -275,7 +275,7 @@ export function LoadingToast({
 }: Omit<BaseProps, "description"> & { className?: string }) {
   return (
     <ToastWrapper variant="loading" className={className}>
-      <div className="mt-0.5 strink-0">
+      <div className="mt-0.5 shrink-0">
         <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
       </div>
 
@@ -297,7 +297,7 @@ export function PromiseLoadingToast({
 }: Omit<BaseProps, "description"> & { className?: string }) {
   return (
     <ToastWrapper variant="loading" className={className}>
-      <div className="mt-0.5 strink-0">
+      <div className="mt-0.5 shrink-0">
         <Loader2Icon className="size-4 animate-spin text-blue-600 dark:text-blue-400" />
       </div>
 
@@ -325,7 +325,7 @@ export function PromiseSuccessToast({
 }: BaseProps & { className?: string }) {
   return (
     <ToastWrapper variant="success" className={className}>
-      <div className="mt-0.5 strink-0">
+      <div className="mt-0.5 shrink-0">
         <CircleCheckIcon className="size-4 text-green-600 dark:text-green-400" />
       </div>
 
@@ -353,7 +353,7 @@ export function PromiseErrorToast({
 }: BaseProps & { className?: string }) {
   return (
     <ToastWrapper variant="error" className={className}>
-      <div className="mt-0.5 strink-0">
+      <div className="mt-0.5 shrink-0">
         <CircleAlertIcon className="size-4 text-red-600 dark:text-red-400" />
       </div>
 
