@@ -2,9 +2,9 @@
 
 import { Button } from "@decode/ui/components/button";
 import { Separator } from "@decode/ui/components/separator";
-import { toast } from "@decode/ui/components/sonner";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 
 type GoogleSignInProps = {
@@ -18,7 +18,8 @@ export function GoogleSignIn({
 }: GoogleSignInProps) {
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  async function handleGoogleSignIn() {
+  async function handleGoogleSignIn(e: React.MouseEvent) {
+    e.preventDefault();
     if (isSigningIn || disabled) {
       return;
     }
@@ -37,10 +38,11 @@ export function GoogleSignIn({
       toast.error(
         err instanceof Error ? err.message : "Sign in with Google failed"
       );
-    } finally {
       setIsSigningIn(false);
     }
   }
+
+  const isDisabled = disabled || isSigningIn;
 
   return (
     <div className="space-y-4">
@@ -55,7 +57,7 @@ export function GoogleSignIn({
 
       <Button
         className="w-full gap-2 rounded-xl font-mono"
-        disabled={disabled || isSigningIn}
+        disabled={isDisabled}
         onClick={handleGoogleSignIn}
         type="button"
         variant="outline"
