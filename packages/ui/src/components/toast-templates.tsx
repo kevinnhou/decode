@@ -12,8 +12,8 @@ import { Button } from "@decode/ui/components/button";
 import { cn } from "@decode/ui/lib/utils";
 
 export interface ActionToastProps {
-  title: string;
-  description?: string;
+  title: React.ReactNode;
+  description?: React.ReactNode;
   actionLabel: string;
   onAction: () => void;
   cancelLabel?: string;
@@ -22,22 +22,22 @@ export interface ActionToastProps {
 }
 
 export interface ErrorToastProps {
-  title: string;
-  description?: string;
+  title: React.ReactNode;
+  description?: React.ReactNode;
   retry?: { label: string; onRetry: () => void };
   className?: string;
 }
 
 export interface WarningToastProps {
-  title: string;
-  description?: string;
+  title: React.ReactNode;
+  description?: React.ReactNode;
   action?: { label: string; onAction: () => void };
   className?: string;
 }
 
 interface BaseProps {
-  title: string;
-  description?: string;
+  title: React.ReactNode;
+  description?: React.ReactNode;
   onDismiss: () => void;
 }
 

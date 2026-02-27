@@ -20,17 +20,26 @@ function isAction(value: unknown): value is Action {
   );
 }
 
+function resolveReactNode(
+  value: React.ReactNode | (() => React.ReactNode) | undefined,
+): React.ReactNode {
+  if (value === undefined) return undefined;
+  if (typeof value === "function") return (value as () => React.ReactNode)();
+  return value;
+}
+
 function createCustomToast() {
   const customToast = (
     message: React.ReactNode,
     data?: ExternalToast,
   ): string | number => {
-    const title = typeof message === "function" ? String(message) : message;
+    const title = resolveReactNode(message);
+    const description = resolveReactNode(data?.description);
     return sonnerToast.custom(
       (id) => (
         <SuccessToast
-          title={String(title)}
-          description={data?.description ? String(data.description) : undefined}
+          title={title}
+          description={description}
           onDismiss={() => sonnerToast.dismiss(id)}
         />
       ),
@@ -42,18 +51,13 @@ function createCustomToast() {
     message: React.ReactNode,
     data?: ExternalToast,
   ): string | number => {
-    const title = typeof message === "function" ? String(message) : message;
-    const description =
-      data?.description !== undefined
-        ? typeof data.description === "function"
-          ? String(data.description())
-          : String(data.description)
-        : undefined;
+    const title = resolveReactNode(message);
+    const description = resolveReactNode(data?.description);
 
     return sonnerToast.custom(
       (id) => (
         <SuccessToast
-          title={String(title)}
+          title={title}
           description={description}
           onDismiss={() => sonnerToast.dismiss(id)}
         />
@@ -66,13 +70,8 @@ function createCustomToast() {
     message: React.ReactNode,
     data?: ExternalToast,
   ): string | number => {
-    const title = typeof message === "function" ? String(message) : message;
-    const description =
-      data?.description !== undefined
-        ? typeof data.description === "function"
-          ? String(data.description())
-          : String(data.description)
-        : undefined;
+    const title = resolveReactNode(message);
+    const description = resolveReactNode(data?.description);
 
     const actionData = data?.action;
     const retry = isAction(actionData)
@@ -88,7 +87,7 @@ function createCustomToast() {
     return sonnerToast.custom(
       (id) => (
         <ErrorToast
-          title={String(title)}
+          title={title}
           description={description}
           retry={retry}
           onDismiss={() => sonnerToast.dismiss(id)}
@@ -102,13 +101,8 @@ function createCustomToast() {
     message: React.ReactNode,
     data?: ExternalToast,
   ): string | number => {
-    const title = typeof message === "function" ? String(message) : message;
-    const description =
-      data?.description !== undefined
-        ? typeof data.description === "function"
-          ? String(data.description())
-          : String(data.description)
-        : undefined;
+    const title = resolveReactNode(message);
+    const description = resolveReactNode(data?.description);
 
     const actionData = data?.action;
     const action = isAction(actionData)
@@ -124,7 +118,7 @@ function createCustomToast() {
     return sonnerToast.custom(
       (id) => (
         <WarningToast
-          title={String(title)}
+          title={title}
           description={description}
           action={action}
           onDismiss={() => sonnerToast.dismiss(id)}
@@ -138,12 +132,12 @@ function createCustomToast() {
     message: React.ReactNode,
     data?: ExternalToast,
   ): string | number => {
-    const title = typeof message === "function" ? String(message) : message;
+    const title = resolveReactNode(message);
 
     return sonnerToast.custom(
       (id) => (
         <LoadingToast
-          title={String(title)}
+          title={title}
           onDismiss={() => sonnerToast.dismiss(id)}
         />
       ),
