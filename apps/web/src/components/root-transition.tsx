@@ -39,7 +39,7 @@ export function RootTransition({ children }: { children: React.ReactNode }) {
         isMounted &&
           "transition-[margin,max-width,border-color] duration-500 ease-in-out",
         showStyles
-          ? "mx-[min(4rem,max(0px,calc((100vw-1536px)/2)))] max-w-screen-2xl"
+          ? "mx-[max(0px,calc((100vw-1536px)/2))] max-w-screen-2xl"
           : "mx-0 w-full max-w-full",
         showStyles ? "my-[min(4rem,max(0px,calc((100vw-1536px)/2)))]" : "my-0",
         "2xl:border",
