@@ -2,7 +2,7 @@
 
 import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
 import type * as React from "react";
-import { Toaster } from "sonner";
+import { Toaster } from "@decode/ui/components/sonner";
 import Cookies from "js-cookie";
 
 import { createContext, useContext, useEffect, useState } from "react";
@@ -56,6 +56,8 @@ export function ActiveThemeProvider({
   );
 }
 
+export { useTheme } from "next-themes";
+
 export function useThemeConfig() {
   const context = useContext(ThemeContext);
   if (context === undefined) {
@@ -77,7 +79,7 @@ function ToasterProvider() {
   const { theme } = useTheme() as {
     theme: "light" | "dark" | "system";
   };
-  return <Toaster position="bottom-center" richColors theme={theme} />;
+  return <Toaster position="bottom-center" theme={theme} />;
 }
 
 export function UIProviders({ children }: { children: React.ReactNode }) {

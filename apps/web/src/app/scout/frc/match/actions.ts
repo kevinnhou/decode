@@ -3,14 +3,11 @@
 import { api } from "@decode/backend/convex/_generated/api";
 import { z } from "zod";
 import { fetchAuthMutation, isAuthenticated } from "@/lib/convex";
+import type { SubmissionResult } from "@/lib/form/types";
 import {
   type FrcMatchSubmissionSchema,
   frcMatchSubmissionSchema,
 } from "@/schema/scouting";
-
-type SubmissionResult =
-  | { success: true; message: string }
-  | { success: false; message: string };
 
 export async function submitMatch(
   data: FrcMatchSubmissionSchema,

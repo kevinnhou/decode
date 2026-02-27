@@ -3,16 +3,16 @@
 
 import { Button } from "@decode/ui/components/button";
 import { Form } from "@decode/ui/components/form";
+import { toast } from "@decode/ui/components/sonner";
 import { useForm } from "@decode/ui/lib/react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
 import { useInputMode } from "@/hooks/use-input-mode";
 import { useMatchTimer } from "@/hooks/use-match-timer";
 import { getConfig, getTeamsMap, setTeamsMap } from "@/lib/config";
+import { getInitialFormValues } from "@/lib/form/utils";
 import type { FieldSchema, FormSchema } from "@/schema/scouting";
 import { formSchema } from "@/schema/scouting";
-import { getInitialFormValues } from "@/utils/form";
 import { Config } from "~/form/config";
 import { EventsList } from "~/form/events-list";
 import { EVENT_TO_FORM_KEY, FieldInput } from "~/form/field-input";

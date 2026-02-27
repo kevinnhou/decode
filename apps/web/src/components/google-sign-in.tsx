@@ -2,6 +2,9 @@
 
 import { Button } from "@decode/ui/components/button";
 import { Separator } from "@decode/ui/components/separator";
+import { toast } from "@decode/ui/components/sonner";
+import { Loader2 } from "lucide-react";
+import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
 type GoogleSignInProps = {
@@ -13,11 +16,30 @@ export function GoogleSignIn({
   callbackURL = "/scout",
   disabled,
 }: GoogleSignInProps) {
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
   async function handleGoogleSignIn() {
-    await authClient.signIn.social({
-      provider: "google",
-      callbackURL,
-    });
+    if (isSigningIn || disabled) {
+      return;
+    }
+
+    setIsSigningIn(true);
+    try {
+      const result = await authClient.signIn.social({
+        provider: "google",
+        callbackURL,
+      });
+
+      if (result?.error) {
+        toast.error(result.error.message ?? "Sign in with Google failed");
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Sign in with Google failed"
+      );
+    } finally {
+      setIsSigningIn(false);
+    }
   }
 
   return (
@@ -33,13 +55,17 @@ export function GoogleSignIn({
 
       <Button
         className="w-full gap-2 rounded-xl font-mono"
-        disabled={disabled}
+        disabled={disabled || isSigningIn}
         onClick={handleGoogleSignIn}
         type="button"
         variant="outline"
       >
-        <GoogleIcon className="size-4" />
-        Continue with Google
+        {isSigningIn ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <GoogleIcon className="size-4" />
+        )}
+        {isSigningIn ? "Redirecting to Google…" : "Continue with Google"}
       </Button>
     </div>
   );

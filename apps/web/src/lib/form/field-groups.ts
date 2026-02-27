@@ -1,72 +1,5 @@
-import type { ZodType } from "zod";
-import type { FrcMatchSubmissionSchema } from "@/schema/scouting";
 import { formSchema, metaSchema } from "@/schema/scouting";
-
-export type FieldName =
-  | "meta.teamNumber"
-  | "meta.qualification"
-  | "meta.teamName"
-  | "meta.allianceColour"
-  | "autonomousMissed"
-  | "autonomousMade"
-  | "teleopMissed"
-  | "teleopMade"
-  | "tags";
-
-export type FieldComponent = "input" | "select" | "integer" | "tags";
-
-export type BaseField = {
-  component: FieldComponent;
-  name: FieldName;
-  label: string;
-  optional?: boolean;
-  schema: ZodType;
-};
-
-export type InputField = BaseField & {
-  component: "input";
-  inputType?: "number" | "text";
-  inputMode?: InputModeValue;
-  placeholder?: string;
-  emptyValue?: number | undefined;
-  clearEmptyString?: boolean;
-};
-
-export type SelectField = BaseField & {
-  component: "select";
-  options: string[];
-};
-
-export type IntegerField = BaseField & {
-  component: "integer";
-  incrementKey?: string;
-};
-
-export type TagField = BaseField & {
-  component: "tags";
-};
-
-export type FieldDefinition =
-  | InputField
-  | SelectField
-  | IntegerField
-  | TagField;
-
-export type FieldGroup = {
-  id: string;
-  className?: string;
-  fields: FieldDefinition[];
-};
-
-export type InputModeValue =
-  | "none"
-  | "text"
-  | "decimal"
-  | "numeric"
-  | "tel"
-  | "search"
-  | "email"
-  | "url";
+import type { FieldGroup } from "./field-types";
 
 export const TAGS = ["penalties", "defense", "climb"];
 
@@ -160,16 +93,6 @@ export const FIELD_GROUPS: FieldGroup[] = [
   },
 ];
 
-export type FrcMatchFieldName =
-  | "meta.teamNumber"
-  | "meta.matchNumber"
-  | "meta.matchStage"
-  | "meta.allianceColour"
-  | "meta.teamName"
-  | "climbLevel"
-  | "climbDuration"
-  | "notes";
-
 export const FRC_PERIODS = [
   { key: "auto" as const, label: "AUTO" },
   { key: "transition" as const, label: "Transition" },
@@ -186,5 +109,3 @@ export const FRC_CLIMB_LEVELS = [
   { value: 2, label: "Level 2" },
   { value: 3, label: "Level 3" },
 ] as const;
-
-export type FrcMatchFormValues = FrcMatchSubmissionSchema;

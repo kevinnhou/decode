@@ -4,12 +4,12 @@ import { api } from "@decode/backend/convex/_generated/api";
 import { Button } from "@decode/ui/components/button";
 import { Card, CardContent } from "@decode/ui/components/card";
 import { Input } from "@decode/ui/components/input";
+import { toast } from "@decode/ui/components/sonner";
 import { useMutation, useQuery } from "convex/react";
 import { Building2, Check, LogOut, Mail, Pencil, User, X } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 
 export default function ProfilePage() {

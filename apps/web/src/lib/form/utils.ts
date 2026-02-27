@@ -1,19 +1,35 @@
 import type { DefaultValues } from "@decode/ui/lib/react-hook-form";
+import type { ChangeEvent } from "react";
+import type { ControllerRenderProps, FieldValues, Path } from "react-hook-form";
 import type {
   FieldSchema,
   FormSchema,
   FrcMatchSubmissionSchema,
 } from "@/schema/scouting";
+import { INITIAL_PERIOD_DATA } from "./constants";
 
-const INITIAL_PERIOD_DATA = {
-  auto: { scoring: 0, feeding: 0, defense: 0 },
-  transition: { scoring: 0, feeding: 0, defense: 0 },
-  shift1: { scoring: 0, feeding: 0, defense: 0 },
-  shift2: { scoring: 0, feeding: 0, defense: 0 },
-  shift3: { scoring: 0, feeding: 0, defense: 0 },
-  shift4: { scoring: 0, feeding: 0, defense: 0 },
-  endGame: { scoring: 0, feeding: 0, defense: 0 },
-};
+export function handleNumberInputChange<T extends FieldValues>(
+  e: ChangeEvent<HTMLInputElement>,
+  field: ControllerRenderProps<T, Path<T>>
+) {
+  const value = e.target.value;
+  field.onChange(value === "" ? undefined : Number(value));
+}
+
+export function getNumberInputValue(value: number | null | undefined): string {
+  return value === undefined || value === null ? "" : String(value);
+}
+
+export function formatNumberFieldProps<T extends FieldValues>(
+  field: ControllerRenderProps<T, Path<T>>
+) {
+  return {
+    ...field,
+    onChange: (e: ChangeEvent<HTMLInputElement>) =>
+      handleNumberInputChange(e, field),
+    value: getNumberInputValue(field.value as number | null | undefined),
+  };
+}
 
 export function getInitialFrcFormValues(): DefaultValues<FrcMatchSubmissionSchema> {
   return {

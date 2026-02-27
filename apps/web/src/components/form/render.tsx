@@ -18,16 +18,16 @@ import {
 import { TagSelector } from "@decode/ui/components/tag-selector";
 import type { UseFormReturn } from "@decode/ui/lib/react-hook-form";
 import type { ChangeEvent } from "react";
+import { FIELD_GROUPS, TAGS } from "@/lib/form/field-groups";
 import type {
   FieldDefinition,
   InputField,
   IntegerField,
   SelectField,
   TagField,
-} from "@/lib/form";
-import { FIELD_GROUPS, TAGS } from "@/lib/form";
+} from "@/lib/form/field-types";
+import { coerceNumberValue, createTag } from "@/lib/form/utils";
 import type { FormSchema } from "@/schema/scouting";
-import { coerceNumberValue, createTag } from "@/utils/form";
 import { IntegerInput } from "~/form/input";
 
 interface FormFieldsProps {

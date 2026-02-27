@@ -19,44 +19,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@decode/ui/components/select";
+import { toast } from "@decode/ui/components/sonner";
 import { Textarea } from "@decode/ui/components/textarea";
 import { useForm } from "@decode/ui/lib/react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronLeft, ChevronRight, UploadIcon, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { getConfig } from "@/lib/config";
+import {
+  CLIMB_LEVEL_OPTIONS,
+  DRIVETRAIN_TYPE_OPTIONS,
+  INTAKE_METHOD_OPTIONS,
+  PIT_SECTION_CONFIG,
+} from "@/lib/form/constants";
+import type { PhotoPreview } from "@/lib/form/types";
+import { formatNumberFieldProps } from "@/lib/form/utils";
 import { type FrcPitFormSchema, frcPitFormSchema } from "@/schema/scouting";
 import { Config } from "~/form/config";
 import { setPitSectionsState } from "~/sidebar/pit-sections";
 import { getPhotoUploadUrl, submitPit } from "./actions";
-
-type SectionConfig = {
-  id: string;
-  label: string;
-};
-
-type UploadedPhotoPreview = {
-  id: string;
-  storageId?: string;
-  previewUrl: string;
-  fileName: string;
-  status: "uploading" | "uploaded" | "failed";
-};
-
-const sectionConfig: SectionConfig[] = [
-  { id: "metadata", label: "Metadata" },
-  { id: "robotDimensions", label: "Robot Dimensions" },
-  { id: "capabilities", label: "Capabilities" },
-  { id: "fieldTraversal", label: "Navigation" },
-  { id: "notes", label: "Notes" },
-];
-
-const intakeMethodOptions = [
-  { id: "floor", label: "Floor" },
-  { id: "depot", label: "Depot" },
-  { id: "outpost", label: "Outpost/Human Player" },
-] as const;
 
 function CheckboxLabelRow({
   children,
@@ -97,9 +78,7 @@ function Section({
 export default function PitScouting() {
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [photoPreviews, setPhotoPreviews] = useState<UploadedPhotoPreview[]>(
-    []
-  );
+  const [photoPreviews, setPhotoPreviews] = useState<PhotoPreview[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [completedSections, setCompletedSections] = useState<Set<number>>(
     new Set()
@@ -131,8 +110,8 @@ export default function PitScouting() {
     },
   });
 
-  const currentSection = sectionConfig[activeSectionIndex];
-  const isLastSection = activeSectionIndex === sectionConfig.length - 1;
+  const currentSection = PIT_SECTION_CONFIG[activeSectionIndex];
+  const isLastSection = activeSectionIndex === PIT_SECTION_CONFIG.length - 1;
 
   const handlePhotoUpload = useCallback(
     // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Photo upload with validation and error handling
@@ -163,7 +142,11 @@ export default function PitScouting() {
           ]);
 
           try {
-            const uploadUrl = await getPhotoUploadUrl();
+            const uploadResult = await getPhotoUploadUrl();
+            if (!(uploadResult.success && uploadResult.uploadUrl)) {
+              throw new Error(uploadResult.message);
+            }
+            const uploadUrl = uploadResult.uploadUrl;
 
             const uploadResponse = await fetch(uploadUrl, {
               method: "POST",
@@ -294,7 +277,7 @@ export default function PitScouting() {
         setIsSubmitting(true);
         try {
           const values = form.getValues();
-          await submitPit({
+          const result = await submitPit({
             competitionType: "FRC",
             eventCode,
             eventName: undefined,
@@ -329,8 +312,12 @@ export default function PitScouting() {
             weight: values.weight,
           });
 
-          toast.success("Pit scouting submitted successfully");
-          onReset();
+          if (result.success) {
+            toast.success(result.message);
+            onReset();
+          } else {
+            toast.error(result.message);
+          }
         } catch (error) {
           const message =
             error instanceof Error
@@ -342,7 +329,7 @@ export default function PitScouting() {
         }
       } else {
         setActiveSectionIndex((prev) =>
-          Math.min(prev + 1, sectionConfig.length - 1)
+          Math.min(prev + 1, PIT_SECTION_CONFIG.length - 1)
         );
       }
     },
@@ -402,7 +389,7 @@ export default function PitScouting() {
   useEffect(() => {
     async function updateCompletionStatus() {
       const newCompleted = new Set<number>();
-      for (let i = 0; i < sectionConfig.length; i++) {
+      for (let i = 0; i < PIT_SECTION_CONFIG.length; i++) {
         const isComplete = await checkSectionCompletion(i);
         if (isComplete) {
           newCompleted.add(i);
@@ -424,7 +411,7 @@ export default function PitScouting() {
 
   useEffect(() => {
     setPitSectionsState({
-      sections: sectionConfig.map((section, index) => ({
+      sections: PIT_SECTION_CONFIG.map((section, index) => ({
         id: section.id,
         label: section.label,
         completed: completedSections.has(index),
@@ -450,13 +437,13 @@ export default function PitScouting() {
         >
           <div className="space-y-2">
             <p className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
-              {activeSectionIndex + 1} / {sectionConfig.length}
+              {activeSectionIndex + 1} / {PIT_SECTION_CONFIG.length}
             </p>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full rounded-full bg-primary transition-all"
                 style={{
-                  width: `${((activeSectionIndex + 1) / sectionConfig.length) * 100}%`,
+                  width: `${((activeSectionIndex + 1) / PIT_SECTION_CONFIG.length) * 100}%`,
                 }}
               />
             </div>
@@ -478,12 +465,7 @@ export default function PitScouting() {
                           className="w-full bg-background text-lg"
                           placeholder="Enter team number"
                           type="number"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value ? Number(e.target.value) : 0
-                            )
-                          }
+                          {...formatNumberFieldProps(field)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -580,21 +562,7 @@ export default function PitScouting() {
                           <FormControl>
                             <Input
                               type="number"
-                              {...field}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val !== "") {
-                                  field.onChange(Number(val));
-                                } else {
-                                  field.onChange(undefined);
-                                }
-                              }}
-                              value={
-                                field.value !== undefined &&
-                                field.value !== null
-                                  ? String(field.value)
-                                  : ""
-                              }
+                              {...formatNumberFieldProps(field)}
                             />
                           </FormControl>
                           <FormMessage />
@@ -610,21 +578,7 @@ export default function PitScouting() {
                           <FormControl>
                             <Input
                               type="number"
-                              {...field}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val !== "") {
-                                  field.onChange(Number(val));
-                                } else {
-                                  field.onChange(undefined);
-                                }
-                              }}
-                              value={
-                                field.value !== undefined &&
-                                field.value !== null
-                                  ? String(field.value)
-                                  : ""
-                              }
+                              {...formatNumberFieldProps(field)}
                             />
                           </FormControl>
                           <FormMessage />
@@ -640,21 +594,7 @@ export default function PitScouting() {
                           <FormControl>
                             <Input
                               type="number"
-                              {...field}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val !== "") {
-                                  field.onChange(Number(val));
-                                } else {
-                                  field.onChange(undefined);
-                                }
-                              }}
-                              value={
-                                field.value !== undefined &&
-                                field.value !== null
-                                  ? String(field.value)
-                                  : ""
-                              }
+                              {...formatNumberFieldProps(field)}
                             />
                           </FormControl>
                           <FormMessage />
@@ -674,20 +614,7 @@ export default function PitScouting() {
                         <FormControl>
                           <Input
                             type="number"
-                            {...field}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val !== "") {
-                                field.onChange(Number(val));
-                              } else {
-                                field.onChange(undefined);
-                              }
-                            }}
-                            value={
-                              field.value !== undefined && field.value !== null
-                                ? String(field.value)
-                                : ""
-                            }
+                            {...formatNumberFieldProps(field)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -711,9 +638,14 @@ export default function PitScouting() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="swerve">Swerve</SelectItem>
-                            <SelectItem value="tank">Tank</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
+                            {DRIVETRAIN_TYPE_OPTIONS.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -739,20 +671,7 @@ export default function PitScouting() {
                           <Input
                             placeholder="Number of game elements"
                             type="number"
-                            {...field}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val !== "") {
-                                field.onChange(Number(val));
-                              } else {
-                                field.onChange(undefined);
-                              }
-                            }}
-                            value={
-                              field.value !== undefined && field.value !== null
-                                ? String(field.value)
-                                : ""
-                            }
+                            {...formatNumberFieldProps(field)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -770,20 +689,7 @@ export default function PitScouting() {
                           <Input
                             placeholder="~ Balls/Second"
                             type="number"
-                            {...field}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val !== "") {
-                                field.onChange(Number(val));
-                              } else {
-                                field.onChange(undefined);
-                              }
-                            }}
-                            value={
-                              field.value !== undefined && field.value !== null
-                                ? String(field.value)
-                                : ""
-                            }
+                            {...formatNumberFieldProps(field)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -797,7 +703,7 @@ export default function PitScouting() {
                     Intake Methods
                   </FormLabel>
                   <div className="grid gap-2 sm:grid-cols-3">
-                    {intakeMethodOptions.map((method) => (
+                    {INTAKE_METHOD_OPTIONS.map((method) => (
                       <FormField
                         control={form.control}
                         key={method.id}
@@ -858,10 +764,11 @@ export default function PitScouting() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="0">Level 0 - No Climb</SelectItem>
-                          <SelectItem value="1">Level 1</SelectItem>
-                          <SelectItem value="2">Level 2</SelectItem>
-                          <SelectItem value="3">Level 3</SelectItem>
+                          {CLIMB_LEVEL_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

@@ -2,12 +2,29 @@
 
 import { api } from "@decode/backend/convex/_generated/api";
 import { fetchAuthMutation, isAuthenticated } from "@/lib/convex";
+import type { SubmissionResult } from "@/lib/form/types";
 
-export async function getPhotoUploadUrl(): Promise<string> {
+export async function getPhotoUploadUrl(): Promise<
+  SubmissionResult & { uploadUrl?: string }
+> {
   if (!(await isAuthenticated())) {
-    throw new Error("You must be signed in to upload photos.");
+    return {
+      success: false,
+      message: "You must be signed in to upload photos.",
+    };
   }
-  return await fetchAuthMutation(api.submissions.generatePitPhotoUploadUrl, {});
+
+  try {
+    const uploadUrl = await fetchAuthMutation(
+      api.submissions.generatePitPhotoUploadUrl,
+      {}
+    );
+    return { success: true, message: "Upload URL generated", uploadUrl };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to generate upload URL";
+    return { success: false, message };
+  }
 }
 
 type SubmitPitArgs = {
@@ -30,9 +47,22 @@ type SubmitPitArgs = {
   weight?: number;
 };
 
-export async function submitPit(args: SubmitPitArgs): Promise<string> {
+export async function submitPit(
+  args: SubmitPitArgs
+): Promise<SubmissionResult> {
   if (!(await isAuthenticated())) {
-    throw new Error("You must be signed in to submit pit scouting.");
+    return {
+      success: false,
+      message: "You must be signed in to submit pit scouting.",
+    };
   }
-  return await fetchAuthMutation(api.submissions.submitPit, args);
+
+  try {
+    await fetchAuthMutation(api.submissions.submitPit, args);
+    return { success: true, message: "Pit scouting submitted successfully" };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to submit pit scouting";
+    return { success: false, message };
+  }
 }

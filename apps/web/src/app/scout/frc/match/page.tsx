@@ -20,16 +20,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@decode/ui/components/select";
+import { toast } from "@decode/ui/components/sonner";
 import { useForm } from "@decode/ui/lib/react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
 import { useInputMode } from "@/hooks/use-input-mode";
 import {
   useMatchTimerFRC,
   usePeriodActionTimer,
 } from "@/hooks/use-match-timer";
 import { getConfig, getTeamsMap, setTeamsMap } from "@/lib/config";
+import {
+  ALLIANCE_COLOUR_OPTIONS,
+  FRC_PERIOD_TO_KEY,
+  INITIAL_PERIOD_DATA,
+  MATCH_STAGE_OPTIONS,
+} from "@/lib/form/constants";
+import type { PageState } from "@/lib/form/types";
+import {
+  formatNumberFieldProps,
+  getInitialFrcFormValues,
+} from "@/lib/form/utils";
 import type {
   FrcAutoPath,
   FrcFieldEvent,
@@ -37,7 +48,6 @@ import type {
   FrcPeriodDataMap,
 } from "@/schema/scouting";
 import { frcMatchSubmissionSchema } from "@/schema/scouting";
-import { getInitialFrcFormValues } from "@/utils/form";
 import { Config } from "~/form/config";
 import { FrcEventsList } from "~/form/events-list";
 import { FrcFieldInput } from "~/form/field-input";
@@ -46,18 +56,6 @@ import { PeriodSlide } from "~/form/period-slide";
 import { SummaryView } from "~/form/summary-view";
 import { setSidebarContent } from "~/sidebar/slot";
 import { submitMatch } from "./actions";
-
-const INITIAL_PERIOD_DATA: FrcPeriodDataMap = {
-  auto: { scoring: 0, feeding: 0, defense: 0 },
-  transition: { scoring: 0, feeding: 0, defense: 0 },
-  shift1: { scoring: 0, feeding: 0, defense: 0 },
-  shift2: { scoring: 0, feeding: 0, defense: 0 },
-  shift3: { scoring: 0, feeding: 0, defense: 0 },
-  shift4: { scoring: 0, feeding: 0, defense: 0 },
-  endGame: { scoring: 0, feeding: 0, defense: 0 },
-};
-
-type PageState = "meta" | "running" | "summary";
 
 export default function MatchScouting() {
   const { mode: inputMode } = useInputMode();
@@ -72,9 +70,9 @@ export default function MatchScouting() {
   );
 
   const timer = useMatchTimerFRC();
-  const scoringTimer = usePeriodActionTimer(timer.getCurrentPeriod);
-  const feedingTimer = usePeriodActionTimer(timer.getCurrentPeriod);
-  const defenseTimer = usePeriodActionTimer(timer.getCurrentPeriod);
+  const scoringTimer = usePeriodActionTimer();
+  const feedingTimer = usePeriodActionTimer();
+  const defenseTimer = usePeriodActionTimer();
 
   const form = useForm<FrcMatchSubmissionSchema>({
     resolver: zodResolver(frcMatchSubmissionSchema),
@@ -187,10 +185,59 @@ export default function MatchScouting() {
   }, [teamsMap]);
 
   useEffect(() => {
+    scoringTimer.updateMatchElapsed(timer.elapsedTime);
+    feedingTimer.updateMatchElapsed(timer.elapsedTime);
+    defenseTimer.updateMatchElapsed(timer.elapsedTime);
+  }, [timer.elapsedTime, scoringTimer, feedingTimer, defenseTimer]);
+
+  const flushActiveTimers = useCallback(() => {
+    const scoringSegments = scoringTimer.isRunning ? scoringTimer.flush() : [];
+    const feedingSegments = feedingTimer.isRunning ? feedingTimer.flush() : [];
+    const defenseSegments = defenseTimer.isRunning ? defenseTimer.flush() : [];
+
+    if (
+      scoringSegments.length > 0 ||
+      feedingSegments.length > 0 ||
+      defenseSegments.length > 0
+    ) {
+      setPeriodData((prev) => {
+        const updated = { ...prev };
+
+        for (const segment of scoringSegments) {
+          const key = FRC_PERIOD_TO_KEY[segment.period];
+          updated[key] = {
+            ...updated[key],
+            scoring: updated[key].scoring + segment.duration,
+          };
+        }
+
+        for (const segment of feedingSegments) {
+          const key = FRC_PERIOD_TO_KEY[segment.period];
+          updated[key] = {
+            ...updated[key],
+            feeding: updated[key].feeding + segment.duration,
+          };
+        }
+
+        for (const segment of defenseSegments) {
+          const key = FRC_PERIOD_TO_KEY[segment.period];
+          updated[key] = {
+            ...updated[key],
+            defense: updated[key].defense + segment.duration,
+          };
+        }
+
+        return updated;
+      });
+    }
+  }, [scoringTimer, feedingTimer, defenseTimer]);
+
+  useEffect(() => {
     if (timer.state === "finished" && pageState === "running") {
+      flushActiveTimers();
       setPageState("summary");
     }
-  }, [timer.state, pageState]);
+  }, [timer.state, pageState, flushActiveTimers]);
 
   useEffect(() => {
     setSidebarContent(
@@ -273,16 +320,7 @@ export default function MatchScouting() {
                           inputMode="numeric"
                           placeholder="Enter team number"
                           type="number"
-                          {...field}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            field.onChange(v === "" ? undefined : Number(v));
-                          }}
-                          value={
-                            field.value === undefined || field.value === null
-                              ? ""
-                              : String(field.value)
-                          }
+                          {...formatNumberFieldProps(field)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -300,16 +338,7 @@ export default function MatchScouting() {
                           inputMode="numeric"
                           placeholder="Enter match number"
                           type="number"
-                          {...field}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            field.onChange(v === "" ? undefined : Number(v));
-                          }}
-                          value={
-                            field.value === undefined || field.value === null
-                              ? ""
-                              : String(field.value)
-                          }
+                          {...formatNumberFieldProps(field)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -332,9 +361,11 @@ export default function MatchScouting() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="practice">Practice</SelectItem>
-                          <SelectItem value="qual">Qualification</SelectItem>
-                          <SelectItem value="playoff">Playoff</SelectItem>
+                          {MATCH_STAGE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -357,8 +388,11 @@ export default function MatchScouting() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Red">Red</SelectItem>
-                          <SelectItem value="Blue">Blue</SelectItem>
+                          {ALLIANCE_COLOUR_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

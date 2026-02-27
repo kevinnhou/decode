@@ -213,10 +213,6 @@ export function useMatchTimer(): UseMatchTimerReturn {
   };
 }
 
-/**
- * FRC match timer variant: 2:30 countdown with no pause, plus REBUILT period mapping.
- * Use for FRC match scouting.
- */
 export function useMatchTimerFRC(): UseMatchTimerFRCReturn {
   const [timeRemaining, setTimeRemaining] = useState(INITIAL_TIME_SECONDS);
   const [state, setState] = useState<TimerState>("idle");
@@ -376,22 +372,25 @@ export interface UsePeriodActionTimerReturn {
   elapsedSeconds: number;
   start: () => void;
   stop: () => { period: FrcPeriod; duration: number } | null;
+  flush: () => { period: FrcPeriod; duration: number }[];
   reset: () => void;
+  updateMatchElapsed: (matchElapsed: number) => void;
 }
 
-/**
- * Per-action timer for FRC period slides (Scoring, Feeding, Defence).
- * Duration is attributed to the period when the timer was started.
- * Timers carry over across periods; on stop, attribution uses startPeriod.
- */
-export function usePeriodActionTimer(
-  getCurrentPeriod: () => FrcPeriod
-): UsePeriodActionTimerReturn {
+export function usePeriodActionTimer(): UsePeriodActionTimerReturn {
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const startTimeRef = useRef<number | null>(null);
   const startPeriodRef = useRef<FrcPeriod | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const periodSegmentsRef = useRef<{ period: FrcPeriod; duration: number }[]>(
+    []
+  );
+  const matchElapsedRef = useRef<number>(0);
+
+  const updateMatchElapsed = useCallback((matchElapsed: number) => {
+    matchElapsedRef.current = matchElapsed;
+  }, []);
 
   const updateElapsed = useCallback(() => {
     if (startTimeRef.current === null) {
@@ -399,6 +398,22 @@ export function usePeriodActionTimer(
     }
 
     const elapsed = (Date.now() - startTimeRef.current) / 1000;
+    const currentPeriod = getFrcPeriodFromElapsed(matchElapsedRef.current);
+
+    if (startPeriodRef.current !== currentPeriod) {
+      const lastPeriod = startPeriodRef.current;
+      if (lastPeriod !== null) {
+        const segmentDuration =
+          elapsed -
+          periodSegmentsRef.current.reduce((sum, seg) => sum + seg.duration, 0);
+        periodSegmentsRef.current.push({
+          period: lastPeriod,
+          duration: segmentDuration,
+        });
+      }
+      startPeriodRef.current = currentPeriod;
+    }
+
     setElapsedSeconds(elapsed);
 
     if (animationFrameRef.current !== null) {
@@ -411,23 +426,34 @@ export function usePeriodActionTimer(
       return;
     }
 
-    startPeriodRef.current = getCurrentPeriod();
+    startPeriodRef.current = getFrcPeriodFromElapsed(matchElapsedRef.current);
+    periodSegmentsRef.current = [];
     startTimeRef.current = Date.now();
     setElapsedSeconds(0);
     setIsRunning(true);
     animationFrameRef.current = window.requestAnimationFrame(updateElapsed);
-  }, [getCurrentPeriod, updateElapsed]);
+  }, [updateElapsed]);
 
-  const stop = useCallback((): {
-    period: FrcPeriod;
-    duration: number;
-  } | null => {
+  const flush = useCallback((): { period: FrcPeriod; duration: number }[] => {
     if (startTimeRef.current === null || startPeriodRef.current === null) {
-      return null;
+      return [];
     }
 
-    const duration = (Date.now() - startTimeRef.current) / 1000;
-    const period = startPeriodRef.current;
+    const totalElapsed = (Date.now() - startTimeRef.current) / 1000;
+    const segmentsTotal = periodSegmentsRef.current.reduce(
+      (sum, seg) => sum + seg.duration,
+      0
+    );
+    const remainingDuration = totalElapsed - segmentsTotal;
+
+    if (remainingDuration > 0) {
+      periodSegmentsRef.current.push({
+        period: startPeriodRef.current,
+        duration: remainingDuration,
+      });
+    }
+
+    const result = [...periodSegmentsRef.current];
 
     if (animationFrameRef.current !== null) {
       window.cancelAnimationFrame(animationFrameRef.current);
@@ -436,11 +462,29 @@ export function usePeriodActionTimer(
 
     startTimeRef.current = null;
     startPeriodRef.current = null;
+    periodSegmentsRef.current = [];
     setIsRunning(false);
     setElapsedSeconds(0);
 
-    return { period, duration };
+    return result;
   }, []);
+
+  const stop = useCallback((): {
+    period: FrcPeriod;
+    duration: number;
+  } | null => {
+    const segments = flush();
+
+    if (segments.length === 0) {
+      return null;
+    }
+
+    if (segments.length === 1) {
+      return segments[0];
+    }
+
+    return segments.at(-1) ?? null;
+  }, [flush]);
 
   const reset = useCallback(() => {
     if (animationFrameRef.current !== null) {
@@ -449,6 +493,7 @@ export function usePeriodActionTimer(
     }
     startTimeRef.current = null;
     startPeriodRef.current = null;
+    periodSegmentsRef.current = [];
     setIsRunning(false);
     setElapsedSeconds(0);
   }, []);
@@ -467,6 +512,8 @@ export function usePeriodActionTimer(
     elapsedSeconds,
     start,
     stop,
+    flush,
     reset,
+    updateMatchElapsed,
   };
 }

@@ -7,12 +7,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@decode/ui/components/dropdown-menu";
-import { useThemeConfig } from "@decode/ui/components/providers";
+import { useTheme, useThemeConfig } from "@decode/ui/components/providers";
 import { useSidebar } from "@decode/ui/components/sidebar";
 import { baseColours } from "@decode/ui/lib/colours";
 import { cn } from "@decode/ui/lib/utils";
 import { CheckIcon, MoonIcon, SunIcon } from "lucide-react";
-import { useTheme } from "next-themes";
 
 export function ThemeSwitcher() {
   const { activeTheme, setActiveTheme } = useThemeConfig();
