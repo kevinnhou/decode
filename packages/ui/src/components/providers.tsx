@@ -56,6 +56,8 @@ export function ActiveThemeProvider({
   );
 }
 
+export { useTheme } from "next-themes";
+
 export function useThemeConfig() {
   const context = useContext(ThemeContext);
   if (context === undefined) {

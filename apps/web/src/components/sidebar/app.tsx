@@ -6,7 +6,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarSeparator,
 } from "@decode/ui/components/sidebar";
 import { cn } from "@decode/ui/lib/utils";
 import { usePathname } from "next/navigation";
@@ -62,7 +61,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarFooter>
         <ScoutType />
-        <SidebarSeparator />
         <ThemeSwitcher />
       </SidebarFooter>
     </Sidebar>
