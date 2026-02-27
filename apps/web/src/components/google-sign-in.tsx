@@ -2,9 +2,9 @@
 
 import { Button } from "@decode/ui/components/button";
 import { Separator } from "@decode/ui/components/separator";
+import { toast } from "@decode/ui/components/sonner";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 
 type GoogleSignInProps = {

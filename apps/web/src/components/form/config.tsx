@@ -23,11 +23,11 @@ import {
   FormMessage,
 } from "@decode/ui/components/form";
 import { Input } from "@decode/ui/components/input";
+import { toast } from "@decode/ui/components/sonner";
 import { useForm } from "@decode/ui/lib/react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileJson, Settings, Upload } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
 import { getConfig, setConfig } from "@/lib/config";
 import {
   type SpreadsheetConfigSchema,

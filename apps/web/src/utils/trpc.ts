@@ -1,5 +1,5 @@
+import { toast } from "@decode/ui/components/sonner";
 import { QueryCache, QueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({

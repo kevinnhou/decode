@@ -20,10 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@decode/ui/components/select";
+import { toast } from "@decode/ui/components/sonner";
 import { useForm } from "@decode/ui/lib/react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
 import { useInputMode } from "@/hooks/use-input-mode";
 import {
   useMatchTimerFRC,

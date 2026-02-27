@@ -3,10 +3,10 @@
 
 import { Button } from "@decode/ui/components/button";
 import { Form } from "@decode/ui/components/form";
+import { toast } from "@decode/ui/components/sonner";
 import { useForm } from "@decode/ui/lib/react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
 import { useInputMode } from "@/hooks/use-input-mode";
 import { useMatchTimer } from "@/hooks/use-match-timer";
 import { getConfig, getTeamsMap, setTeamsMap } from "@/lib/config";
