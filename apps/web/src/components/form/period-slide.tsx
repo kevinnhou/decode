@@ -19,6 +19,7 @@ import {
 import type { UseFormReturn } from "@decode/ui/lib/react-hook-form";
 import { useCallback } from "react";
 import type { FrcPeriod } from "@/hooks/use-match-timer";
+import { FRC_PERIOD_TO_KEY } from "@/lib/form/constants";
 import { FRC_CLIMB_LEVELS } from "@/lib/form/field-groups";
 import type {
   FrcMatchSubmissionSchema,
@@ -33,16 +34,6 @@ const PERIOD_LABELS: Record<FrcPeriod, string> = {
   SHIFT_3: "Shift 3",
   SHIFT_4: "Shift 4",
   END_GAME: "End Game",
-};
-
-const FRCPERIOD_TO_KEY: Record<FrcPeriod, keyof FrcPeriodDataMap> = {
-  AUTO: "auto",
-  TRANSITION: "transition",
-  SHIFT_1: "shift1",
-  SHIFT_2: "shift2",
-  SHIFT_3: "shift3",
-  SHIFT_4: "shift4",
-  END_GAME: "endGame",
 };
 
 function formatSeconds(seconds: number): string {
@@ -146,7 +137,7 @@ export function PeriodSlide({
       onPeriodDataChange((prev) => {
         const updated = { ...prev };
         for (const segment of segments) {
-          const key = FRCPERIOD_TO_KEY[segment.period];
+          const key = FRC_PERIOD_TO_KEY[segment.period];
           updated[key] = {
             ...updated[key],
             [action]: updated[key][action] + segment.duration,
