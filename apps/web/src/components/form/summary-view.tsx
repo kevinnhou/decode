@@ -9,7 +9,7 @@ import {
 } from "@decode/ui/components/form";
 import { Textarea } from "@decode/ui/components/textarea";
 import type { UseFormReturn } from "@decode/ui/lib/react-hook-form";
-import { FRC_CLIMB_LEVELS } from "@/lib/form";
+import { FRC_CLIMB_LEVELS } from "@/lib/form/field-groups";
 import type {
   FrcAutoPath,
   FrcFieldEvent,

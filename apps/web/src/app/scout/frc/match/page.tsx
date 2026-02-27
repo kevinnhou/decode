@@ -30,6 +30,17 @@ import {
   usePeriodActionTimer,
 } from "@/hooks/use-match-timer";
 import { getConfig, getTeamsMap, setTeamsMap } from "@/lib/config";
+import {
+  ALLIANCE_COLOUR_OPTIONS,
+  FRC_PERIOD_TO_KEY,
+  INITIAL_PERIOD_DATA,
+  MATCH_STAGE_OPTIONS,
+} from "@/lib/form/constants";
+import type { PageState } from "@/lib/form/types";
+import {
+  formatNumberFieldProps,
+  getInitialFrcFormValues,
+} from "@/lib/form/utils";
 import type {
   FrcAutoPath,
   FrcFieldEvent,
@@ -37,7 +48,6 @@ import type {
   FrcPeriodDataMap,
 } from "@/schema/scouting";
 import { frcMatchSubmissionSchema } from "@/schema/scouting";
-import { getInitialFrcFormValues } from "@/utils/form";
 import { Config } from "~/form/config";
 import { FrcEventsList } from "~/form/events-list";
 import { FrcFieldInput } from "~/form/field-input";
@@ -46,18 +56,6 @@ import { PeriodSlide } from "~/form/period-slide";
 import { SummaryView } from "~/form/summary-view";
 import { setSidebarContent } from "~/sidebar/slot";
 import { submitMatch } from "./actions";
-
-const INITIAL_PERIOD_DATA: FrcPeriodDataMap = {
-  auto: { scoring: 0, feeding: 0, defense: 0 },
-  transition: { scoring: 0, feeding: 0, defense: 0 },
-  shift1: { scoring: 0, feeding: 0, defense: 0 },
-  shift2: { scoring: 0, feeding: 0, defense: 0 },
-  shift3: { scoring: 0, feeding: 0, defense: 0 },
-  shift4: { scoring: 0, feeding: 0, defense: 0 },
-  endGame: { scoring: 0, feeding: 0, defense: 0 },
-};
-
-type PageState = "meta" | "running" | "summary";
 
 export default function MatchScouting() {
   const { mode: inputMode } = useInputMode();
@@ -204,21 +202,9 @@ export default function MatchScouting() {
     ) {
       setPeriodData((prev) => {
         const updated = { ...prev };
-        const FRCPERIOD_TO_KEY: Record<
-          import("@/hooks/use-match-timer").FrcPeriod,
-          keyof FrcPeriodDataMap
-        > = {
-          AUTO: "auto",
-          TRANSITION: "transition",
-          SHIFT_1: "shift1",
-          SHIFT_2: "shift2",
-          SHIFT_3: "shift3",
-          SHIFT_4: "shift4",
-          END_GAME: "endGame",
-        };
 
         for (const segment of scoringSegments) {
-          const key = FRCPERIOD_TO_KEY[segment.period];
+          const key = FRC_PERIOD_TO_KEY[segment.period];
           updated[key] = {
             ...updated[key],
             scoring: updated[key].scoring + segment.duration,
@@ -226,7 +212,7 @@ export default function MatchScouting() {
         }
 
         for (const segment of feedingSegments) {
-          const key = FRCPERIOD_TO_KEY[segment.period];
+          const key = FRC_PERIOD_TO_KEY[segment.period];
           updated[key] = {
             ...updated[key],
             feeding: updated[key].feeding + segment.duration,
@@ -234,7 +220,7 @@ export default function MatchScouting() {
         }
 
         for (const segment of defenseSegments) {
-          const key = FRCPERIOD_TO_KEY[segment.period];
+          const key = FRC_PERIOD_TO_KEY[segment.period];
           updated[key] = {
             ...updated[key],
             defense: updated[key].defense + segment.duration,
@@ -334,16 +320,7 @@ export default function MatchScouting() {
                           inputMode="numeric"
                           placeholder="Enter team number"
                           type="number"
-                          {...field}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            field.onChange(v === "" ? undefined : Number(v));
-                          }}
-                          value={
-                            field.value === undefined || field.value === null
-                              ? ""
-                              : String(field.value)
-                          }
+                          {...formatNumberFieldProps(field)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -361,16 +338,7 @@ export default function MatchScouting() {
                           inputMode="numeric"
                           placeholder="Enter match number"
                           type="number"
-                          {...field}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            field.onChange(v === "" ? undefined : Number(v));
-                          }}
-                          value={
-                            field.value === undefined || field.value === null
-                              ? ""
-                              : String(field.value)
-                          }
+                          {...formatNumberFieldProps(field)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -393,9 +361,11 @@ export default function MatchScouting() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="practice">Practice</SelectItem>
-                          <SelectItem value="qual">Qualification</SelectItem>
-                          <SelectItem value="playoff">Playoff</SelectItem>
+                          {MATCH_STAGE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -418,8 +388,11 @@ export default function MatchScouting() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Red">Red</SelectItem>
-                          <SelectItem value="Blue">Blue</SelectItem>
+                          {ALLIANCE_COLOUR_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

@@ -19,7 +19,7 @@ import {
 import type { UseFormReturn } from "@decode/ui/lib/react-hook-form";
 import { useCallback } from "react";
 import type { FrcPeriod } from "@/hooks/use-match-timer";
-import { FRC_CLIMB_LEVELS } from "@/lib/form";
+import { FRC_CLIMB_LEVELS } from "@/lib/form/field-groups";
 import type {
   FrcMatchSubmissionSchema,
   FrcPeriodDataMap,
