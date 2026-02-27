@@ -69,11 +69,6 @@ export const unifiedSubmissionSchema = z.object({
 
 export type UnifiedSubmissionSchema = z.infer<typeof unifiedSubmissionSchema>;
 
-/**
- * Full submission payload: client form data + server-attached attribution.
- * The attribution fields are merged server-side in the submit action,
- * not supplied by the client.
- */
 export const attributedSubmissionSchema = unifiedSubmissionSchema.merge(
   scoutAttributionSchema
 );

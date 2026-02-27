@@ -103,18 +103,24 @@ interface PeriodSlideProps {
     elapsedSeconds: number;
     start: () => void;
     stop: () => { period: FrcPeriod; duration: number } | null;
+    flush: () => { period: FrcPeriod; duration: number }[];
+    updateMatchElapsed: (matchElapsed: number) => void;
   };
   feedingTimer: {
     isRunning: boolean;
     elapsedSeconds: number;
     start: () => void;
     stop: () => { period: FrcPeriod; duration: number } | null;
+    flush: () => { period: FrcPeriod; duration: number }[];
+    updateMatchElapsed: (matchElapsed: number) => void;
   };
   defenseTimer: {
     isRunning: boolean;
     elapsedSeconds: number;
     start: () => void;
     stop: () => { period: FrcPeriod; duration: number } | null;
+    flush: () => { period: FrcPeriod; duration: number }[];
+    updateMatchElapsed: (matchElapsed: number) => void;
   };
   form?: UseFormReturn<FrcMatchSubmissionSchema>;
 }
@@ -129,22 +135,25 @@ export function PeriodSlide({
 }: PeriodSlideProps) {
   const handleStop = useCallback(
     (
-      stopFn: () => { period: FrcPeriod; duration: number } | null,
+      flushFn: () => { period: FrcPeriod; duration: number }[],
       action: "scoring" | "feeding" | "defense"
     ) => {
-      const result = stopFn();
-      if (!result) {
+      const segments = flushFn();
+      if (segments.length === 0) {
         return;
       }
 
-      const key = FRCPERIOD_TO_KEY[result.period];
-      onPeriodDataChange((prev) => ({
-        ...prev,
-        [key]: {
-          ...prev[key],
-          [action]: prev[key][action] + result.duration,
-        },
-      }));
+      onPeriodDataChange((prev) => {
+        const updated = { ...prev };
+        for (const segment of segments) {
+          const key = FRCPERIOD_TO_KEY[segment.period];
+          updated[key] = {
+            ...updated[key],
+            [action]: updated[key][action] + segment.duration,
+          };
+        }
+        return updated;
+      });
     },
     [onPeriodDataChange]
   );
@@ -162,21 +171,21 @@ export function PeriodSlide({
           isRunning={scoringTimer.isRunning}
           label="Scoring"
           onStart={scoringTimer.start}
-          onStop={() => handleStop(scoringTimer.stop, "scoring")}
+          onStop={() => handleStop(scoringTimer.flush, "scoring")}
         />
         <ActionTimer
           elapsedSeconds={feedingTimer.elapsedSeconds}
           isRunning={feedingTimer.isRunning}
           label="Feeding"
           onStart={feedingTimer.start}
-          onStop={() => handleStop(feedingTimer.stop, "feeding")}
+          onStop={() => handleStop(feedingTimer.flush, "feeding")}
         />
         <ActionTimer
           elapsedSeconds={defenseTimer.elapsedSeconds}
           isRunning={defenseTimer.isRunning}
           label="Defence"
           onStart={defenseTimer.start}
-          onStop={() => handleStop(defenseTimer.stop, "defense")}
+          onStop={() => handleStop(defenseTimer.flush, "defense")}
         />
       </div>
 

@@ -72,9 +72,9 @@ export default function MatchScouting() {
   );
 
   const timer = useMatchTimerFRC();
-  const scoringTimer = usePeriodActionTimer(timer.getCurrentPeriod);
-  const feedingTimer = usePeriodActionTimer(timer.getCurrentPeriod);
-  const defenseTimer = usePeriodActionTimer(timer.getCurrentPeriod);
+  const scoringTimer = usePeriodActionTimer();
+  const feedingTimer = usePeriodActionTimer();
+  const defenseTimer = usePeriodActionTimer();
 
   const form = useForm<FrcMatchSubmissionSchema>({
     resolver: zodResolver(frcMatchSubmissionSchema),
@@ -187,10 +187,71 @@ export default function MatchScouting() {
   }, [teamsMap]);
 
   useEffect(() => {
+    scoringTimer.updateMatchElapsed(timer.elapsedTime);
+    feedingTimer.updateMatchElapsed(timer.elapsedTime);
+    defenseTimer.updateMatchElapsed(timer.elapsedTime);
+  }, [timer.elapsedTime, scoringTimer, feedingTimer, defenseTimer]);
+
+  const flushActiveTimers = useCallback(() => {
+    const scoringSegments = scoringTimer.isRunning ? scoringTimer.flush() : [];
+    const feedingSegments = feedingTimer.isRunning ? feedingTimer.flush() : [];
+    const defenseSegments = defenseTimer.isRunning ? defenseTimer.flush() : [];
+
+    if (
+      scoringSegments.length > 0 ||
+      feedingSegments.length > 0 ||
+      defenseSegments.length > 0
+    ) {
+      setPeriodData((prev) => {
+        const updated = { ...prev };
+        const FRCPERIOD_TO_KEY: Record<
+          import("@/hooks/use-match-timer").FrcPeriod,
+          keyof FrcPeriodDataMap
+        > = {
+          AUTO: "auto",
+          TRANSITION: "transition",
+          SHIFT_1: "shift1",
+          SHIFT_2: "shift2",
+          SHIFT_3: "shift3",
+          SHIFT_4: "shift4",
+          END_GAME: "endGame",
+        };
+
+        for (const segment of scoringSegments) {
+          const key = FRCPERIOD_TO_KEY[segment.period];
+          updated[key] = {
+            ...updated[key],
+            scoring: updated[key].scoring + segment.duration,
+          };
+        }
+
+        for (const segment of feedingSegments) {
+          const key = FRCPERIOD_TO_KEY[segment.period];
+          updated[key] = {
+            ...updated[key],
+            feeding: updated[key].feeding + segment.duration,
+          };
+        }
+
+        for (const segment of defenseSegments) {
+          const key = FRCPERIOD_TO_KEY[segment.period];
+          updated[key] = {
+            ...updated[key],
+            defense: updated[key].defense + segment.duration,
+          };
+        }
+
+        return updated;
+      });
+    }
+  }, [scoringTimer, feedingTimer, defenseTimer]);
+
+  useEffect(() => {
     if (timer.state === "finished" && pageState === "running") {
+      flushActiveTimers();
       setPageState("summary");
     }
-  }, [timer.state, pageState]);
+  }, [timer.state, pageState, flushActiveTimers]);
 
   useEffect(() => {
     setSidebarContent(
