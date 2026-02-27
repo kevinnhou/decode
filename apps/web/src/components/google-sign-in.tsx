@@ -18,8 +18,7 @@ export function GoogleSignIn({
 }: GoogleSignInProps) {
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  async function handleGoogleSignIn(e: React.MouseEvent) {
-    e.preventDefault();
+  async function handleGoogleSignIn() {
     if (isSigningIn || disabled) {
       return;
     }
@@ -38,11 +37,10 @@ export function GoogleSignIn({
       toast.error(
         err instanceof Error ? err.message : "Sign in with Google failed"
       );
+    } finally {
       setIsSigningIn(false);
     }
   }
-
-  const isDisabled = disabled || isSigningIn;
 
   return (
     <div className="space-y-4">
@@ -57,7 +55,7 @@ export function GoogleSignIn({
 
       <Button
         className="w-full gap-2 rounded-xl font-mono"
-        disabled={isDisabled}
+        disabled={disabled || isSigningIn}
         onClick={handleGoogleSignIn}
         type="button"
         variant="outline"
