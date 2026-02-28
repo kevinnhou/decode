@@ -27,7 +27,7 @@ export function getBaseUrl(): string {
 }
 
 export const siteConfig: SiteConfig = {
-  name: "Next Mono",
+  name: "Decode",
   description: "",
   baseUrl: getBaseUrl(),
   locale: "en-AU",
