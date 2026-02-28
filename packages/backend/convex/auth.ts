@@ -26,6 +26,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) =>
       siteUrl,
       "http://localhost:3001/",
       "https://optimise.fyi/",
+      "https://www.optimise.fyi/",
       "*",
     ],
     database: authComponent.adapter(ctx as any),
