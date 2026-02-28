@@ -30,7 +30,7 @@ export interface AsyncMetadataOptions {
 function processSeoProps(props: MetadataProps = {}) {
   const baseUrl: string = site.links.url;
 
-  const baseTitle = props.title ? `${site.name} | ${props.title}` : site.name;
+  const baseTitle = props.title ? `${site.name} / ${props.title}` : site.name;
 
   const description = props.description || site.description;
   const pagePath = props.openGraph?.url || "/";

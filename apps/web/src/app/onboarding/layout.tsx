@@ -4,16 +4,18 @@ import { isAuthenticated } from "@/lib/convex";
 import { generateMetadata as genMeta } from "@/lib/metadata";
 
 export const metadata: Metadata = genMeta({
-  title: "Profile",
-  description: "Manage your account and organisation settings.",
+  title: "Join organisation",
+  description:
+    "Enter your team's invite code or create a new organisation to get started.",
   openGraph: {
-    title: "Profile",
-    description: "Manage your account and organisation settings.",
-    url: "/profile",
+    title: "Join organisation",
+    description:
+      "Enter your team's invite code or create a new organisation to get started.",
+    url: "/onboarding",
   },
 });
 
-export default async function ProfileLayout({
+export default async function OnboardingLayout({
   children,
 }: {
   children: React.ReactNode;
