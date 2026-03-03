@@ -11,9 +11,11 @@ import {
 } from "@decode/ui/components/dropdown-menu";
 import { Input } from "@decode/ui/components/input";
 import { Label } from "@decode/ui/components/label";
+import { useTheme, useThemeConfig } from "@decode/ui/components/providers";
 import { Separator } from "@decode/ui/components/separator";
 import { toast } from "@decode/ui/components/sonner";
 import { Tabs } from "@decode/ui/components/tabs";
+import { baseColours } from "@decode/ui/lib/colours";
 import { cn } from "@decode/ui/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import {
@@ -27,6 +29,7 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
+import type React from "react";
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
@@ -40,6 +43,8 @@ interface PersonalTabProps {
 
 function PersonalTab({ profile, userEmail }: PersonalTabProps) {
   const updateName = useMutation(api.auth.updateDisplayName);
+  const { theme: themeMode, setTheme, resolvedTheme } = useTheme();
+  const { activeTheme, setActiveTheme } = useThemeConfig();
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState("");
 
@@ -126,6 +131,125 @@ function PersonalTab({ profile, userEmail }: PersonalTabProps) {
       <div className="space-y-3">
         <Label className="text-muted-foreground">Email</Label>
         <p className="text-foreground text-sm">{userEmail}</p>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-4">
+        <Label className="text-muted-foreground">Appearance</Label>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <button
+            className={cn(
+              "relative cursor-pointer rounded-xl border-2 transition-all duration-200 hover:border-primary/50",
+              themeMode === "light"
+                ? "border-primary bg-white shadow-lg dark:bg-zinc-50"
+                : "border-border"
+            )}
+            onClick={() => setTheme("light")}
+            type="button"
+          >
+            <div className="rounded-xl bg-white p-4">
+              <div className="mb-3 flex items-center gap-2 border-gray-200 border-b pb-2">
+                <div className="h-2 w-16 rounded bg-gray-200" />
+                <div className="ml-auto h-2 w-2 rounded-full bg-gray-300" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-2 w-24 rounded bg-gray-200" />
+                <div className="h-2 w-32 rounded bg-gray-100" />
+                <div className="h-2 w-20 rounded bg-gray-100" />
+              </div>
+            </div>
+            <div className="absolute right-3 bottom-3 font-medium text-gray-700 text-sm">
+              Light
+            </div>
+          </button>
+
+          <button
+            className={cn(
+              "relative cursor-pointer rounded-xl border-2 transition-all duration-200 hover:border-primary/50",
+              themeMode === "dark"
+                ? "border-primary bg-zinc-950 shadow-lg"
+                : "border-border"
+            )}
+            onClick={() => setTheme("dark")}
+            type="button"
+          >
+            <div className="rounded-xl bg-zinc-950 p-4">
+              <div className="mb-3 flex items-center gap-2 border-zinc-800 border-b pb-2">
+                <div className="h-2 w-16 rounded bg-zinc-700" />
+                <div className="ml-auto h-2 w-2 rounded-full bg-zinc-600" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-2 w-24 rounded bg-zinc-700" />
+                <div className="h-2 w-32 rounded bg-zinc-800" />
+                <div className="h-2 w-20 rounded bg-zinc-800" />
+              </div>
+            </div>
+            <div className="absolute right-3 bottom-3 font-medium text-sm text-zinc-300">
+              Dark
+            </div>
+          </button>
+
+          <button
+            className={cn(
+              "relative cursor-pointer rounded-xl border-2 transition-all duration-200 hover:border-primary/50",
+              themeMode === "system"
+                ? "border-primary shadow-md"
+                : "border-border"
+            )}
+            onClick={() => setTheme("system")}
+            type="button"
+          >
+            <div className="rounded-xl bg-linear-to-br from-white to-zinc-100 p-4 dark:from-zinc-900 dark:to-zinc-950">
+              <div className="mb-3 flex items-center gap-2 border-gray-200 border-b pb-2 dark:border-zinc-700">
+                <div className="h-2 w-16 rounded bg-linear-to-r from-gray-200 to-zinc-600" />
+                <div className="ml-auto h-2 w-2 rounded-full bg-linear-to-r from-gray-300 to-zinc-500" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-2 w-24 rounded bg-linear-to-r from-gray-200 to-zinc-600" />
+                <div className="h-2 w-32 rounded bg-linear-to-r from-gray-100 to-zinc-700" />
+                <div className="h-2 w-20 rounded bg-linear-to-r from-gray-100 to-zinc-700" />
+              </div>
+            </div>
+            <div className="absolute right-3 bottom-3 font-medium text-gray-700 text-sm dark:text-zinc-300">
+              System
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="grid grid-cols-3 gap-3">
+          {baseColours.map((colour) => {
+            const isActive = activeTheme === colour.name;
+            const colourValue =
+              colour.activeColour[resolvedTheme === "dark" ? "dark" : "light"];
+            return (
+              <Button
+                className={cn(
+                  "h-10 justify-start",
+                  isActive ? "border-2 border-primary" : ""
+                )}
+                key={colour.name}
+                onClick={() => setActiveTheme(colour.name)}
+                style={
+                  {
+                    "--theme-primary": colourValue,
+                  } as React.CSSProperties
+                }
+                variant="secondary"
+              >
+                <span
+                  className="mr-2 flex size-5 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: "var(--theme-primary)" }}
+                >
+                  {isActive ? <Check className="size-3 text-white" /> : null}
+                </span>
+                {colour.label}
+              </Button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -431,7 +555,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-12">
+    <div className="container mx-auto max-w-4xl px-4 py-12">
       <div className="flex gap-12">
         <div className="shrink-0">
           <h1 className="mb-6 font-semibold text-2xl tracking-tight">
