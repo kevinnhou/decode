@@ -372,6 +372,97 @@ export const updateDisplayName = mutation({
   },
 });
 
+// --- Organisation Queries ---
+
+/**
+ * Returns all members of the current user's organisation.
+ *
+ * @param ctx - The Convex query context
+ * @param _args - No arguments
+ * @returns Array of organisation members with their profiles
+ * @throws ConvexError if not authenticated or no profile exists
+ */
+export const getOrganisationMembers = query({
+  args: {},
+  returns: v.any(),
+  async handler(ctx, _args) {
+    const { profile } = await requireUserProfile(ctx);
+
+    const members = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_organisationId", (q) =>
+        q.eq("organisationId", profile.organisationId)
+      )
+      .collect();
+
+    return members;
+  },
+});
+
+/**
+ * Returns the current user's organisation details.
+ *
+ * @param ctx - The Convex query context
+ * @param _args - No arguments
+ * @returns Organisation details or null
+ * @throws ConvexError if not authenticated or no profile exists
+ */
+export const getOrganisation = query({
+  args: {},
+  returns: v.any(),
+  async handler(ctx, _args) {
+    const { profile } = await requireUserProfile(ctx);
+    const organisation = await ctx.db.get(profile.organisationId);
+    return organisation;
+  },
+});
+
+/**
+ * Updates the current user's organisation name. User must be an admin.
+ *
+ * @param ctx - The Convex mutation context
+ * @param args.name - New organisation name
+ * @throws ConvexError if not authenticated, not admin or organisation not found
+ */
+export const updateOrganisationName = mutation({
+  args: {
+    name: v.string(),
+  },
+  async handler(ctx, args) {
+    const { profile } = await requireRole(ctx, "admin");
+
+    await ctx.db.patch(profile.organisationId, {
+      name: args.name,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Regenerates the invite code for the current user's organisation. User must be an admin.
+ *
+ * @param ctx - The Convex mutation context
+ * @param _args - No arguments
+ * @returns The new invite code
+ * @throws ConvexError if not authenticated or not admin
+ */
+export const regenerateInviteCode = mutation({
+  args: {},
+  returns: v.string(),
+  async handler(ctx, _args) {
+    const { profile } = await requireRole(ctx, "admin");
+
+    const newInviteCode = generateInviteCode();
+
+    await ctx.db.patch(profile.organisationId, {
+      inviteCode: newInviteCode,
+      updatedAt: Date.now(),
+    });
+
+    return newInviteCode;
+  },
+});
+
 // --- Utilities ---
 
 /**
