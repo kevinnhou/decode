@@ -1,65 +1,118 @@
-"use client";
+"use client"
 
+import * as React from "react"
+import { useState, useRef, useEffect } from "react"
 import { cn } from "@decode/ui/lib/utils";
-import { Tabs as TabsPrimitive } from "radix-ui";
-import type * as React from "react";
 
-function Tabs({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Root>) {
-  return (
-    <TabsPrimitive.Root
-      className={cn("flex flex-col gap-2", className)}
-      data-slot="tabs"
-      {...props}
-    />
-  );
+interface Tab {
+  id: string
+  label: string
 }
 
-function TabsList({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.List>) {
-  return (
-    <TabsPrimitive.List
-      className={cn(
-        "inline-flex h-9 w-fit items-center justify-center rounded-lg bg-muted p-[3px] text-muted-foreground",
-        className
-      )}
-      data-slot="tabs-list"
-      {...props}
-    />
-  );
+interface TabsProps extends React.HTMLAttributes<HTMLDivElement> {
+  tabs: Tab[]
+  activeTab?: string
+  onTabChange?: (tabId: string) => void
 }
 
-function TabsTrigger({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
-  return (
-    <TabsPrimitive.Trigger
-      className={cn(
-        "inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-transparent px-2 py-1 font-medium text-foreground text-sm transition-[color,box-shadow] focus-visible:border-ring focus-visible:outline-1 focus-visible:outline-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:shadow-sm dark:text-muted-foreground dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 dark:data-[state=active]:text-foreground [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-        className
-      )}
-      data-slot="tabs-trigger"
-      {...props}
-    />
-  );
-}
+const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
+  ({ className, tabs, activeTab, onTabChange, ...props }, ref) => {
+    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+    const [hoverStyle, setHoverStyle] = useState({})
+    const [activeStyle, setActiveStyle] = useState({ top: "0px", height: "0px" })
+    const tabRefs = useRef<(HTMLDivElement | null)[]>([])
 
-function TabsContent({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Content>) {
-  return (
-    <TabsPrimitive.Content
-      className={cn("flex-1 outline-none", className)}
-      data-slot="tabs-content"
-      {...props}
-    />
-  );
-}
+    const activeIndex = activeTab 
+      ? tabs.findIndex(tab => tab.id === activeTab)
+      : 0
 
-export { Tabs, TabsList, TabsTrigger, TabsContent };
+    useEffect(() => {
+      if (hoveredIndex !== null) {
+        const hoveredElement = tabRefs.current[hoveredIndex]
+        if (hoveredElement) {
+          const { offsetTop, offsetHeight } = hoveredElement
+          setHoverStyle({
+            top: `${offsetTop}px`,
+            height: `${offsetHeight}px`,
+          })
+        }
+      }
+    }, [hoveredIndex])
+
+    useEffect(() => {
+      const activeElement = tabRefs.current[activeIndex]
+      if (activeElement) {
+        const { offsetTop, offsetHeight } = activeElement
+        setActiveStyle({
+          top: `${offsetTop}px`,
+          height: `${offsetHeight}px`,
+        })
+      }
+    }, [activeIndex, tabs])
+
+    useEffect(() => {
+      requestAnimationFrame(() => {
+        const element = tabRefs.current[activeIndex >= 0 ? activeIndex : 0]
+        if (element) {
+          const { offsetTop, offsetHeight } = element
+          setActiveStyle({
+            top: `${offsetTop}px`,
+            height: `${offsetHeight}px`,
+          })
+        }
+      })
+    }, [])
+
+    return (
+      <div 
+        ref={ref} 
+        className={cn("relative", className)} 
+        {...props}
+      >
+        <div className="relative">
+          <div
+            className="absolute left-0 w-full transition-all duration-300 ease-out bg-[#0e0f1114] dark:bg-[#ffffff1a] rounded-[6px]"
+            style={{
+              ...hoverStyle,
+              opacity: hoveredIndex !== null ? 1 : 0,
+            }}
+          />
+
+          <div
+            className="absolute left-[-6px] top-0 w-[2px] bg-[#0e0f11] dark:bg-white transition-all duration-300 ease-out"
+            style={activeStyle}
+          />
+
+          <div className="relative flex flex-col space-y-[6px]">
+            {tabs.map((tab, index) => (
+              <div
+                key={tab.id}
+                ref={(el) => {
+                  tabRefs.current[index] = el
+                }}
+                className={cn(
+                  "px-3 py-2 cursor-pointer transition-colors duration-300 min-h-[36px] flex items-center",
+                  index === activeIndex 
+                    ? "text-[#0e0e10] dark:text-white" 
+                    : "text-[#0e0f1199] dark:text-[#ffffff99]"
+                )}
+                onMouseEnter={() => setHoveredIndex(index)}
+                onMouseLeave={() => setHoveredIndex(null)}
+                onClick={() => {
+                  onTabChange?.(tab.id)
+                }}
+              >
+                <span className="text-sm font-medium leading-5 whitespace-nowrap">
+                  {tab.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+)
+Tabs.displayName = "Tabs"
+
+export { Tabs }

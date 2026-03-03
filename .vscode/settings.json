@@ -8,12 +8,19 @@
     "**/node_modules": true,
     "**/.next": true,
     "**/.turbo": true,
-
     "**/next-env.d.ts": true,
     "**/next.config.*": true,
     "**/postcss.config.*": true,
     "**/tsconfig.json": true,
 
+    "**/AllianceNo2-Regular.woff2": true,
+    "**/apple-icon.png": true,
+    "**/favicon.ico": true,
+    "**/manifest.ts": true,
+    "**/robots.ts": true,
+    "**/sitemap.xml": true,
+
+    "**/.ruler": true,
     "**/.source": true,
     "**/source.config.ts": true,
 

@@ -19,12 +19,10 @@ export default async function ScoutLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Gate: require signed-in user
   if (!(await isAuthenticated())) {
     redirect("/login" as Route);
   }
 
-  // Gate: require user profile (must belong to an organisation)
   const profile = await fetchAuthQuery(api.auth.getCurrentUserProfile);
   if (!profile) {
     redirect("/onboarding" as Route);

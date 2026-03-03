@@ -137,10 +137,6 @@
         "typescript": "^5.9.2",
       },
     },
-    "packages/config": {
-      "name": "@decode/config",
-      "version": "0.0.0",
-    },
     "packages/ui": {
       "name": "@decode/ui",
       "version": "0.0.0",
@@ -424,8 +420,6 @@
     "@date-fns/tz": ["@date-fns/tz@1.4.1", "", {}, "sha512-P5LUNhtbj6YfI3iJjw5EL9eUAG6OitD0W3fWQcpQjDRc/QIsL0tRNuO1PcDvPccWL1fSTXXdE1ds+l95DV/OFA=="],
 
     "@decode/backend": ["@decode/backend@workspace:packages/backend"],
-
-    "@decode/config": ["@decode/config@workspace:packages/config"],
 
     "@decode/docs": ["@decode/docs@workspace:apps/docs"],
 
