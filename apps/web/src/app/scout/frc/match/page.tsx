@@ -303,7 +303,7 @@ export default function MatchScouting() {
 
   if (pageState === "meta") {
     return (
-      <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
         <Form {...form}>
           <form className="space-y-6">
             <section className="space-y-4">
@@ -443,7 +443,7 @@ export default function MatchScouting() {
 
     if (inputMode === "field") {
       return (
-        <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
           <Form {...form}>
             <div>
               <FrcFieldInput
@@ -462,7 +462,7 @@ export default function MatchScouting() {
     }
 
     return (
-      <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
         <Form {...form}>
           <div>
             <PeriodSlide
@@ -480,7 +480,7 @@ export default function MatchScouting() {
   }
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+    <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <Form {...form}>
         <div>
           <SummaryView

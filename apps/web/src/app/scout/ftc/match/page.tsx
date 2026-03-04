@@ -172,12 +172,9 @@ export default function MatchScouting() {
   }, [form, teamsMap, watchedTeamNumber]);
 
   return (
-    <div className="container mx-auto max-w-6xl py-15">
+    <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <Form {...form}>
-        <form
-          className="space-y-6 px-10"
-          onSubmit={form.handleSubmit(onSubmit)}
-        >
+        <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
           <FormFields
             form={form}
             groups={["meta"]}
