@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const INITIAL_TIME_SECONDS = 150; // 2:30
+export const INITIAL_TIME_SECONDS = 160; // 2:40 (20s AUTO + 2:20 TELEOP)
 export const PAUSE_TIME_SECONDS = 120; // 2:00
 const FINAL_TIME_SECONDS = 0;
 
@@ -15,14 +15,18 @@ export type FrcPeriod =
   | "SHIFT_4"
   | "END_GAME";
 
-const FRC_PERIOD_BOUNDARIES: { end: number; period: FrcPeriod }[] = [
-  { end: 20, period: "AUTO" },
-  { end: 33, period: "TRANSITION" }, // 23-33 (gap 20-23 returns TRANSITION)
-  { end: 58, period: "SHIFT_1" },
-  { end: 83, period: "SHIFT_2" },
-  { end: 108, period: "SHIFT_3" },
-  { end: 133, period: "SHIFT_4" },
-  { end: 150, period: "END_GAME" },
+const FRC_PERIOD_BOUNDARIES: {
+  start: number;
+  end: number;
+  period: FrcPeriod;
+}[] = [
+  { start: 0, end: 20, period: "AUTO" },
+  { start: 20, end: 30, period: "TRANSITION" },
+  { start: 30, end: 55, period: "SHIFT_1" },
+  { start: 55, end: 80, period: "SHIFT_2" },
+  { start: 80, end: 105, period: "SHIFT_3" },
+  { start: 105, end: 130, period: "SHIFT_4" },
+  { start: 130, end: 160, period: "END_GAME" },
 ];
 
 function getFrcPeriodFromElapsed(elapsedSeconds: number): FrcPeriod {
@@ -32,6 +36,31 @@ function getFrcPeriodFromElapsed(elapsedSeconds: number): FrcPeriod {
     }
   }
   return "END_GAME";
+}
+
+export function getFrcPeriodProgress(elapsedSeconds: number): {
+  period: FrcPeriod;
+  periodDuration: number;
+  elapsedInPeriod: number;
+  timeRemainingInPeriod: number;
+} {
+  const period = getFrcPeriodFromElapsed(elapsedSeconds);
+  const bounds = FRC_PERIOD_BOUNDARIES.find((b) => b.period === period);
+  if (!bounds) {
+    return {
+      period: "END_GAME",
+      periodDuration: 30,
+      elapsedInPeriod: 30,
+      timeRemainingInPeriod: 0,
+    };
+  }
+  const periodDuration = bounds.end - bounds.start;
+  const elapsedInPeriod = Math.min(
+    elapsedSeconds - bounds.start,
+    periodDuration
+  );
+  const timeRemainingInPeriod = Math.max(0, periodDuration - elapsedInPeriod);
+  return { period, periodDuration, elapsedInPeriod, timeRemainingInPeriod };
 }
 
 interface UseMatchTimerReturn {

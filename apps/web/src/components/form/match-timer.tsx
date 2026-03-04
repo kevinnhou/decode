@@ -3,7 +3,7 @@
 import { Button } from "@decode/ui/components/button";
 import { cn } from "@decode/ui/lib/utils";
 import { Pause, Play, RotateCcw } from "lucide-react";
-import type { FrcPeriod } from "@/hooks/use-match-timer";
+import { type FrcPeriod, INITIAL_TIME_SECONDS } from "@/hooks/use-match-timer";
 
 type TimerState = "idle" | "running" | "paused" | "finished";
 
@@ -126,7 +126,7 @@ export function MatchTimer({
 
       <div
         className="absolute bottom-0 left-0 h-1 bg-primary/20 transition-all duration-1000 ease-linear"
-        style={{ width: `${(timeRemaining / 150) * 100}%` }}
+        style={{ width: `${(timeRemaining / INITIAL_TIME_SECONDS) * 100}%` }}
       />
     </div>
   );
