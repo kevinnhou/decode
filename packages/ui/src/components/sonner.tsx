@@ -10,162 +10,149 @@ import {
 import { Toaster as Sonner, toast as sonnerToast } from "sonner";
 import type { Action, ExternalToast } from "sonner";
 
-function isAction(value: unknown): value is Action {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "label" in value &&
-    "onClick" in value &&
-    typeof (value as Action).onClick === "function"
+function resolve(v: React.ReactNode | (() => React.ReactNode) | undefined) {
+  return typeof v === "function" ? (v as () => React.ReactNode)() : v;
+}
+
+function isAction(v: unknown): v is Action {
+  return typeof v === "object" && v !== null && "label" in v && "onClick" in v;
+}
+
+function toOpts(d?: ExternalToast) {
+  if (!d) return d;
+  const { description: _, action: __, ...rest } = d;
+  return rest;
+}
+
+function custom(
+  render: (id: number | string) => React.ReactElement,
+  data?: ExternalToast,
+) {
+  return sonnerToast.custom(render, toOpts(data));
+}
+
+function successToast(message: React.ReactNode, data?: ExternalToast) {
+  return custom(
+    (id) => (
+      <SuccessToast
+        title={resolve(message)}
+        description={resolve(data?.description)}
+        onDismiss={() => sonnerToast.dismiss(id)}
+      />
+    ),
+    data,
   );
 }
 
-function resolveReactNode(
-  value: React.ReactNode | (() => React.ReactNode) | undefined,
-): React.ReactNode {
-  if (value === undefined) return undefined;
-  if (typeof value === "function") return (value as () => React.ReactNode)();
-  return value;
-}
-
-function createCustomToast() {
-  const customToast = (
-    message: React.ReactNode,
-    data?: ExternalToast,
-  ): string | number => {
-    const title = resolveReactNode(message);
-    const description = resolveReactNode(data?.description);
-    return sonnerToast.custom(
-      (id) => (
-        <SuccessToast
-          title={title}
-          description={description}
-          onDismiss={() => sonnerToast.dismiss(id)}
-        />
-      ),
-      data,
-    );
-  };
-
-  customToast.success = (
-    message: React.ReactNode,
-    data?: ExternalToast,
-  ): string | number => {
-    const title = resolveReactNode(message);
-    const description = resolveReactNode(data?.description);
-
-    return sonnerToast.custom(
-      (id) => (
-        <SuccessToast
-          title={title}
-          description={description}
-          onDismiss={() => sonnerToast.dismiss(id)}
-        />
-      ),
-      data,
-    );
-  };
-
-  customToast.error = (
-    message: React.ReactNode,
-    data?: ExternalToast,
-  ): string | number => {
-    const title = resolveReactNode(message);
-    const description = resolveReactNode(data?.description);
-
-    const actionData = data?.action;
-    const retry = isAction(actionData)
-      ? {
-          label: String(actionData.label),
-          onRetry: () =>
-            actionData.onClick(
-              {} as React.MouseEvent<HTMLButtonElement, MouseEvent>,
-            ),
-        }
+const toast = Object.assign(successToast, {
+  success: successToast,
+  info: successToast,
+  message: successToast,
+  error: (message: React.ReactNode, data?: ExternalToast) => {
+    const action = data?.action;
+    const retry = isAction(action)
+      ? { label: String(action.label), onRetry: () => action.onClick({} as React.MouseEvent<HTMLButtonElement, MouseEvent>) }
       : undefined;
-
-    return sonnerToast.custom(
+    return custom(
       (id) => (
         <ErrorToast
-          title={title}
-          description={description}
+          title={resolve(message)}
+          description={resolve(data?.description)}
           retry={retry}
           onDismiss={() => sonnerToast.dismiss(id)}
         />
       ),
       data,
     );
-  };
-
-  customToast.warning = (
-    message: React.ReactNode,
-    data?: ExternalToast,
-  ): string | number => {
-    const title = resolveReactNode(message);
-    const description = resolveReactNode(data?.description);
-
-    const actionData = data?.action;
-    const action = isAction(actionData)
-      ? {
-          label: String(actionData.label),
-          onAction: () =>
-            actionData.onClick(
-              {} as React.MouseEvent<HTMLButtonElement, MouseEvent>,
-            ),
-        }
+  },
+  warning: (message: React.ReactNode, data?: ExternalToast) => {
+    const action = data?.action;
+    const act = isAction(action)
+      ? { label: String(action.label), onAction: () => action.onClick({} as React.MouseEvent<HTMLButtonElement, MouseEvent>) }
       : undefined;
-
-    return sonnerToast.custom(
+    return custom(
       (id) => (
         <WarningToast
-          title={title}
-          description={description}
-          action={action}
+          title={resolve(message)}
+          description={resolve(data?.description)}
+          action={act}
           onDismiss={() => sonnerToast.dismiss(id)}
         />
       ),
       data,
     );
-  };
-
-  customToast.loading = (
-    message: React.ReactNode,
-    data?: ExternalToast,
-  ): string | number => {
-    const title = resolveReactNode(message);
-
-    return sonnerToast.custom(
+  },
+  loading: (message: React.ReactNode, data?: ExternalToast) =>
+    sonnerToast.custom(
       (id) => (
         <LoadingToast
-          title={title}
+          title={resolve(message)}
           onDismiss={() => sonnerToast.dismiss(id)}
         />
       ),
       data,
-    );
-  };
-
-  customToast.info = customToast.success;
-
-  customToast.message = customToast;
-
-  customToast.promise = ((promise, data) =>
-    sonnerToast.promise(promise, data)) as <T>(
+    ),
+  promise: <T,>(
     promise: Promise<T> | (() => Promise<T>),
-    data?: Parameters<typeof sonnerToast.promise>[1],
-  ) => { unwrap: () => Promise<T> };
+    data: {
+      loading?: React.ReactNode;
+      success?: React.ReactNode | ((data: T) => React.ReactNode);
+      error?: React.ReactNode | ((error: unknown) => React.ReactNode);
+      finally?: () => void;
+    },
+  ) => {
+    const loadingMsg = data?.loading ?? "Loading...";
+    const successMsg = data?.success ?? "Success";
+    const errorMsg = data?.error ?? "An error occurred";
 
-  customToast.dismiss = sonnerToast.dismiss.bind(sonnerToast);
+    const id = sonnerToast.custom(
+      (toastId) => (
+        <LoadingToast
+          title={resolve(loadingMsg)}
+          onDismiss={() => sonnerToast.dismiss(toastId)}
+        />
+      ),
+      { duration: Number.POSITIVE_INFINITY },
+    );
 
-  customToast.getHistory =
-    sonnerToast.getHistory?.bind(sonnerToast) ?? (() => []);
+    const p = Promise.resolve(
+      typeof promise === "function" ? (promise as () => Promise<T>)() : promise,
+    );
 
-  customToast.getToasts = sonnerToast.getToasts?.bind(sonnerToast) ?? (() => []);
+    p.then(async (result) => {
+      const msg = typeof successMsg === "function" ? await successMsg(result) : successMsg;
+      sonnerToast.custom(
+        (toastId) => (
+          <SuccessToast
+            title={resolve(msg)}
+            onDismiss={() => sonnerToast.dismiss(toastId)}
+          />
+        ),
+        { id, duration: 4000 },
+      );
+    }).catch(async (err) => {
+      const msg = typeof errorMsg === "function" ? await errorMsg(err) : errorMsg;
+      sonnerToast.custom(
+        (toastId) => (
+          <ErrorToast
+            title={resolve(msg)}
+            onDismiss={() => sonnerToast.dismiss(toastId)}
+          />
+        ),
+        { id, duration: 4000 },
+      );
+    }).finally(() => {
+      data?.finally?.();
+    });
 
-  return customToast;
-}
-
-const toast = createCustomToast();
+    return Object.assign(p, {
+      unwrap: () => p,
+    });
+  },
+  dismiss: sonnerToast.dismiss.bind(sonnerToast),
+  getHistory: sonnerToast.getHistory?.bind(sonnerToast) ?? (() => []),
+  getToasts: sonnerToast.getToasts?.bind(sonnerToast) ?? (() => []),
+});
 
 function Toaster({
   theme = "system",
@@ -175,14 +162,11 @@ function Toaster({
     <Sonner
       className="toaster group"
       theme={theme as "light" | "dark" | "system"}
-      toastOptions={{
-        unstyled: true,
-      }}
+      toastOptions={{ unstyled: true }}
       {...props}
     />
   );
 }
 
 export type { ExternalToast } from "sonner";
-export { toast };
-export { Toaster };
+export { toast, Toaster };

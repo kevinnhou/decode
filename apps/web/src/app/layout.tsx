@@ -59,7 +59,7 @@ export default async function RootLayout({
           type="application/ld+json"
         />
       </head>
-      <body className="overflow-hidden">
+      <body className="select-none overflow-hidden">
         <Providers convexToken={convexToken}>
           <RootTransition>
             <SidebarProvider className="flex h-full flex-col">
