@@ -434,7 +434,16 @@ export default function MatchScouting() {
                   name="meta.teamName"
                   render={({ field }) => (
                     <FormItem className="sm:col-span-2">
-                      <FormLabel>Team Name (optional)</FormLabel>
+                      <FormLabel>
+                        Team Name{" "}
+                        <div className="flex justify-between gap-1 font-bold">
+                          [
+                          <span className="font-extralight font-sans italic">
+                            optional
+                          </span>
+                          ]
+                        </div>
+                      </FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Enter team name"
