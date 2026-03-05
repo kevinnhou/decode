@@ -18,7 +18,7 @@ import { EventsList } from "~/form/events-list";
 import { EVENT_TO_FORM_KEY, FieldInput } from "~/form/field-input";
 import { MatchTimer } from "~/form/match-timer";
 import { FormFields } from "~/form/render";
-import { setSidebarContent } from "~/sidebar/slot";
+import { setSidebarContent, setSidebarFooterContent } from "~/sidebar/slot";
 import { submitUnified } from "./actions";
 
 export default function MatchScouting() {
@@ -104,32 +104,29 @@ export default function MatchScouting() {
 
   useEffect(() => {
     if (mode === "field") {
+      setSidebarFooterContent(
+        <MatchTimer
+          formatTime={timer.formatTime}
+          pause={timer.pause}
+          reset={timer.reset}
+          resume={timer.resume}
+          start={timer.start}
+          state={timer.state}
+          timeRemaining={timer.timeRemaining}
+        />
+      );
       setSidebarContent(
-        <div className="flex h-full max-h-[calc(100svh-var(--header-height))] flex-col gap-4 overflow-hidden p-4">
-          <div className="shrink-0">
-            <MatchTimer
-              formatTime={timer.formatTime}
-              pause={timer.pause}
-              reset={timer.reset}
-              resume={timer.resume}
-              start={timer.start}
-              state={timer.state}
-              timeRemaining={timer.timeRemaining}
-            />
-          </div>
-          <div className="min-h-0 flex-1">
-            <EventsList
-              events={fieldEvents}
-              onRemoveEvent={handleRemoveEvent}
-            />
-          </div>
+        <div className="flex h-full max-h-[calc(100svh-var(--header-height))] flex-col overflow-hidden p-4">
+          <EventsList events={fieldEvents} onRemoveEvent={handleRemoveEvent} />
         </div>
       );
     } else {
+      setSidebarFooterContent(null);
       setSidebarContent(null);
     }
 
     return () => {
+      setSidebarFooterContent(null);
       setSidebarContent(null);
     };
   }, [

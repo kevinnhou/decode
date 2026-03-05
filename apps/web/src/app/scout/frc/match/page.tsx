@@ -55,7 +55,7 @@ import { FrcFieldInput } from "~/form/field-input";
 import { MatchTimerFRC } from "~/form/match-timer";
 import { PeriodSlide } from "~/form/period-slide";
 import { SummaryView } from "~/form/summary-view";
-import { setSidebarContent } from "~/sidebar/slot";
+import { setSidebarContent, setSidebarFooterContent } from "~/sidebar/slot";
 import { submitMatch } from "./actions";
 
 // biome-ignore lint/nursery/noShadow: PASS
@@ -267,39 +267,23 @@ export default function MatchScouting() {
   }, [timer.state, pageState, flushActiveTimers]);
 
   useEffect(() => {
-    setSidebarContent(
-      <div className="flex h-full max-h-[calc(100svh-var(--header-height))] flex-col gap-4 overflow-hidden p-4">
-        <div className="shrink-0">
-          <MatchTimerFRC
-            formatTime={timer.formatTime}
-            getCurrentPeriod={timer.getCurrentPeriod}
-            pause={timer.pause}
-            reset={timer.reset}
-            resume={timer.resume}
-            start={timer.start}
-            state={timer.state}
-            timeRemaining={timer.timeRemaining}
-          />
-        </div>
-        {inputMode === "field" && pageState === "running" ? (
-          <div className="min-h-0 flex-1">
-            <FrcEventsList
-              events={frcFieldEvents}
-              onRemoveEvent={handleRemoveFrcEvent}
-            />
-          </div>
-        ) : null}
-      </div>
+    setSidebarFooterContent(
+      <MatchTimerFRC
+        formatTime={timer.formatTime}
+        getCurrentPeriod={timer.getCurrentPeriod}
+        pause={timer.pause}
+        reset={timer.reset}
+        resume={timer.resume}
+        start={timer.start}
+        state={timer.state}
+        timeRemaining={timer.timeRemaining}
+      />
     );
 
     return () => {
-      setSidebarContent(null);
+      setSidebarFooterContent(null);
     };
   }, [
-    inputMode,
-    pageState,
-    frcFieldEvents,
-    handleRemoveFrcEvent,
     timer.formatTime,
     timer.getCurrentPeriod,
     timer.pause,
@@ -309,6 +293,25 @@ export default function MatchScouting() {
     timer.state,
     timer.timeRemaining,
   ]);
+
+  useEffect(() => {
+    if (inputMode === "field" && pageState === "running") {
+      setSidebarContent(
+        <div className="flex h-full max-h-[calc(100svh-var(--header-height))] flex-col overflow-hidden p-4">
+          <FrcEventsList
+            events={frcFieldEvents}
+            onRemoveEvent={handleRemoveFrcEvent}
+          />
+        </div>
+      );
+    } else {
+      setSidebarContent(null);
+    }
+
+    return () => {
+      setSidebarContent(null);
+    };
+  }, [inputMode, pageState, frcFieldEvents, handleRemoveFrcEvent]);
 
   const watchedTeamNumber = form.watch("meta.teamNumber");
 

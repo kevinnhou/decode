@@ -2,31 +2,43 @@
 
 import { type ReactNode, useEffect, useState } from "react";
 
-let currentContent: ReactNode = null;
-const subscribers = new Set<(content: ReactNode) => void>();
+function createSlot() {
+  let current: ReactNode = null;
+  const subscribers = new Set<(content: ReactNode) => void>();
 
-export function setSidebarContent(content: ReactNode) {
-  currentContent = content;
-  for (const subscriber of subscribers) {
-    subscriber(content);
-  }
-}
-
-export function SidebarContentSlot() {
-  const [content, setContent] = useState<ReactNode>(currentContent);
-
-  useEffect(() => {
-    const handler = (newContent: ReactNode) => {
-      setContent(newContent);
-    };
-    subscribers.add(handler);
-    if (currentContent !== null) {
-      setContent(currentContent);
+  function set(content: ReactNode) {
+    current = content;
+    for (const subscriber of subscribers) {
+      subscriber(content);
     }
-    return () => {
-      subscribers.delete(handler);
-    };
-  }, []);
+  }
 
-  return <>{content}</>;
+  function Slot({ fallback }: { fallback?: ReactNode } = {}) {
+    const [content, setContent] = useState<ReactNode>(current);
+
+    useEffect(() => {
+      const handler = (newContent: ReactNode) => {
+        setContent(newContent);
+      };
+      subscribers.add(handler);
+      if (current !== null) {
+        setContent(current);
+      }
+      return () => {
+        subscribers.delete(handler);
+      };
+    }, []);
+
+    return <>{content ?? fallback}</>;
+  }
+
+  return { set, Slot };
 }
+
+const contentSlot = createSlot();
+export const setSidebarContent = contentSlot.set;
+export const SidebarContentSlot = contentSlot.Slot;
+
+const footerSlot = createSlot();
+export const setSidebarFooterContent = footerSlot.set;
+export const SidebarFooterSlot = footerSlot.Slot;

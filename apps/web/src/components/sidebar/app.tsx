@@ -11,7 +11,7 @@ import { cn } from "@decode/ui/lib/utils";
 import { usePathname } from "next/navigation";
 import { PitSections } from "./pit-sections";
 import { ScoutType } from "./scout-type";
-import { SidebarContentSlot } from "./slot";
+import { SidebarContentSlot, SidebarFooterSlot } from "./slot";
 import { ThemeSwitcher } from "./theme";
 import { Toggle } from "./toggle";
 
@@ -61,7 +61,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarFooter>
         <ScoutType />
-        <ThemeSwitcher />
+        <SidebarFooterSlot fallback={<ThemeSwitcher />} />
       </SidebarFooter>
     </Sidebar>
   );

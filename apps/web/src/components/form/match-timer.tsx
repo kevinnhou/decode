@@ -3,6 +3,7 @@
 import { Button } from "@decode/ui/components/button";
 import { cn } from "@decode/ui/lib/utils";
 import { Pause, Play, RotateCcw } from "lucide-react";
+import type { ReactNode } from "react";
 import { type FrcPeriod, INITIAL_TIME_SECONDS } from "@/hooks/use-match-timer";
 
 type TimerState = "idle" | "running" | "paused" | "finished";
@@ -32,6 +33,7 @@ interface MatchTimerProps {
   resume: () => void;
   reset: () => void;
   formatTime: (seconds: number) => string;
+  header?: ReactNode;
 }
 
 export function MatchTimer({
@@ -42,12 +44,14 @@ export function MatchTimer({
   resume,
   reset,
   formatTime,
+  header,
 }: MatchTimerProps) {
   return (
     <div className="relative overflow-hidden rounded-xl border bg-muted/30 p-4 transition-colors hover:bg-muted/40">
+      {header ? <div className="mb-3">{header}</div> : null}
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-col">
-          <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
+          <span className="font-medium text-[10px] text-muted-foreground uppercase italic tracking-wider">
             {state === "idle" && "Ready"}
             {state === "running" && "Running"}
             {state === "paused" && "Paused"}
@@ -141,28 +145,41 @@ export function MatchTimerFRC({
   ...props
 }: MatchTimerFRCProps) {
   const currentPeriod = getCurrentPeriod();
+  const currentIndex = FRC_PERIODS.indexOf(currentPeriod);
 
-  return (
-    <div className="space-y-2">
-      <MatchTimer {...props} />
-      <div className="flex flex-wrap gap-1">
-        {FRC_PERIODS.map((period) => {
+  const periodHeader = (
+    <div className="space-y-1.5">
+      <div
+        aria-valuemax={FRC_PERIODS.length}
+        aria-valuemin={1}
+        aria-valuenow={currentIndex + 1}
+        className="flex gap-px overflow-hidden rounded-full"
+        role="progressbar"
+      >
+        {FRC_PERIODS.map((period, i) => {
           const isActive = period === currentPeriod;
+          const isPast = i < currentIndex;
           return (
-            <span
+            <div
               className={cn(
-                "rounded px-2 py-0.5 font-medium font-mono text-[10px] uppercase",
+                "h-1 min-w-0 flex-1 transition-colors",
                 isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted/50 text-muted-foreground"
+                  ? "bg-primary"
+                  : isPast
+                    ? "bg-primary/30"
+                    : "bg-muted/30"
               )}
               key={period}
-            >
-              {formatPeriodLabel(period)}
-            </span>
+              title={formatPeriodLabel(period)}
+            />
           );
         })}
       </div>
+      <p className="font-bold font-mono text-[10px] text-muted-foreground">
+        {formatPeriodLabel(currentPeriod)}
+      </p>
     </div>
   );
+
+  return <MatchTimer {...props} header={periodHeader} />;
 }
