@@ -18,15 +18,7 @@ import { Tabs } from "@decode/ui/components/tabs";
 import { baseColours } from "@decode/ui/lib/colours";
 import { cn } from "@decode/ui/lib/utils";
 import { useMutation, useQuery } from "convex/react";
-import {
-  Check,
-  ChevronDown,
-  Copy,
-  LogOut,
-  Pencil,
-  RefreshCw,
-  X,
-} from "lucide-react";
+import { Check, ChevronDown, LogOut, Pencil, RefreshCw, X } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import type React from "react";
@@ -431,17 +423,13 @@ function OrganisationTab({
       <div className="space-y-3">
         <Label className="text-muted-foreground">Invite Code</Label>
         <div className="flex items-center gap-2">
-          <code className="rounded-md border bg-muted px-3 py-1.5 font-mono text-sm">
-            {organisation.inviteCode}
-          </code>
-          <Button
-            className="size-9"
+          <button
+            className="cursor-pointer rounded-md border bg-muted px-3 py-1.5 font-mono text-sm transition-colors hover:bg-muted/80"
             onClick={handleCopyInviteCode}
-            size="icon"
-            variant="ghost"
+            type="button"
           >
-            <Copy className="size-4" />
-          </Button>
+            {organisation.inviteCode}
+          </button>
           {isAdmin ? (
             <Button
               className="size-9"

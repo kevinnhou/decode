@@ -426,10 +426,10 @@ export default function PitScouting() {
   }, [activeSectionIndex, completedSections, handleNavigate]);
 
   return (
-    <div className="container mx-auto max-w-4xl py-10">
+    <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <Form {...form}>
         <form
-          className="space-y-8 px-4 md:px-8"
+          className="space-y-8"
           onSubmit={async (e) => {
             e.preventDefault();
             await handleContinue();

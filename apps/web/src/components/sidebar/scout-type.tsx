@@ -34,7 +34,7 @@ export function ScoutType() {
         type="button"
       >
         <ArrowRightLeft className="size-3 shrink-0" />
-        {!isCollapsed && <span>{label}</span>}
+        {!isCollapsed && <span className="italic">{label}</span>}
       </button>
     </div>
   );

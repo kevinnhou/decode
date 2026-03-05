@@ -23,9 +23,10 @@ import {
 import { toast } from "@decode/ui/components/sonner";
 import { useForm } from "@decode/ui/lib/react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { useInputMode } from "@/hooks/use-input-mode";
 import {
+  getFrcPeriodProgress,
   useMatchTimerFRC,
   usePeriodActionTimer,
 } from "@/hooks/use-match-timer";
@@ -54,8 +55,34 @@ import { FrcFieldInput } from "~/form/field-input";
 import { MatchTimerFRC } from "~/form/match-timer";
 import { PeriodSlide } from "~/form/period-slide";
 import { SummaryView } from "~/form/summary-view";
-import { setSidebarContent } from "~/sidebar/slot";
+import { setSidebarContent, setSidebarFooterContent } from "~/sidebar/slot";
 import { submitMatch } from "./actions";
+
+// biome-ignore lint/nursery/noShadow: PASS
+const PeriodBar = memo(function PeriodBar({
+  barKey,
+  durationSec,
+  isFinished,
+}: {
+  barKey: string;
+  durationSec: number;
+  isFinished: boolean;
+}) {
+  if (isFinished) {
+    return (
+      <div className="h-full rounded-full bg-primary" style={{ width: 0 }} />
+    );
+  }
+  return (
+    <div
+      className="h-full rounded-full bg-primary"
+      key={barKey}
+      style={{
+        animation: `period-shrink ${durationSec}s linear forwards`,
+      }}
+    />
+  );
+});
 
 export default function MatchScouting() {
   const { mode: inputMode } = useInputMode();
@@ -240,39 +267,23 @@ export default function MatchScouting() {
   }, [timer.state, pageState, flushActiveTimers]);
 
   useEffect(() => {
-    setSidebarContent(
-      <div className="flex h-full max-h-[calc(100svh-var(--header-height))] flex-col gap-4 overflow-hidden p-4">
-        <div className="shrink-0">
-          <MatchTimerFRC
-            formatTime={timer.formatTime}
-            getCurrentPeriod={timer.getCurrentPeriod}
-            pause={timer.pause}
-            reset={timer.reset}
-            resume={timer.resume}
-            start={timer.start}
-            state={timer.state}
-            timeRemaining={timer.timeRemaining}
-          />
-        </div>
-        {inputMode === "field" && pageState === "running" ? (
-          <div className="min-h-0 flex-1">
-            <FrcEventsList
-              events={frcFieldEvents}
-              onRemoveEvent={handleRemoveFrcEvent}
-            />
-          </div>
-        ) : null}
-      </div>
+    setSidebarFooterContent(
+      <MatchTimerFRC
+        formatTime={timer.formatTime}
+        getCurrentPeriod={timer.getCurrentPeriod}
+        pause={timer.pause}
+        reset={timer.reset}
+        resume={timer.resume}
+        start={timer.start}
+        state={timer.state}
+        timeRemaining={timer.timeRemaining}
+      />
     );
 
     return () => {
-      setSidebarContent(null);
+      setSidebarFooterContent(null);
     };
   }, [
-    inputMode,
-    pageState,
-    frcFieldEvents,
-    handleRemoveFrcEvent,
     timer.formatTime,
     timer.getCurrentPeriod,
     timer.pause,
@@ -282,6 +293,25 @@ export default function MatchScouting() {
     timer.state,
     timer.timeRemaining,
   ]);
+
+  useEffect(() => {
+    if (inputMode === "field" && pageState === "running") {
+      setSidebarContent(
+        <div className="flex h-full max-h-[calc(100svh-var(--header-height))] flex-col overflow-hidden p-4">
+          <FrcEventsList
+            events={frcFieldEvents}
+            onRemoveEvent={handleRemoveFrcEvent}
+          />
+        </div>
+      );
+    } else {
+      setSidebarContent(null);
+    }
+
+    return () => {
+      setSidebarContent(null);
+    };
+  }, [inputMode, pageState, frcFieldEvents, handleRemoveFrcEvent]);
 
   const watchedTeamNumber = form.watch("meta.teamNumber");
 
@@ -303,7 +333,7 @@ export default function MatchScouting() {
 
   if (pageState === "meta") {
     return (
-      <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
         <Form {...form}>
           <form className="space-y-6">
             <section className="space-y-4">
@@ -404,7 +434,16 @@ export default function MatchScouting() {
                   name="meta.teamName"
                   render={({ field }) => (
                     <FormItem className="sm:col-span-2">
-                      <FormLabel>Team Name (optional)</FormLabel>
+                      <FormLabel>
+                        Team Name{" "}
+                        <div className="flex justify-between gap-1 font-bold">
+                          [
+                          <span className="font-extralight font-sans italic">
+                            optional
+                          </span>
+                          ]
+                        </div>
+                      </FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Enter team name"
@@ -442,10 +481,26 @@ export default function MatchScouting() {
     const currentPeriod = timer.getCurrentPeriod();
 
     if (inputMode === "field") {
+      const progress = getFrcPeriodProgress(timer.elapsedTime);
+      const isFinished = timer.state === "finished";
+
       return (
-        <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
           <Form {...form}>
-            <div>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <p className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
+                  {progress.period} ·{" "}
+                  {timer.formatTime(progress.timeRemainingInPeriod)} left
+                </p>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <PeriodBar
+                    barKey={progress.period}
+                    durationSec={progress.periodDuration}
+                    isFinished={isFinished}
+                  />
+                </div>
+              </div>
               <FrcFieldInput
                 autoPath={autoPath}
                 fieldEvents={frcFieldEvents}
@@ -461,10 +516,26 @@ export default function MatchScouting() {
       );
     }
 
+    const progress = getFrcPeriodProgress(timer.elapsedTime);
+    const isFinished = timer.state === "finished";
+
     return (
-      <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
         <Form {...form}>
-          <div>
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <p className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
+                {progress.period} ·{" "}
+                {timer.formatTime(progress.timeRemainingInPeriod)} left
+              </p>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <PeriodBar
+                  barKey={progress.period}
+                  durationSec={progress.periodDuration}
+                  isFinished={isFinished}
+                />
+              </div>
+            </div>
             <PeriodSlide
               defenseTimer={defenseTimer}
               feedingTimer={feedingTimer}
@@ -479,10 +550,26 @@ export default function MatchScouting() {
     );
   }
 
+  const progress = getFrcPeriodProgress(timer.elapsedTime);
+  const isFinished = timer.state === "finished";
+
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+    <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <Form {...form}>
-        <div>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <p className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
+              {progress.period} ·{" "}
+              {timer.formatTime(progress.timeRemainingInPeriod)} left
+            </p>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <PeriodBar
+                barKey={progress.period}
+                durationSec={progress.periodDuration}
+                isFinished={isFinished}
+              />
+            </div>
+          </div>
           <SummaryView
             autoPath={inputMode === "field" ? autoPath : undefined}
             form={form}
