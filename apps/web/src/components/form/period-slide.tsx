@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@decode/ui/components/button";
 import {
   FormControl,
   FormField,
@@ -17,24 +16,16 @@ import {
   SelectValue,
 } from "@decode/ui/components/select";
 import type { UseFormReturn } from "@decode/ui/lib/react-hook-form";
+import { cn } from "@decode/ui/lib/utils";
 import { useCallback } from "react";
 import type { FrcPeriod } from "@/hooks/use-match-timer";
 import { FRC_PERIOD_TO_KEY } from "@/lib/form/constants";
 import { FRC_CLIMB_LEVELS } from "@/lib/form/field-groups";
+import { formatShortcutKey } from "@/lib/shortcuts";
 import type {
   FrcMatchSubmissionSchema,
   FrcPeriodDataMap,
 } from "@/schema/scouting";
-
-const PERIOD_LABELS: Record<FrcPeriod, string> = {
-  AUTO: "AUTO",
-  TRANSITION: "Transition",
-  SHIFT_1: "Shift 1",
-  SHIFT_2: "Shift 2",
-  SHIFT_3: "Shift 3",
-  SHIFT_4: "Shift 4",
-  END_GAME: "End Game",
-};
 
 function formatSeconds(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -46,6 +37,7 @@ interface ActionTimerProps {
   label: string;
   isRunning: boolean;
   elapsedSeconds: number;
+  shortcutKey?: string;
   onStart: () => void;
   onStop: () => void;
 }
@@ -54,34 +46,73 @@ function ActionTimer({
   label,
   isRunning,
   elapsedSeconds,
+  shortcutKey,
   onStart,
   onStop,
 }: ActionTimerProps) {
   return (
-    <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-4">
-      <span className="font-medium text-muted-foreground text-sm">{label}</span>
-      <div className="flex items-center justify-between gap-4">
-        <span className="font-mono text-2xl tabular-nums">
+    <button
+      className={cn(
+        "relative flex w-full flex-col gap-4 overflow-hidden rounded-xl border-2 p-5 text-left transition-all duration-200",
+        isRunning
+          ? "border-primary bg-primary/5 hover:bg-primary/10 active:scale-[0.98]"
+          : "border-border bg-muted/20 hover:bg-muted/30 active:scale-[0.98]"
+      )}
+      onClick={() => {
+        if (isRunning) {
+          onStop();
+        } else {
+          onStart();
+        }
+      }}
+      type="button"
+    >
+      <div className="flex items-center gap-2">
+        <div
+          className={cn(
+            "size-2 rounded-full transition-colors",
+            isRunning ? "animate-pulse bg-primary" : "bg-muted-foreground/30"
+          )}
+        />
+        <span className="font-medium text-sm">{label}</span>
+        {shortcutKey ? (
+          <kbd className="muted-foreground ml-auto rounded bg-muted px-1.5 py-0.5 font-mono text-xs italic">
+            {formatShortcutKey(shortcutKey)}
+          </kbd>
+        ) : null}
+      </div>
+
+      <div className="flex items-end justify-between gap-3">
+        <span
+          className={cn(
+            "font-mono font-semibold tabular-nums transition-colors",
+            isRunning
+              ? "text-4xl text-foreground"
+              : "text-4xl text-muted-foreground/60"
+          )}
+        >
           {formatSeconds(elapsedSeconds)}
         </span>
-        <Button
-          className="font-mono"
-          onClick={() => {
-            if (isRunning) {
-              onStop();
-            } else {
-              onStart();
-            }
-          }}
-          size="sm"
-          type="button"
-          variant={isRunning ? "destructive" : "default"}
+        <span
+          className={cn(
+            "rounded-md px-3 py-1.5 font-medium text-sm transition-colors",
+            isRunning
+              ? "bg-destructive text-destructive-foreground"
+              : "bg-primary text-primary-foreground"
+          )}
         >
           {isRunning ? "Stop" : "Start"}
-        </Button>
+        </span>
       </div>
-    </div>
+    </button>
   );
+}
+
+interface ActionTimerControls {
+  isRunning: boolean;
+  elapsedSeconds: number;
+  start: () => void;
+  flush: () => { period: FrcPeriod; duration: number }[];
 }
 
 interface PeriodSlideProps {
@@ -89,30 +120,10 @@ interface PeriodSlideProps {
   onPeriodDataChange: (
     updater: (prev: FrcPeriodDataMap) => FrcPeriodDataMap
   ) => void;
-  scoringTimer: {
-    isRunning: boolean;
-    elapsedSeconds: number;
-    start: () => void;
-    stop: () => { period: FrcPeriod; duration: number } | null;
-    flush: () => { period: FrcPeriod; duration: number }[];
-    updateMatchElapsed: (matchElapsed: number) => void;
-  };
-  feedingTimer: {
-    isRunning: boolean;
-    elapsedSeconds: number;
-    start: () => void;
-    stop: () => { period: FrcPeriod; duration: number } | null;
-    flush: () => { period: FrcPeriod; duration: number }[];
-    updateMatchElapsed: (matchElapsed: number) => void;
-  };
-  defenseTimer: {
-    isRunning: boolean;
-    elapsedSeconds: number;
-    start: () => void;
-    stop: () => { period: FrcPeriod; duration: number } | null;
-    flush: () => { period: FrcPeriod; duration: number }[];
-    updateMatchElapsed: (matchElapsed: number) => void;
-  };
+  scoringTimer: ActionTimerControls;
+  feedingTimer: ActionTimerControls;
+  defenseTimer: ActionTimerControls;
+  shortcuts?: { scoring: string; feeding: string; defense: string };
   form?: UseFormReturn<FrcMatchSubmissionSchema>;
 }
 
@@ -122,6 +133,7 @@ export function PeriodSlide({
   scoringTimer,
   feedingTimer,
   defenseTimer,
+  shortcuts,
   form,
 }: PeriodSlideProps) {
   const handleStop = useCallback(
@@ -154,8 +166,6 @@ export function PeriodSlide({
 
   return (
     <div className="space-y-6">
-      <h2 className="font-semibold text-xl">{PERIOD_LABELS[period]}</h2>
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <ActionTimer
           elapsedSeconds={scoringTimer.elapsedSeconds}
@@ -163,6 +173,7 @@ export function PeriodSlide({
           label="Scoring"
           onStart={scoringTimer.start}
           onStop={() => handleStop(scoringTimer.flush, "scoring")}
+          shortcutKey={shortcuts?.scoring}
         />
         <ActionTimer
           elapsedSeconds={feedingTimer.elapsedSeconds}
@@ -170,6 +181,7 @@ export function PeriodSlide({
           label="Feeding"
           onStart={feedingTimer.start}
           onStop={() => handleStop(feedingTimer.flush, "feeding")}
+          shortcutKey={shortcuts?.feeding}
         />
         <ActionTimer
           elapsedSeconds={defenseTimer.elapsedSeconds}
@@ -177,6 +189,7 @@ export function PeriodSlide({
           label="Defence"
           onStart={defenseTimer.start}
           onStop={() => handleStop(defenseTimer.flush, "defense")}
+          shortcutKey={shortcuts?.defense}
         />
       </div>
 

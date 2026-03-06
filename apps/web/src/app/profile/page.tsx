@@ -22,8 +22,14 @@ import { Check, ChevronDown, LogOut, Pencil, RefreshCw, X } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import type React from "react";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useScoutingShortcuts } from "@/hooks/use-scouting-shortcuts";
 import { authClient } from "@/lib/auth-client";
+import {
+  formatShortcutKey,
+  type ScoutingShortcuts,
+  SHORTCUT_LABELS,
+} from "@/lib/shortcuts";
 
 interface PersonalTabProps {
   profile: {
@@ -247,19 +253,126 @@ function PersonalTab({ profile, userEmail }: PersonalTabProps) {
   );
 }
 
+interface KeyCaptureButtonProps {
+  action: keyof ScoutingShortcuts;
+  currentKey: string;
+  onCapture: (action: keyof ScoutingShortcuts, key: string) => void;
+}
+
+function KeyCaptureButton({
+  action,
+  currentKey,
+  onCapture,
+}: KeyCaptureButtonProps) {
+  const [isCapturing, setIsCapturing] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const handleClick = useCallback(() => {
+    setIsCapturing(true);
+    buttonRef.current?.focus();
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (!isCapturing) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (e.key === "Escape") {
+        setIsCapturing(false);
+        return;
+      }
+
+      const key = e.key === " " ? " " : e.key.toLowerCase();
+      onCapture(action, key);
+      setIsCapturing(false);
+    },
+    [isCapturing, action, onCapture]
+  );
+
+  const handleBlur = useCallback(() => {
+    setIsCapturing(false);
+  }, []);
+
+  return (
+    <button
+      className={cn(
+        "inline-flex h-8 min-w-16 items-center justify-center rounded-md border px-3 font-mono text-sm transition-colors",
+        isCapturing
+          ? "border-primary bg-primary/10 text-primary outline-none ring-2 ring-primary/30"
+          : "border-border bg-muted/50 text-foreground hover:bg-muted"
+      )}
+      onBlur={handleBlur}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      ref={buttonRef}
+      type="button"
+    >
+      {isCapturing ? "Press a key…" : formatShortcutKey(currentKey)}
+    </button>
+  );
+}
+
 interface SettingsTabProps {
   onSignOut: () => Promise<void>;
 }
 
 function SettingsTab({ onSignOut }: SettingsTabProps) {
+  const { shortcuts, setShortcut, resetShortcuts } = useScoutingShortcuts();
+
+  const shortcutActions = Object.keys(
+    SHORTCUT_LABELS
+  ) as (keyof ScoutingShortcuts)[];
+
   return (
-    <div className="space-y-6">
-      <div className="space-y-3">
+    <div className="space-y-8">
+      <section className="space-y-1">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-medium text-sm">Keyboard Shortcuts</h3>
+          </div>
+          <button
+            className="text-muted-foreground text-xs underline-offset-4 transition-colors hover:text-foreground hover:underline"
+            onClick={resetShortcuts}
+            type="button"
+          >
+            Reset
+          </button>
+        </div>
+
+        <div className="mt-3 overflow-hidden rounded-lg border">
+          {shortcutActions.map((action, i) => (
+            <div
+              className={cn(
+                "flex items-center justify-between px-4 py-3",
+                i !== shortcutActions.length - 1 && "border-b"
+              )}
+              key={action}
+            >
+              <span className="text-sm">{SHORTCUT_LABELS[action]}</span>
+              <KeyCaptureButton
+                action={action}
+                currentKey={shortcuts[action]}
+                onCapture={setShortcut}
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <Separator />
+
+      <section className="space-y-3">
+        <div>
+          <h3 className="font-medium text-sm">Account</h3>
+        </div>
         <Button className="gap-2" onClick={onSignOut} variant="destructive">
           <LogOut className="size-4" />
           Sign Out
         </Button>
-      </div>
+      </section>
     </div>
   );
 }
