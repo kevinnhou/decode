@@ -76,7 +76,7 @@ function ActionTimer({
         />
         <span className="font-medium text-sm">{label}</span>
         {shortcutKey ? (
-          <kbd className="ml-auto rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+          <kbd className="muted-foreground ml-auto rounded bg-muted px-1.5 py-0.5 font-mono text-xs italic">
             {formatShortcutKey(shortcutKey)}
           </kbd>
         ) : null}

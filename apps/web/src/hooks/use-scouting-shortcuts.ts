@@ -20,7 +20,21 @@ export function useScoutingShortcuts(): {
 
   const setShortcut = useCallback(
     (action: keyof ScoutingShortcuts, key: string) => {
-      setShortcuts({ ...getShortcuts(), [action]: key });
+      const current = getShortcuts();
+
+      const conflicting = (
+        Object.keys(current) as (keyof ScoutingShortcuts)[]
+      ).find((a) => a !== action && current[a] === key);
+
+      if (conflicting) {
+        setShortcuts({
+          ...current,
+          [action]: key,
+          [conflicting]: current[action],
+        });
+      } else {
+        setShortcuts({ ...current, [action]: key });
+      }
     },
     []
   );
