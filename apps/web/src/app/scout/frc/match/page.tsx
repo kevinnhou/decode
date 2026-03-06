@@ -62,26 +62,20 @@ import { submitMatch } from "./actions";
 
 // biome-ignore lint/nursery/noShadow: PASS
 const PeriodBar = memo(function PeriodBar({
-  barKey,
-  durationSec,
-  isFinished,
+  elapsedInPeriod,
+  periodDuration,
 }: {
-  barKey: string;
-  durationSec: number;
-  isFinished: boolean;
+  elapsedInPeriod: number;
+  periodDuration: number;
 }) {
-  if (isFinished) {
-    return (
-      <div className="h-full rounded-full bg-primary" style={{ width: 0 }} />
-    );
-  }
+  const pct =
+    periodDuration > 0
+      ? Math.max(0, (1 - elapsedInPeriod / periodDuration) * 100)
+      : 0;
   return (
     <div
-      className="h-full rounded-full bg-primary"
-      key={barKey}
-      style={{
-        animation: `period-shrink ${durationSec}s linear forwards`,
-      }}
+      className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-linear"
+      style={{ width: `${pct}%` }}
     />
   );
 });
@@ -598,7 +592,6 @@ export default function MatchScouting() {
 
     if (inputMode === "field") {
       const progress = getFrcPeriodProgress(timer.elapsedTime);
-      const isFinished = timer.state === "finished";
 
       return (
         <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
@@ -611,9 +604,8 @@ export default function MatchScouting() {
                 </p>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                   <PeriodBar
-                    barKey={progress.period}
-                    durationSec={progress.periodDuration}
-                    isFinished={isFinished}
+                    elapsedInPeriod={progress.elapsedInPeriod}
+                    periodDuration={progress.periodDuration}
                   />
                 </div>
               </div>
@@ -633,7 +625,6 @@ export default function MatchScouting() {
     }
 
     const progress = getFrcPeriodProgress(timer.elapsedTime);
-    const isFinished = timer.state === "finished";
 
     return (
       <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
@@ -646,9 +637,8 @@ export default function MatchScouting() {
               </p>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                 <PeriodBar
-                  barKey={progress.period}
-                  durationSec={progress.periodDuration}
-                  isFinished={isFinished}
+                  elapsedInPeriod={progress.elapsedInPeriod}
+                  periodDuration={progress.periodDuration}
                 />
               </div>
             </div>
@@ -668,7 +658,6 @@ export default function MatchScouting() {
   }
 
   const progress = getFrcPeriodProgress(timer.elapsedTime);
-  const isFinished = timer.state === "finished";
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
@@ -681,9 +670,8 @@ export default function MatchScouting() {
             </p>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <PeriodBar
-                barKey={progress.period}
-                durationSec={progress.periodDuration}
-                isFinished={isFinished}
+                elapsedInPeriod={progress.elapsedInPeriod}
+                periodDuration={progress.periodDuration}
               />
             </div>
           </div>
