@@ -26,10 +26,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { memo, useCallback, useEffect, useState } from "react";
 import { useInputMode } from "@/hooks/use-input-mode";
 import {
+  type FrcPeriod,
   getFrcPeriodProgress,
   useMatchTimerFRC,
   usePeriodActionTimer,
 } from "@/hooks/use-match-timer";
+import { useScoutingShortcuts } from "@/hooks/use-scouting-shortcuts";
 import { getConfig, getTeamsMap, setTeamsMap } from "@/lib/config";
 import {
   ALLIANCE_COLOUR_OPTIONS,
@@ -220,6 +222,116 @@ export default function MatchScouting() {
     feedingTick(timer.elapsedTime);
     defenseTick(timer.elapsedTime);
   }, [timer.elapsedTime, scoringTick, feedingTick, defenseTick]);
+
+  const { shortcuts } = useScoutingShortcuts();
+
+  const handleTimerStop = useCallback(
+    (
+      flushFn: () => { period: FrcPeriod; duration: number }[],
+      action: "scoring" | "feeding" | "defense"
+    ) => {
+      const segments = flushFn();
+      if (segments.length === 0) {
+        return;
+      }
+      setPeriodData((prev) => {
+        const updated = { ...prev };
+        for (const segment of segments) {
+          const key = FRC_PERIOD_TO_KEY[segment.period];
+          updated[key] = {
+            ...updated[key],
+            [action]: updated[key][action] + segment.duration,
+          };
+        }
+        return updated;
+      });
+    },
+    []
+  );
+
+  const toggleScoringTimer = useCallback(() => {
+    if (scoringTimer.isRunning) {
+      handleTimerStop(scoringTimer.flush, "scoring");
+    } else {
+      scoringTimer.start();
+    }
+  }, [scoringTimer, handleTimerStop]);
+
+  const toggleFeedingTimer = useCallback(() => {
+    if (feedingTimer.isRunning) {
+      handleTimerStop(feedingTimer.flush, "feeding");
+    } else {
+      feedingTimer.start();
+    }
+  }, [feedingTimer, handleTimerStop]);
+
+  const toggleDefenseTimer = useCallback(() => {
+    if (defenseTimer.isRunning) {
+      handleTimerStop(defenseTimer.flush, "defense");
+    } else {
+      defenseTimer.start();
+    }
+  }, [defenseTimer, handleTimerStop]);
+
+  const toggleMatchTimer = useCallback(() => {
+    if (timer.state === "running") {
+      timer.pause();
+    } else if (timer.state === "paused") {
+      timer.resume();
+    }
+  }, [timer]);
+
+  const handleShortcutKey = useCallback(
+    (key: string): boolean => {
+      const keyMap: Record<string, (() => void) | undefined> = {
+        [shortcuts.scoring]: toggleScoringTimer,
+        [shortcuts.feeding]: toggleFeedingTimer,
+        [shortcuts.defense]: toggleDefenseTimer,
+        [shortcuts.matchTimer]: toggleMatchTimer,
+      };
+      const action = keyMap[key];
+      if (action) {
+        action();
+        return true;
+      }
+      return false;
+    },
+    [
+      shortcuts,
+      toggleScoringTimer,
+      toggleFeedingTimer,
+      toggleDefenseTimer,
+      toggleMatchTimer,
+    ]
+  );
+
+  useEffect(() => {
+    if (pageState !== "running" || inputMode !== "form") {
+      return;
+    }
+
+    function handleKeyDown(e: KeyboardEvent) {
+      const active = document.activeElement;
+      if (
+        active instanceof HTMLInputElement ||
+        active instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        return;
+      }
+      const key = e.key === " " ? " " : e.key.toLowerCase();
+      if (handleShortcutKey(key)) {
+        e.preventDefault();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [pageState, inputMode, handleShortcutKey]);
 
   const flushActiveTimers = useCallback(() => {
     const scoringSegments = scoringTimer.isRunning ? scoringTimer.flush() : [];
@@ -547,6 +659,7 @@ export default function MatchScouting() {
               onPeriodDataChange={setPeriodData}
               period={currentPeriod}
               scoringTimer={scoringTimer}
+              shortcuts={shortcuts}
             />
           </div>
         </Form>
