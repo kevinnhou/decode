@@ -84,35 +84,21 @@ function ActionTimer({
   );
 }
 
+interface ActionTimerControls {
+  isRunning: boolean;
+  elapsedSeconds: number;
+  start: () => void;
+  flush: () => { period: FrcPeriod; duration: number }[];
+}
+
 interface PeriodSlideProps {
   period: FrcPeriod;
   onPeriodDataChange: (
     updater: (prev: FrcPeriodDataMap) => FrcPeriodDataMap
   ) => void;
-  scoringTimer: {
-    isRunning: boolean;
-    elapsedSeconds: number;
-    start: () => void;
-    stop: () => { period: FrcPeriod; duration: number } | null;
-    flush: () => { period: FrcPeriod; duration: number }[];
-    updateMatchElapsed: (matchElapsed: number) => void;
-  };
-  feedingTimer: {
-    isRunning: boolean;
-    elapsedSeconds: number;
-    start: () => void;
-    stop: () => { period: FrcPeriod; duration: number } | null;
-    flush: () => { period: FrcPeriod; duration: number }[];
-    updateMatchElapsed: (matchElapsed: number) => void;
-  };
-  defenseTimer: {
-    isRunning: boolean;
-    elapsedSeconds: number;
-    start: () => void;
-    stop: () => { period: FrcPeriod; duration: number } | null;
-    flush: () => { period: FrcPeriod; duration: number }[];
-    updateMatchElapsed: (matchElapsed: number) => void;
-  };
+  scoringTimer: ActionTimerControls;
+  feedingTimer: ActionTimerControls;
+  defenseTimer: ActionTimerControls;
   form?: UseFormReturn<FrcMatchSubmissionSchema>;
 }
 

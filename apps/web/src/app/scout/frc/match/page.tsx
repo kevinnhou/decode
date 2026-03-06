@@ -211,11 +211,15 @@ export default function MatchScouting() {
     setTeamsMap(teamsMap);
   }, [teamsMap]);
 
+  const { tick: scoringTick } = scoringTimer;
+  const { tick: feedingTick } = feedingTimer;
+  const { tick: defenseTick } = defenseTimer;
+
   useEffect(() => {
-    scoringTimer.updateMatchElapsed(timer.elapsedTime);
-    feedingTimer.updateMatchElapsed(timer.elapsedTime);
-    defenseTimer.updateMatchElapsed(timer.elapsedTime);
-  }, [timer.elapsedTime, scoringTimer, feedingTimer, defenseTimer]);
+    scoringTick(timer.elapsedTime);
+    feedingTick(timer.elapsedTime);
+    defenseTick(timer.elapsedTime);
+  }, [timer.elapsedTime, scoringTick, feedingTick, defenseTick]);
 
   const flushActiveTimers = useCallback(() => {
     const scoringSegments = scoringTimer.isRunning ? scoringTimer.flush() : [];
