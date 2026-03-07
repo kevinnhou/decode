@@ -84,12 +84,13 @@ export const getCurrentUserProfile = query({
 
 /**
  * Fetches the authenticated user for the current request from Better Auth.
+ * Returns null when unauthenticated (does not throw).
  *
  * @param ctx - The Convex query context
  * @returns The auth user or null
  */
 export async function getAuthUser(ctx: QueryCtx) {
-  return await authComponent.getAuthUser(ctx as any);
+  return (await authComponent.safeGetAuthUser(ctx as any)) ?? null;
 }
 
 /**
