@@ -26,16 +26,16 @@ import { useForm } from "@decode/ui/lib/react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "convex/react";
 import { memo, useCallback, useEffect, useState } from "react";
-import { useInputMode } from "@/hooks/use-input-mode";
+import { useInput } from "@/hooks/use-input";
+import { useMyDuties } from "@/hooks/use-my-duties";
+import { useShortcuts } from "@/hooks/use-shortcuts";
 import {
-  type FrcPeriod,
   getFrcPeriodProgress,
   useMatchTimerFRC,
   usePeriodActionTimer,
-} from "@/hooks/use-match-timer";
-import { useMyDuties } from "@/hooks/use-my-duties";
-import { useScoutingShortcuts } from "@/hooks/use-scouting-shortcuts";
+} from "@/hooks/use-timer";
 import { getConfig, getTeamsMap, setTeamsMap } from "@/lib/config";
+import type { FrcPeriod } from "@/lib/form/constants";
 import {
   ALLIANCE_COLOUR_OPTIONS,
   FRC_PERIOD_TO_KEY,
@@ -90,7 +90,7 @@ const PeriodBar = memo(function PeriodBar({
 });
 
 export default function MatchScouting() {
-  const { mode: inputMode } = useInputMode();
+  const { mode: inputMode } = useInput();
   const [pageState, setPageState] = useState<PageState>("meta");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [periodData, setPeriodData] =
@@ -258,7 +258,7 @@ export default function MatchScouting() {
     defenseTick(timer.elapsedTime);
   }, [timer.elapsedTime, scoringTick, feedingTick, defenseTick]);
 
-  const { shortcuts } = useScoutingShortcuts();
+  const { shortcuts } = useShortcuts();
 
   const handleTimerStop = useCallback(
     (

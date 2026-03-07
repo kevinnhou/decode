@@ -1,4 +1,3 @@
-import type { FrcPeriod } from "@/hooks/use-match-timer";
 import type { FrcPeriodDataMap } from "@/schema/scouting";
 import type { SectionConfig } from "./types";
 
@@ -59,3 +58,32 @@ export const CLIMB_LEVEL_OPTIONS = [
   { value: "2", label: "Level 2" },
   { value: "3", label: "Level 3" },
 ] as const;
+
+export const INITIAL_TIME_SECONDS = 160; // 2:40 (20s AUTO + 2:20 TELEOP)
+export const PAUSE_TIME_SECONDS = 120; // 2:00
+export const FINAL_TIME_SECONDS = 0;
+
+export type TimerState = "idle" | "running" | "paused" | "finished";
+
+export type FrcPeriod =
+  | "AUTO"
+  | "TRANSITION"
+  | "SHIFT_1"
+  | "SHIFT_2"
+  | "SHIFT_3"
+  | "SHIFT_4"
+  | "END_GAME";
+
+export const FRC_PERIOD_BOUNDARIES: {
+  start: number;
+  end: number;
+  period: FrcPeriod;
+}[] = [
+  { start: 0, end: 20, period: "AUTO" },
+  { start: 20, end: 30, period: "TRANSITION" },
+  { start: 30, end: 55, period: "SHIFT_1" },
+  { start: 55, end: 80, period: "SHIFT_2" },
+  { start: 80, end: 105, period: "SHIFT_3" },
+  { start: 105, end: 130, period: "SHIFT_4" },
+  { start: 130, end: 160, period: "END_GAME" },
+];

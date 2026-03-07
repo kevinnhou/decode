@@ -1,33 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-export const INITIAL_TIME_SECONDS = 160; // 2:40 (20s AUTO + 2:20 TELEOP)
-export const PAUSE_TIME_SECONDS = 120; // 2:00
-const FINAL_TIME_SECONDS = 0;
-
-export type TimerState = "idle" | "running" | "paused" | "finished";
-
-export type FrcPeriod =
-  | "AUTO"
-  | "TRANSITION"
-  | "SHIFT_1"
-  | "SHIFT_2"
-  | "SHIFT_3"
-  | "SHIFT_4"
-  | "END_GAME";
-
-const FRC_PERIOD_BOUNDARIES: {
-  start: number;
-  end: number;
-  period: FrcPeriod;
-}[] = [
-  { start: 0, end: 20, period: "AUTO" },
-  { start: 20, end: 30, period: "TRANSITION" },
-  { start: 30, end: 55, period: "SHIFT_1" },
-  { start: 55, end: 80, period: "SHIFT_2" },
-  { start: 80, end: 105, period: "SHIFT_3" },
-  { start: 105, end: 130, period: "SHIFT_4" },
-  { start: 130, end: 160, period: "END_GAME" },
-];
+import type { FrcPeriod, TimerState } from "@/lib/form/constants";
+import {
+  FINAL_TIME_SECONDS,
+  FRC_PERIOD_BOUNDARIES,
+  INITIAL_TIME_SECONDS,
+  PAUSE_TIME_SECONDS,
+} from "@/lib/form/constants";
 
 function getFrcPeriodFromElapsed(elapsedSeconds: number): FrcPeriod {
   for (const { end, period } of FRC_PERIOD_BOUNDARIES) {

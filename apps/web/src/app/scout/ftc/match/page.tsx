@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/complexity/noVoid: PASS */
+
 "use client";
 
 import { Button } from "@decode/ui/components/button";
@@ -7,8 +8,8 @@ import { toast } from "@decode/ui/components/sonner";
 import { useForm } from "@decode/ui/lib/react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useState } from "react";
-import { useInputMode } from "@/hooks/use-input-mode";
-import { useMatchTimer } from "@/hooks/use-match-timer";
+import { useInput } from "@/hooks/use-input";
+import { useMatchTimer } from "@/hooks/use-timer";
 import { getConfig, getTeamsMap, setTeamsMap } from "@/lib/config";
 import { getInitialFormValues } from "@/lib/form/utils";
 import type { FieldSchema, FormSchema } from "@/schema/scouting";
@@ -22,7 +23,7 @@ import { setSidebarContent, setSidebarFooterContent } from "~/sidebar/slot";
 import { submitUnified } from "./actions";
 
 export default function MatchScouting() {
-  const { mode } = useInputMode();
+  const { mode } = useInput();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldEvents, setFieldEvents] = useState<FieldSchema>([]);

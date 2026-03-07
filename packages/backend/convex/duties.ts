@@ -111,7 +111,7 @@ function validateCreateDutyArgs(args: {
 }
 
 /**
- * Lists scouting duties for an event (management UI). Excludes soft-deleted duties.
+ * Lists scouting duties for an event. Excludes soft-deleted duties.
  * Caller must be leadScout or admin in the same organisation.
  *
  * @param ctx - The Convex query context

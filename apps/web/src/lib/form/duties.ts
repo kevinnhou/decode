@@ -1,7 +1,7 @@
 import type { Doc } from "@decode/backend/convex/_generated/dataModel";
 import { cn } from "@decode/ui/lib/utils";
 
-type Duty = Doc<"scoutingDuties">;
+export type Duty = Doc<"scoutingDuties">;
 
 export function formatDutyLabel(duty: Duty): string {
   if (duty.delegationType === "team" && duty.teamNumber !== undefined) {

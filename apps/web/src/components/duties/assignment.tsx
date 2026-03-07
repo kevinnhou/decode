@@ -4,9 +4,9 @@ import { Label } from "@decode/ui/components/label";
 import { Separator } from "@decode/ui/components/separator";
 import { useMyDuties } from "@/hooks/use-my-duties";
 import { getConfig } from "@/lib/config";
-import { dutyChipClass, formatDutyLabel } from "@/lib/duties";
+import { dutyChipClass, formatDutyLabel } from "@/lib/form/duties";
 
-export function ProfileAssignments() {
+export function DutiesAssignment() {
   const config = getConfig();
   const { duties, isLoading } = useMyDuties();
   const eventCode = config?.eventCode?.trim() ?? null;

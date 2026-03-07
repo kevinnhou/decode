@@ -3,7 +3,7 @@
 "use client";
 
 import { api } from "@decode/backend/convex/_generated/api";
-import type { Doc, Id } from "@decode/backend/convex/_generated/dataModel";
+import type { Id } from "@decode/backend/convex/_generated/dataModel";
 import { Button } from "@decode/ui/components/button";
 import {
   Dialog,
@@ -40,10 +40,9 @@ import {
   Users,
 } from "lucide-react";
 import { useCallback, useState } from "react";
-import { dutyChipClass, formatDutyLabel } from "@/lib/duties";
-import { AssignmentGrid } from "~/manage/assignment-grid";
-
-type Duty = Doc<"scoutingDuties">;
+import type { Duty } from "@/lib/form/duties";
+import { dutyChipClass, formatDutyLabel } from "@/lib/form/duties";
+import { DutiesGrid } from "~/duties/grid";
 
 type CreateArgs = {
   scout: string;
@@ -369,7 +368,7 @@ async function createPositionDuty(
   });
 }
 
-export function ProfileManagement() {
+export function DutiesManagement() {
   const [eventCode, setEventCode] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
@@ -579,7 +578,7 @@ function AssignmentContent({
       </div>
 
       {viewMode === "grid" ? (
-        <AssignmentGrid duties={duties} scoutNames={scoutNames} />
+        <DutiesGrid duties={duties} scoutNames={scoutNames} />
       ) : isLoadingDuties ? (
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (

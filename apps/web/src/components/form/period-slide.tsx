@@ -18,10 +18,10 @@ import {
 import type { UseFormReturn } from "@decode/ui/lib/react-hook-form";
 import { cn } from "@decode/ui/lib/utils";
 import { useCallback } from "react";
-import type { FrcPeriod } from "@/hooks/use-match-timer";
+import type { FrcPeriod } from "@/hooks/use-timer";
 import { FRC_PERIOD_TO_KEY } from "@/lib/form/constants";
 import { FRC_CLIMB_LEVELS } from "@/lib/form/field-groups";
-import { formatShortcutKey } from "@/lib/shortcuts";
+import { formatShortcutKey } from "@/lib/form/shortcuts";
 import type {
   FrcMatchSubmissionSchema,
   FrcPeriodDataMap,

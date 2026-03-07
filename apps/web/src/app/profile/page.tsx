@@ -23,15 +23,14 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { useCallback, useRef, useState } from "react";
-import { useScoutingShortcuts } from "@/hooks/use-scouting-shortcuts";
+import { useShortcuts } from "@/hooks/use-shortcuts";
 import { authClient } from "@/lib/auth-client";
 import {
   formatShortcutKey,
   type ScoutingShortcuts,
   SHORTCUT_LABELS,
-} from "@/lib/shortcuts";
-import { ProfileAssignments } from "~/manage/profile-assignments";
-import { ProfileManagement } from "~/manage/profile-management";
+} from "@/lib/form/shortcuts";
+import { DutiesAssignment } from "~/duties/assignment";
 
 interface PersonalTabProps {
   profile: {
@@ -322,7 +321,7 @@ interface SettingsTabProps {
 }
 
 function SettingsTab({ onSignOut }: SettingsTabProps) {
-  const { shortcuts, setShortcut, resetShortcuts } = useScoutingShortcuts();
+  const { shortcuts, setShortcut, resetShortcuts } = useShortcuts();
 
   const shortcutActions = Object.keys(
     SHORTCUT_LABELS
@@ -631,7 +630,7 @@ function OrganisationTab({
         </div>
       </div>
 
-      <ProfileAssignments />
+      <DutiesAssignment />
 
       {canManage ? (
         <>
@@ -643,7 +642,7 @@ function OrganisationTab({
                 Assign scouts to teams or positions for FRC events.
               </p>
             </div>
-            <ProfileManagement />
+            <DutiesAssignment />
           </div>
         </>
       ) : null}

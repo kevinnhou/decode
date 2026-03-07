@@ -1,11 +1,9 @@
 "use client";
 
-import type { Doc } from "@decode/backend/convex/_generated/dataModel";
 import { cn } from "@decode/ui/lib/utils";
+import type { Duty } from "@/lib/form/duties";
 
-type Duty = Doc<"scoutingDuties">;
-
-type AssignmentGridProps = {
+type DutiesGridProps = {
   duties: Duty[];
   scoutNames: Map<string, string>;
 };
@@ -25,7 +23,7 @@ function findScoutForPosition(
   );
 }
 
-export function AssignmentGrid({ duties, scoutNames }: AssignmentGridProps) {
+export function DutiesGrid({ duties, scoutNames }: DutiesGridProps) {
   return (
     <div className="space-y-2">
       {(["Red", "Blue"] as const).map((alliance) => (
