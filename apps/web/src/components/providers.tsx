@@ -4,6 +4,7 @@ import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
 import { UIProviders } from "@decode/ui/components/providers";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { Analytics } from "@vercel/analytics/next";
 import { ConvexReactClient } from "convex/react";
 import { authClient } from "@/lib/auth-client";
 import { queryClient } from "@/utils/trpc";
@@ -22,6 +23,7 @@ export default function Providers({
 }) {
   return (
     <UIProviders>
+      <Analytics />
       <ConvexBetterAuthProvider
         authClient={authClient}
         client={convex}
