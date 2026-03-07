@@ -30,6 +30,8 @@ import {
   type ScoutingShortcuts,
   SHORTCUT_LABELS,
 } from "@/lib/shortcuts";
+import { ProfileAssignments } from "~/manage/profile-assignments";
+import { ProfileManagement } from "~/manage/profile-management";
 
 interface PersonalTabProps {
   profile: {
@@ -398,6 +400,7 @@ interface OrganisationTabProps {
     | undefined;
   userId: string;
   isAdmin: boolean;
+  canManage: boolean;
 }
 
 function OrganisationTab({
@@ -406,6 +409,7 @@ function OrganisationTab({
   members,
   userId,
   isAdmin,
+  canManage,
 }: OrganisationTabProps) {
   const updateOrgName = useMutation(api.auth.updateOrganisationName);
   const regenerateCode = useMutation(api.auth.regenerateInviteCode);
@@ -626,6 +630,23 @@ function OrganisationTab({
             : null}
         </div>
       </div>
+
+      <ProfileAssignments />
+
+      {canManage ? (
+        <>
+          <Separator />
+          <div className="space-y-4">
+            <div>
+              <Label className="text-muted-foreground">Scout Assignments</Label>
+              <p className="mt-0.5 text-muted-foreground text-xs">
+                Assign scouts to teams or positions for FRC events.
+              </p>
+            </div>
+            <ProfileManagement />
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -640,6 +661,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("personal");
 
   const isAdmin = profile?.role === "admin";
+  const canManage = profile?.role === "admin" || profile?.role === "leadScout";
 
   async function handleSignOut() {
     await authClient.signOut();
@@ -684,6 +706,7 @@ export default function ProfilePage() {
 
           {activeTab === "organisation" ? (
             <OrganisationTab
+              canManage={canManage}
               isAdmin={isAdmin}
               members={members}
               organisation={organisation}

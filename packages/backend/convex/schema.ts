@@ -78,6 +78,9 @@ export default defineSchema({
     alliancePosition: v.optional(v.number()),
     isActive: v.boolean(),
     createdAt: v.number(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.string()),
+    deletedAt: v.optional(v.number()),
   })
     .index("by_organisationId", ["organisationId"])
     .index("by_org_and_event", ["organisationId", "eventCode"])
@@ -270,4 +273,43 @@ export default defineSchema({
     .index("by_org_event_team", ["organisationId", "eventCode", "teamNumber"])
     .index("by_scout", ["scoutUserId"])
     .index("by_competition_type", ["competitionType"]),
+
+  // FRC FIRST API cache (events, teams, schedule)
+  firstApiEvents: defineTable({
+    eventCode: v.string(),
+    season: v.number(),
+    name: v.string(),
+    startDate: v.optional(v.string()),
+    endDate: v.optional(v.string()),
+    city: v.optional(v.string()),
+    stateProv: v.optional(v.string()),
+    country: v.optional(v.string()),
+    cachedAt: v.number(),
+  })
+    .index("by_eventCode", ["eventCode"])
+    .index("by_season", ["season"]),
+
+  firstApiTeams: defineTable({
+    eventCode: v.string(),
+    teamNumber: v.number(),
+    teamName: v.optional(v.string()),
+    cachedAt: v.number(),
+  })
+    .index("by_eventCode", ["eventCode"])
+    .index("by_event_team", ["eventCode", "teamNumber"]),
+
+  firstApiSchedule: defineTable({
+    eventCode: v.string(),
+    matchNumber: v.number(),
+    matchType: v.string(),
+    red1: v.optional(v.number()),
+    red2: v.optional(v.number()),
+    red3: v.optional(v.number()),
+    blue1: v.optional(v.number()),
+    blue2: v.optional(v.number()),
+    blue3: v.optional(v.number()),
+    cachedAt: v.number(),
+  })
+    .index("by_eventCode", ["eventCode"])
+    .index("by_event_match", ["eventCode", "matchNumber"]),
 });

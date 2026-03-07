@@ -35,6 +35,10 @@ function createSlot() {
   return { set, Slot };
 }
 
+const assignmentSlot = createSlot();
+export const setSidebarAssignmentContent = assignmentSlot.set;
+export const SidebarAssignmentSlot = assignmentSlot.Slot;
+
 const contentSlot = createSlot();
 export const setSidebarContent = contentSlot.set;
 export const SidebarContentSlot = contentSlot.Slot;
