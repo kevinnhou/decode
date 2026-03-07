@@ -35,7 +35,6 @@ import {
 import type { PhotoPreview } from "@/lib/form/types";
 import { formatNumberFieldProps } from "@/lib/form/utils";
 import { type FrcPitFormSchema, frcPitFormSchema } from "@/schema/scouting";
-import { Config } from "~/form/config";
 import { setPitSectionsState } from "~/sidebar/pit-sections";
 import { getPhotoUploadUrl, submitPit } from "./actions";
 
@@ -890,11 +889,6 @@ export default function PitScouting() {
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <Config
-                onTeamMapLoad={() => {
-                  // pit scouting doesn't require team map
-                }}
-              />
               <Button
                 className="w-full sm:w-auto"
                 disabled={isSubmitting}

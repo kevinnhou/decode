@@ -14,7 +14,6 @@ import { getConfig, getTeamsMap, setTeamsMap } from "@/lib/config";
 import { getInitialFormValues } from "@/lib/form/utils";
 import type { FieldSchema, FormSchema } from "@/schema/scouting";
 import { formSchema } from "@/schema/scouting";
-import { Config } from "~/form/config";
 import { EventsList } from "~/form/events-list";
 import { EVENT_TO_FORM_KEY, FieldInput } from "~/form/field-input";
 import { MatchTimer } from "~/form/match-timer";
@@ -27,9 +26,7 @@ export default function MatchScouting() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldEvents, setFieldEvents] = useState<FieldSchema>([]);
-  const [teamsMap, setTeamsMapState] = useState<Record<string, string>>(() =>
-    getTeamsMap()
-  );
+  const [teamsMap] = useState<Record<string, string>>(() => getTeamsMap());
   const timer = useMatchTimer();
 
   const form = useForm<FormSchema>({
@@ -145,10 +142,6 @@ export default function MatchScouting() {
 
   const watchedTeamNumber = form.watch("meta.teamNumber");
 
-  const handleTeamMapLoad = useCallback((map: Record<string, string>) => {
-    setTeamsMapState((prev) => ({ ...prev, ...map }));
-  }, []);
-
   useEffect(() => {
     setTeamsMap(teamsMap);
   }, [teamsMap]);
@@ -199,21 +192,15 @@ export default function MatchScouting() {
           )}
 
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Button
-                className="rounded-xl font-mono"
-                disabled={isSubmitting}
-                onClick={onReset}
-                type="button"
-                variant="destructive"
-              >
-                Reset
-              </Button>
-              <Config
-                loadedCount={Object.keys(teamsMap).length}
-                onTeamMapLoad={handleTeamMapLoad}
-              />
-            </div>
+            <Button
+              className="rounded-xl font-mono sm:w-auto"
+              disabled={isSubmitting}
+              onClick={onReset}
+              type="button"
+              variant="destructive"
+            >
+              Reset
+            </Button>
             <Button
               className="w-full rounded-xl font-mono sm:w-auto"
               disabled={isSubmitting}

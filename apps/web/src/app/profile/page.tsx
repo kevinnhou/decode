@@ -9,6 +9,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@decode/ui/components/dropdown-menu";
+import {
+  Dropzone as DropzoneComponent,
+  DropzoneContent,
+  DropzoneEmptyState,
+} from "@decode/ui/components/dropzone";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@decode/ui/components/form";
 import { Input } from "@decode/ui/components/input";
 import { Label } from "@decode/ui/components/label";
 import { useTheme, useThemeConfig } from "@decode/ui/components/providers";
@@ -16,21 +29,38 @@ import { Separator } from "@decode/ui/components/separator";
 import { toast } from "@decode/ui/components/sonner";
 import { Tabs } from "@decode/ui/components/tabs";
 import { baseColours } from "@decode/ui/lib/colours";
+import { useForm } from "@decode/ui/lib/react-hook-form";
 import { cn } from "@decode/ui/lib/utils";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "convex/react";
-import { Check, ChevronDown, LogOut, Pencil, RefreshCw, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  FileJson,
+  LogOut,
+  Pencil,
+  RefreshCw,
+  Upload,
+  X,
+} from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import type React from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useShortcuts } from "@/hooks/use-shortcuts";
 import { authClient } from "@/lib/auth-client";
+import { getConfig, getTeamsMap, setConfig, setTeamsMap } from "@/lib/config";
 import {
   formatShortcutKey,
   type ScoutingShortcuts,
   SHORTCUT_LABELS,
 } from "@/lib/form/shortcuts";
+import {
+  type SpreadsheetConfigSchema,
+  spreadsheetConfigSchema,
+} from "@/schema/scouting";
 import { DutiesAssignment } from "~/duties/assignment";
+import { DutiesManagement } from "~/duties/management";
 
 interface PersonalTabProps {
   profile: {
@@ -254,6 +284,19 @@ function PersonalTab({ profile, userEmail }: PersonalTabProps) {
   );
 }
 
+function extractSpreadsheetId(input: string): string {
+  if (!(input.includes("/") || input.includes(":"))) {
+    return input.trim();
+  }
+
+  const urlMatch = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (urlMatch?.[1]) {
+    return urlMatch[1];
+  }
+
+  return input.trim();
+}
+
 interface KeyCaptureButtonProps {
   action: keyof ScoutingShortcuts;
   currentKey: string;
@@ -322,13 +365,227 @@ interface SettingsTabProps {
 
 function SettingsTab({ onSignOut }: SettingsTabProps) {
   const { shortcuts, setShortcut, resetShortcuts } = useShortcuts();
+  const [loadedCount, setLoadedCount] = useState(
+    () => Object.keys(getTeamsMap()).length
+  );
+  const [teamFiles, setTeamFiles] = useState<File[]>();
+  const [isTeamMapLoading, setIsTeamMapLoading] = useState(false);
+
+  const form = useForm<SpreadsheetConfigSchema>({
+    // biome-ignore lint/suspicious/noExplicitAny: PASS
+    resolver: zodResolver(spreadsheetConfigSchema as any),
+    defaultValues: {
+      eventCode: "",
+      spreadsheetId: "",
+      sheetId: "",
+    },
+  });
+
+  useEffect(() => {
+    const config = getConfig();
+    if (config) {
+      form.reset(config);
+    } else {
+      form.reset({
+        eventCode: "",
+        spreadsheetId: "",
+        sheetId: "",
+      });
+    }
+  }, [form]);
+
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: JSON parsing and validation logic
+  const handleTeamMapDrop = useCallback(async (acceptedFiles: File[]) => {
+    const [file] = acceptedFiles;
+    if (!file) {
+      return;
+    }
+
+    setIsTeamMapLoading(true);
+    try {
+      const content = await file.text();
+      const parsed = JSON.parse(content) as unknown;
+
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("Invalid JSON shape");
+      }
+
+      const entries = Object.entries(parsed as Record<string, unknown>).reduce(
+        (acc, [key, value]) => {
+          if (typeof value !== "string") {
+            return acc;
+          }
+          const normalisedKey = key.trim();
+          if (!normalisedKey) {
+            return acc;
+          }
+          acc[normalisedKey] = value.trim();
+          return acc;
+        },
+        {} as Record<string, string>
+      );
+
+      if (Object.keys(entries).length === 0) {
+        throw new Error("No team names found");
+      }
+
+      setTeamFiles([file]);
+      const priorCount = Object.keys(getTeamsMap()).length;
+      const merged = { ...getTeamsMap(), ...entries };
+      setTeamsMap(merged);
+      setLoadedCount(Object.keys(merged).length);
+      toast.success(
+        `Loaded ${Object.keys(entries).length} team${
+          Object.keys(entries).length === 1 ? "" : "s"
+        }${priorCount > 0 ? " (merged with existing)" : ""}`
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Invalid team JSON file";
+      toast.error(message);
+    } finally {
+      setIsTeamMapLoading(false);
+    }
+  }, []);
 
   const shortcutActions = Object.keys(
     SHORTCUT_LABELS
   ) as (keyof ScoutingShortcuts)[];
 
+  const saveConfigOnBlur = useCallback(async () => {
+    const isValid = await form.trigger();
+    if (isValid) {
+      setConfig(form.getValues());
+    }
+  }, [form]);
+
   return (
     <div className="space-y-8">
+      <section className="space-y-4">
+        <Form {...form}>
+          <div className="space-y-5">
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="eventCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Event Code</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g, AUSC..."
+                        {...field}
+                        onBlur={() => {
+                          field.onBlur();
+                          saveConfigOnBlur();
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="spreadsheetId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Spreadsheet ID (optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter Spreadsheet ID or URL"
+                        {...field}
+                        onBlur={() => {
+                          field.onBlur();
+                          saveConfigOnBlur();
+                        }}
+                        onChange={(e) => {
+                          const extractedId = extractSpreadsheetId(
+                            e.target.value
+                          );
+                          field.onChange(extractedId);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="sheetId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sheet ID (optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter Sheet ID"
+                        {...field}
+                        onBlur={() => {
+                          field.onBlur();
+                          saveConfigOnBlur();
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <FormLabel>Team Map</FormLabel>
+              <DropzoneComponent
+                accept={{ "application/json": [".json"] }}
+                className="w-full"
+                disabled={isTeamMapLoading}
+                maxFiles={1}
+                onDrop={(accepted) => {
+                  handleTeamMapDrop(accepted).catch(() => {
+                    //
+                  });
+                }}
+                src={teamFiles}
+              >
+                <DropzoneContent />
+                <DropzoneEmptyState>
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+                      {isTeamMapLoading ? (
+                        <Upload className="size-5 animate-pulse text-muted-foreground" />
+                      ) : (
+                        <FileJson className="size-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="space-y-1 text-center">
+                      <p className="font-medium text-sm">
+                        {isTeamMapLoading ? "Loading..." : "Upload Teams"}
+                      </p>
+                      <p className="text-muted-foreground text-xs">
+                        {loadedCount > 0
+                          ? "Drag & drop or click to add more teams"
+                          : "Drag & drop or click to upload JSON"}
+                      </p>
+                    </div>
+                  </div>
+                </DropzoneEmptyState>
+              </DropzoneComponent>
+              {loadedCount > 0 && (
+                <div className="flex items-center gap-2 rounded-full bg-muted/50 px-3 py-1 text-muted-foreground text-xs">
+                  <span className="relative flex size-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                    <span className="relative inline-flex size-2 rounded-full bg-green-500" />
+                  </span>
+                  {loadedCount} entries loaded
+                </div>
+              )}
+            </div>
+          </div>
+        </Form>
+      </section>
+
+      <Separator />
+
       <section className="space-y-1">
         <div className="flex items-center justify-between">
           <div>
@@ -635,15 +892,8 @@ function OrganisationTab({
       {canManage ? (
         <>
           <Separator />
-          <div className="space-y-4">
-            <div>
-              <Label className="text-muted-foreground">Scout Assignments</Label>
-              <p className="mt-0.5 text-muted-foreground text-xs">
-                Assign scouts to teams or positions for FRC events.
-              </p>
-            </div>
-            <DutiesAssignment />
-          </div>
+
+          <DutiesManagement />
         </>
       ) : null}
     </div>
