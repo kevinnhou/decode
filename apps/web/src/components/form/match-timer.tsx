@@ -4,7 +4,7 @@ import { Button } from "@decode/ui/components/button";
 import { cn } from "@decode/ui/lib/utils";
 import { Pause, Play, RotateCcw } from "lucide-react";
 import type { ReactNode } from "react";
-import { type FrcPeriod, INITIAL_TIME_SECONDS } from "@/hooks/use-match-timer";
+import { type FrcPeriod, INITIAL_TIME_SECONDS } from "@/lib/form/constants";
 
 type TimerState = "idle" | "running" | "paused" | "finished";
 

@@ -4,9 +4,9 @@ import {
   type InputMode,
   setInputMode,
   subscribeInputMode,
-} from "@/lib/input-mode";
+} from "@/lib/form/input";
 
-export function useInputMode(): {
+export function useInput(): {
   mode: InputMode;
   setMode: (mode: InputMode) => void;
 } {

@@ -9,11 +9,11 @@ import {
 } from "@decode/ui/components/sidebar";
 import { cn } from "@decode/ui/lib/utils";
 import { Form, Map as MapIcon } from "lucide-react";
-import { useInputMode } from "@/hooks/use-input-mode";
+import { useInput } from "@/hooks/use-input";
 
 export function Toggle() {
   const { state } = useSidebar();
-  const { mode, setMode } = useInputMode();
+  const { mode, setMode } = useInput();
   const isCollapsed = state === "collapsed";
 
   const modes = [

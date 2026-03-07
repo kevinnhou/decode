@@ -3,6 +3,7 @@
 
 "use client";
 
+import { api } from "@decode/backend/convex/_generated/api";
 import { Button } from "@decode/ui/components/button";
 import {
   Form,
@@ -23,16 +24,18 @@ import {
 import { toast } from "@decode/ui/components/sonner";
 import { useForm } from "@decode/ui/lib/react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "convex/react";
 import { memo, useCallback, useEffect, useState } from "react";
-import { useInputMode } from "@/hooks/use-input-mode";
+import { useInput } from "@/hooks/use-input";
+import { useMyDuties } from "@/hooks/use-my-duties";
+import { useShortcuts } from "@/hooks/use-shortcuts";
 import {
-  type FrcPeriod,
   getFrcPeriodProgress,
   useMatchTimerFRC,
   usePeriodActionTimer,
-} from "@/hooks/use-match-timer";
-import { useScoutingShortcuts } from "@/hooks/use-scouting-shortcuts";
+} from "@/hooks/use-timer";
 import { getConfig, getTeamsMap, setTeamsMap } from "@/lib/config";
+import type { FrcPeriod } from "@/lib/form/constants";
 import {
   ALLIANCE_COLOUR_OPTIONS,
   FRC_PERIOD_TO_KEY,
@@ -42,6 +45,7 @@ import {
 import type { PageState } from "@/lib/form/types";
 import {
   formatNumberFieldProps,
+  getFrcFormValuesFromDuty,
   getInitialFrcFormValues,
 } from "@/lib/form/utils";
 import type {
@@ -57,7 +61,12 @@ import { FrcFieldInput } from "~/form/field-input";
 import { MatchTimerFRC } from "~/form/match-timer";
 import { PeriodSlide } from "~/form/period-slide";
 import { SummaryView } from "~/form/summary-view";
-import { setSidebarContent, setSidebarFooterContent } from "~/sidebar/slot";
+import { AssignmentSidebar } from "~/sidebar/assignment-sidebar";
+import {
+  setSidebarAssignmentContent,
+  setSidebarContent,
+  setSidebarFooterContent,
+} from "~/sidebar/slot";
 import { submitMatch } from "./actions";
 
 // biome-ignore lint/nursery/noShadow: PASS
@@ -81,7 +90,7 @@ const PeriodBar = memo(function PeriodBar({
 });
 
 export default function MatchScouting() {
-  const { mode: inputMode } = useInputMode();
+  const { mode: inputMode } = useInput();
   const [pageState, setPageState] = useState<PageState>("meta");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [periodData, setPeriodData] =
@@ -91,7 +100,15 @@ export default function MatchScouting() {
   const [teamsMap, setTeamsMapState] = useState<Record<string, string>>(() =>
     getTeamsMap()
   );
+  const [activeDuty, setActiveDuty] = useState<{
+    delegationType: "team" | "position";
+    teamNumber?: number;
+    allianceColour?: "Red" | "Blue";
+    alliancePosition?: number;
+  } | null>(null);
+  const [displayedDutyIndex, setDisplayedDutyIndex] = useState(0);
 
+  const { duties } = useMyDuties();
   const timer = useMatchTimerFRC();
   const scoringTimer = usePeriodActionTimer();
   const feedingTimer = usePeriodActionTimer();
@@ -101,6 +118,23 @@ export default function MatchScouting() {
     resolver: zodResolver(frcMatchSubmissionSchema),
     defaultValues: getInitialFrcFormValues(),
   });
+
+  const handleToggleAssignment = useCallback(() => {
+    if (!duties || duties.length === 0) {
+      return;
+    }
+    const idx = displayedDutyIndex % duties.length;
+    const displayedDuty = duties[idx];
+
+    if (activeDuty !== null) {
+      setActiveDuty(null);
+      form.reset(getInitialFrcFormValues());
+      setDisplayedDutyIndex((i) => (i + 1) % duties.length);
+    } else {
+      setActiveDuty(displayedDuty);
+      form.reset(getFrcFormValuesFromDuty(displayedDuty, teamsMap));
+    }
+  }, [duties, activeDuty, displayedDutyIndex, form, teamsMap]);
 
   const handleStartMatch = useCallback(() => {
     if (!form.trigger) {
@@ -116,6 +150,7 @@ export default function MatchScouting() {
     });
   }, [form, timer]);
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: onSubmit orchestrates multiple concerns
   const onSubmit = useCallback(async () => {
     const config = getConfig();
     if (!config?.eventCode) {
@@ -156,7 +191,11 @@ export default function MatchScouting() {
 
       if (result.success) {
         toast.success(result.message);
-        form.reset(getInitialFrcFormValues());
+        form.reset(
+          activeDuty
+            ? getFrcFormValuesFromDuty(activeDuty, teamsMap)
+            : getInitialFrcFormValues()
+        );
         setPeriodData(INITIAL_PERIOD_DATA);
         setFrcFieldEvents([]);
         setAutoPath([]);
@@ -181,6 +220,8 @@ export default function MatchScouting() {
     scoringTimer,
     feedingTimer,
     defenseTimer,
+    activeDuty,
+    teamsMap,
   ]);
 
   const onReset = useCallback(() => {
@@ -217,7 +258,7 @@ export default function MatchScouting() {
     defenseTick(timer.elapsedTime);
   }, [timer.elapsedTime, scoringTick, feedingTick, defenseTick]);
 
-  const { shortcuts } = useScoutingShortcuts();
+  const { shortcuts } = useShortcuts();
 
   const handleTimerStop = useCallback(
     (
@@ -405,6 +446,45 @@ export default function MatchScouting() {
   ]);
 
   useEffect(() => {
+    const showAssignmentPanel =
+      duties &&
+      duties.length > 0 &&
+      (pageState === "meta" ||
+        pageState === "running" ||
+        pageState === "summary");
+    if (showAssignmentPanel && duties.length > 0) {
+      const displayedDuty = activeDuty
+        ? (duties.find(
+            (d) =>
+              d.delegationType === activeDuty.delegationType &&
+              (activeDuty.delegationType === "team"
+                ? d.teamNumber === activeDuty.teamNumber
+                : d.allianceColour === activeDuty.allianceColour &&
+                  d.alliancePosition === activeDuty.alliancePosition)
+          ) ?? duties[0])
+        : duties[displayedDutyIndex % duties.length];
+      setSidebarAssignmentContent(
+        <AssignmentSidebar
+          duty={displayedDuty}
+          isFollowing={activeDuty !== null}
+          onToggle={handleToggleAssignment}
+        />
+      );
+    } else {
+      setSidebarAssignmentContent(null);
+    }
+    return () => {
+      setSidebarAssignmentContent(null);
+    };
+  }, [
+    pageState,
+    duties,
+    activeDuty,
+    displayedDutyIndex,
+    handleToggleAssignment,
+  ]);
+
+  useEffect(() => {
     if (inputMode === "field" && pageState === "running") {
       setSidebarContent(
         <div className="flex h-full max-h-[calc(100svh-var(--header-height))] flex-col overflow-hidden p-4">
@@ -424,6 +504,37 @@ export default function MatchScouting() {
   }, [inputMode, pageState, frcFieldEvents, handleRemoveFrcEvent]);
 
   const watchedTeamNumber = form.watch("meta.teamNumber");
+  const watchedMatchNumber = form.watch("meta.matchNumber");
+  const config = getConfig();
+
+  const resolvedTeamForPosition = useQuery(
+    api.firstApi.getTeamForPosition,
+    activeDuty?.delegationType === "position" &&
+      activeDuty?.allianceColour !== undefined &&
+      activeDuty?.alliancePosition !== undefined &&
+      config?.eventCode &&
+      watchedMatchNumber
+      ? {
+          eventCode: config.eventCode.trim(),
+          matchNumber: watchedMatchNumber,
+          allianceColour: activeDuty.allianceColour,
+          position: activeDuty.alliancePosition as 1 | 2 | 3,
+        }
+      : "skip"
+  );
+
+  useEffect(() => {
+    if (
+      activeDuty?.delegationType === "position" &&
+      resolvedTeamForPosition !== undefined &&
+      resolvedTeamForPosition !== null
+    ) {
+      form.setValue("meta.teamNumber", resolvedTeamForPosition, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [activeDuty?.delegationType, resolvedTeamForPosition, form]);
 
   useEffect(() => {
     if (!watchedTeamNumber) {
@@ -457,6 +568,7 @@ export default function MatchScouting() {
                       <FormLabel>Team Number</FormLabel>
                       <FormControl>
                         <Input
+                          disabled={activeDuty?.delegationType === "team"}
                           inputMode="numeric"
                           placeholder="Enter team number"
                           type="number"
@@ -519,6 +631,7 @@ export default function MatchScouting() {
                     <FormItem>
                       <FormLabel>Alliance Colour</FormLabel>
                       <Select
+                        disabled={activeDuty?.delegationType === "position"}
                         onValueChange={field.onChange}
                         value={field.value}
                       >

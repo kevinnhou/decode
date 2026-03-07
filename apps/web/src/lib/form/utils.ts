@@ -48,6 +48,46 @@ export function getInitialFrcFormValues(): DefaultValues<FrcMatchSubmissionSchem
   };
 }
 
+export type DutyForPrefill = {
+  delegationType: "team" | "position";
+  teamNumber?: number;
+  allianceColour?: "Red" | "Blue";
+  alliancePosition?: number;
+};
+
+export function getFrcFormValuesFromDuty(
+  duty: DutyForPrefill,
+  teamsMap: Record<string, string> = {}
+): DefaultValues<FrcMatchSubmissionSchema> {
+  const base = getInitialFrcFormValues();
+  if (!base.meta) {
+    return base;
+  }
+
+  if (duty.delegationType === "team" && duty.teamNumber !== undefined) {
+    return {
+      ...base,
+      meta: {
+        ...base.meta,
+        teamNumber: duty.teamNumber,
+        teamName: teamsMap[String(duty.teamNumber)] ?? undefined,
+      },
+    };
+  }
+
+  if (duty.delegationType === "position" && duty.allianceColour !== undefined) {
+    return {
+      ...base,
+      meta: {
+        ...base.meta,
+        allianceColour: duty.allianceColour,
+      },
+    };
+  }
+
+  return base;
+}
+
 export function getInitialFormValues(): DefaultValues<FormSchema> {
   return {
     meta: {

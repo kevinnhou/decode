@@ -5,9 +5,9 @@ import {
   type ScoutingShortcuts,
   setShortcuts,
   subscribeShortcuts,
-} from "@/lib/shortcuts";
+} from "@/lib/form/shortcuts";
 
-export function useScoutingShortcuts(): {
+export function useShortcuts(): {
   shortcuts: ScoutingShortcuts;
   setShortcut: (action: keyof ScoutingShortcuts, key: string) => void;
   resetShortcuts: () => void;

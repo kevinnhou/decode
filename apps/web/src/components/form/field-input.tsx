@@ -11,7 +11,7 @@ import { FormLabel } from "@decode/ui/components/form";
 import type { UseFormReturn } from "@decode/ui/lib/react-hook-form";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PAUSE_TIME_SECONDS, type TimerState } from "@/hooks/use-match-timer";
+import { PAUSE_TIME_SECONDS, type TimerState } from "@/lib/form/constants";
 import type {
   FieldEventSchema,
   FieldSchema,

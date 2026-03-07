@@ -23,13 +23,14 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { useCallback, useRef, useState } from "react";
-import { useScoutingShortcuts } from "@/hooks/use-scouting-shortcuts";
+import { useShortcuts } from "@/hooks/use-shortcuts";
 import { authClient } from "@/lib/auth-client";
 import {
   formatShortcutKey,
   type ScoutingShortcuts,
   SHORTCUT_LABELS,
-} from "@/lib/shortcuts";
+} from "@/lib/form/shortcuts";
+import { DutiesAssignment } from "~/duties/assignment";
 
 interface PersonalTabProps {
   profile: {
@@ -320,7 +321,7 @@ interface SettingsTabProps {
 }
 
 function SettingsTab({ onSignOut }: SettingsTabProps) {
-  const { shortcuts, setShortcut, resetShortcuts } = useScoutingShortcuts();
+  const { shortcuts, setShortcut, resetShortcuts } = useShortcuts();
 
   const shortcutActions = Object.keys(
     SHORTCUT_LABELS
@@ -398,6 +399,7 @@ interface OrganisationTabProps {
     | undefined;
   userId: string;
   isAdmin: boolean;
+  canManage: boolean;
 }
 
 function OrganisationTab({
@@ -406,6 +408,7 @@ function OrganisationTab({
   members,
   userId,
   isAdmin,
+  canManage,
 }: OrganisationTabProps) {
   const updateOrgName = useMutation(api.auth.updateOrganisationName);
   const regenerateCode = useMutation(api.auth.regenerateInviteCode);
@@ -626,6 +629,23 @@ function OrganisationTab({
             : null}
         </div>
       </div>
+
+      <DutiesAssignment />
+
+      {canManage ? (
+        <>
+          <Separator />
+          <div className="space-y-4">
+            <div>
+              <Label className="text-muted-foreground">Scout Assignments</Label>
+              <p className="mt-0.5 text-muted-foreground text-xs">
+                Assign scouts to teams or positions for FRC events.
+              </p>
+            </div>
+            <DutiesAssignment />
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -640,6 +660,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("personal");
 
   const isAdmin = profile?.role === "admin";
+  const canManage = profile?.role === "admin" || profile?.role === "leadScout";
 
   async function handleSignOut() {
     await authClient.signOut();
@@ -684,6 +705,7 @@ export default function ProfilePage() {
 
           {activeTab === "organisation" ? (
             <OrganisationTab
+              canManage={canManage}
               isAdmin={isAdmin}
               members={members}
               organisation={organisation}

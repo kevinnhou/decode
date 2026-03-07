@@ -9,6 +9,7 @@ import {
 } from "@decode/ui/components/sidebar";
 import { cn } from "@decode/ui/lib/utils";
 import { usePathname } from "next/navigation";
+import { MatchHeader } from "./match-header";
 import { PitSections } from "./pit-sections";
 import { ScoutType } from "./scout-type";
 import { SidebarContentSlot, SidebarFooterSlot } from "./slot";
@@ -22,7 +23,11 @@ interface SidebarHeaderConfig {
 
 const SIDEBAR_HEADER_CONFIGS: SidebarHeaderConfig[] = [
   {
-    pattern: /\/scout\/(ftc|frc)\/match$/,
+    pattern: /\/scout\/frc\/match$/,
+    component: <MatchHeader />,
+  },
+  {
+    pattern: /\/scout\/ftc\/match$/,
     component: <Toggle />,
   },
   {
