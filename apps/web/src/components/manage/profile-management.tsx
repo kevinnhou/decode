@@ -29,7 +29,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@decode/ui/components/tooltip";
-import { cn } from "@decode/ui/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import {
   LayoutGrid,
@@ -41,6 +40,7 @@ import {
   Users,
 } from "lucide-react";
 import { useCallback, useState } from "react";
+import { dutyChipClass, formatDutyLabel } from "@/lib/duties";
 import { AssignmentGrid } from "~/manage/assignment-grid";
 
 type Duty = Doc<"scoutingDuties">;
@@ -60,36 +60,6 @@ function getInitials(name: string): string {
     .join("")
     .toUpperCase()
     .slice(0, 2);
-}
-
-function formatDutyLabel(duty: Duty): string {
-  if (duty.delegationType === "team" && duty.teamNumber !== undefined) {
-    return `Team ${duty.teamNumber}`;
-  }
-  if (
-    duty.delegationType === "position" &&
-    duty.allianceColour !== undefined &&
-    duty.alliancePosition !== undefined
-  ) {
-    return `${duty.allianceColour} ${duty.alliancePosition}`;
-  }
-  return "Unknown";
-}
-
-function dutyChipClass(duty: Duty): string {
-  const isRed =
-    duty.delegationType === "position" && duty.allianceColour === "Red";
-  const isBlue =
-    duty.delegationType === "position" && duty.allianceColour === "Blue";
-  const base =
-    "flex items-center gap-1 rounded-full border px-2.5 py-1 font-medium text-xs transition-all";
-  const activeClass = duty.isActive ? "" : "opacity-50";
-  const colourClass = isRed
-    ? "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
-    : isBlue
-      ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400"
-      : "border-border bg-secondary/60 text-secondary-foreground";
-  return cn(base, activeClass, colourClass);
 }
 
 type AssignmentChipProps = {
