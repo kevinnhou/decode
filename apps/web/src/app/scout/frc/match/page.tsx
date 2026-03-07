@@ -674,15 +674,13 @@ export default function MatchScouting() {
               </div>
             </section>
 
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-              <Button
-                className="w-full rounded-xl font-mono sm:w-auto"
-                onClick={handleStartMatch}
-                type="button"
-              >
-                Start Match
-              </Button>
-            </div>
+            <Button
+              className="w-full rounded-xl font-mono"
+              onClick={handleStartMatch}
+              type="button"
+            >
+              Start Match
+            </Button>
           </form>
         </Form>
       </div>
