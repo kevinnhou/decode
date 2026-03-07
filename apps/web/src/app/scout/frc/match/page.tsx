@@ -55,7 +55,6 @@ import type {
   FrcPeriodDataMap,
 } from "@/schema/scouting";
 import { frcMatchSubmissionSchema } from "@/schema/scouting";
-import { Config } from "~/form/config";
 import { FrcEventsList } from "~/form/events-list";
 import { FrcFieldInput } from "~/form/field-input";
 import { MatchTimerFRC } from "~/form/match-timer";
@@ -97,9 +96,7 @@ export default function MatchScouting() {
     useState<FrcPeriodDataMap>(INITIAL_PERIOD_DATA);
   const [frcFieldEvents, setFrcFieldEvents] = useState<FrcFieldEvent[]>([]);
   const [autoPath, setAutoPath] = useState<FrcAutoPath>([]);
-  const [teamsMap, setTeamsMapState] = useState<Record<string, string>>(() =>
-    getTeamsMap()
-  );
+  const [teamsMap] = useState<Record<string, string>>(() => getTeamsMap());
   const [activeDuty, setActiveDuty] = useState<{
     delegationType: "team" | "position";
     teamNumber?: number;
@@ -238,10 +235,6 @@ export default function MatchScouting() {
 
   const handleRemoveFrcEvent = useCallback((index: number) => {
     setFrcFieldEvents((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const handleTeamMapLoad = useCallback((map: Record<string, string>) => {
-    setTeamsMapState((prev) => ({ ...prev, ...map }));
   }, []);
 
   useEffect(() => {
@@ -681,11 +674,7 @@ export default function MatchScouting() {
               </div>
             </section>
 
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <Config
-                loadedCount={Object.keys(teamsMap).length}
-                onTeamMapLoad={handleTeamMapLoad}
-              />
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
               <Button
                 className="w-full rounded-xl font-mono sm:w-auto"
                 onClick={handleStartMatch}
