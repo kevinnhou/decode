@@ -37,7 +37,6 @@ import {
   PlayCircle,
   Plus,
   Trash2,
-  Users,
 } from "lucide-react";
 import { useCallback, useState } from "react";
 import type { Duty } from "@/lib/form/duties";
@@ -116,7 +115,7 @@ type ScoutRowProps = {
 
 function ScoutRow({ scout, duties, onToggleActive, onDelete }: ScoutRowProps) {
   return (
-    <div className="rounded-lg border bg-card p-4 transition-colors">
+    <div className="rounded-lg border bg-card p-4">
       <div className="flex items-start gap-3">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary text-xs">
           {getInitials(scout.displayName)}
@@ -201,7 +200,7 @@ function CreateAssignmentDialog({
       <DialogTrigger asChild>
         <Button size="sm" type="button">
           <Plus className="size-3.5" />
-          Add Assignment
+          Add assignment
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
@@ -463,16 +462,16 @@ export function DutiesManagement() {
   const totalAssignments = duties?.length ?? 0;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="space-y-1.5">
         <Label className="text-muted-foreground" htmlFor="sm-event-code">
-          Event Code
+          Enter an Event Code to view Assignments
         </Label>
         <Input
-          className="max-w-xs font-mono"
+          className="h-9 w-40 font-mono text-sm"
           id="sm-event-code"
           onChange={(e) => setEventCode(e.target.value.toUpperCase())}
-          placeholder="e.g. 2025AUSC"
+          placeholder="2025AUSC"
           value={eventCode}
         />
       </div>
@@ -493,14 +492,7 @@ export function DutiesManagement() {
           totalAssignments={totalAssignments}
           viewMode={viewMode}
         />
-      ) : (
-        <div className="rounded-lg border border-dashed p-6 text-center">
-          <Users className="mx-auto mb-2 size-8 text-muted-foreground/50" />
-          <p className="text-muted-foreground text-sm">
-            Enter an event code to manage scout assignments.
-          </p>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -538,35 +530,45 @@ function AssignmentContent({
 }: AssignmentContentProps) {
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm">
-            {viewMode === "list" ? "Scouts" : "Position Grid"}
+            {viewMode === "list" ? "Scouts" : "Position grid"}
           </span>
           {!isLoadingDuties && totalAssignments > 0 ? (
-            <span className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground text-xs">
+            <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground text-xs">
               {totalAssignments} assignment{totalAssignments !== 1 ? "s" : ""}
             </span>
           ) : null}
         </div>
         <div className="flex items-center gap-2">
           <div className="flex rounded-md border">
-            <Button
-              className="rounded-r-none border-r"
-              onClick={() => onViewModeChange("list")}
-              size="sm"
-              variant={viewMode === "list" ? "secondary" : "ghost"}
-            >
-              <ListIcon className="size-3.5" />
-            </Button>
-            <Button
-              className="rounded-l-none"
-              onClick={() => onViewModeChange("grid")}
-              size="sm"
-              variant={viewMode === "grid" ? "secondary" : "ghost"}
-            >
-              <LayoutGrid className="size-3.5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="rounded-r-none border-r"
+                  onClick={() => onViewModeChange("list")}
+                  size="sm"
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                >
+                  <ListIcon className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>List view</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="rounded-l-none"
+                  onClick={() => onViewModeChange("grid")}
+                  size="sm"
+                  variant={viewMode === "grid" ? "secondary" : "ghost"}
+                >
+                  <LayoutGrid className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Grid view</TooltipContent>
+            </Tooltip>
           </div>
           <CreateAssignmentDialog
             onOpenChange={onCreateOpenChange}
@@ -586,11 +588,9 @@ function AssignmentContent({
           ))}
         </div>
       ) : scouts.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-6 text-center">
-          <p className="text-muted-foreground text-sm">
-            No scouts in your organisation yet.
-          </p>
-        </div>
+        <p className="text-muted-foreground text-sm">
+          No scouts in your organisation yet.
+        </p>
       ) : (
         <div className="space-y-2">
           {scouts.map((scout) => (

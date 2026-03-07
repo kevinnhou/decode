@@ -31,6 +31,7 @@ import {
   SHORTCUT_LABELS,
 } from "@/lib/form/shortcuts";
 import { DutiesAssignment } from "~/duties/assignment";
+import { DutiesManagement } from "~/duties/management";
 
 interface PersonalTabProps {
   profile: {
@@ -635,15 +636,8 @@ function OrganisationTab({
       {canManage ? (
         <>
           <Separator />
-          <div className="space-y-4">
-            <div>
-              <Label className="text-muted-foreground">Scout Assignments</Label>
-              <p className="mt-0.5 text-muted-foreground text-xs">
-                Assign scouts to teams or positions for FRC events.
-              </p>
-            </div>
-            <DutiesAssignment />
-          </div>
+
+          <DutiesManagement />
         </>
       ) : null}
     </div>
