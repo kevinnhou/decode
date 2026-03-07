@@ -11,7 +11,7 @@
 import type * as auth from "../auth.js";
 import type * as crons from "../crons.js";
 import type * as duties from "../duties.js";
-import type * as firstApi from "../first-api.js";
+import type * as firstApi from "../firstApi.js";
 import type * as http from "../http.js";
 import type * as submissions from "../submissions.js";
 
