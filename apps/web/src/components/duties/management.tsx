@@ -463,15 +463,14 @@ export function DutiesManagement() {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1.5">
-        <Label className="text-muted-foreground" htmlFor="sm-event-code">
+      <div className="space-y-2">
+        <Label htmlFor="sm-event-code">
           Enter an Event Code to view Assignments
         </Label>
         <Input
-          className="h-9 w-40 font-mono text-sm"
           id="sm-event-code"
           onChange={(e) => setEventCode(e.target.value.toUpperCase())}
-          placeholder="2025AUSC"
+          placeholder="e.g, AUSC..."
           value={eventCode}
         />
       </div>

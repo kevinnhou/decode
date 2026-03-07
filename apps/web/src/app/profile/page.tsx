@@ -452,17 +452,18 @@ function SettingsTab({ onSignOut }: SettingsTabProps) {
     SHORTCUT_LABELS
   ) as (keyof ScoutingShortcuts)[];
 
+  const saveConfigOnBlur = useCallback(async () => {
+    const isValid = await form.trigger();
+    if (isValid) {
+      setConfig(form.getValues());
+    }
+  }, [form]);
+
   return (
     <div className="space-y-8">
       <section className="space-y-4">
         <Form {...form}>
-          <form
-            className="space-y-5"
-            onSubmit={form.handleSubmit((data: SpreadsheetConfigSchema) => {
-              setConfig(data);
-              toast.success("Config saved");
-            })}
-          >
+          <div className="space-y-5">
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -471,7 +472,14 @@ function SettingsTab({ onSignOut }: SettingsTabProps) {
                   <FormItem>
                     <FormLabel>Event Code</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g, AUSC..." {...field} />
+                      <Input
+                        placeholder="e.g, AUSC..."
+                        {...field}
+                        onBlur={() => {
+                          field.onBlur();
+                          saveConfigOnBlur();
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -487,6 +495,10 @@ function SettingsTab({ onSignOut }: SettingsTabProps) {
                       <Input
                         placeholder="Enter Spreadsheet ID or URL"
                         {...field}
+                        onBlur={() => {
+                          field.onBlur();
+                          saveConfigOnBlur();
+                        }}
                         onChange={(e) => {
                           const extractedId = extractSpreadsheetId(
                             e.target.value
@@ -506,7 +518,14 @@ function SettingsTab({ onSignOut }: SettingsTabProps) {
                   <FormItem>
                     <FormLabel>Sheet ID (optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter Sheet ID" {...field} />
+                      <Input
+                        placeholder="Enter Sheet ID"
+                        {...field}
+                        onBlur={() => {
+                          field.onBlur();
+                          saveConfigOnBlur();
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -523,7 +542,7 @@ function SettingsTab({ onSignOut }: SettingsTabProps) {
                 maxFiles={1}
                 onDrop={(accepted) => {
                   handleTeamMapDrop(accepted).catch(() => {
-                    /* Error handled in handler via toast */
+                    //
                   });
                 }}
                 src={teamFiles}
@@ -561,9 +580,7 @@ function SettingsTab({ onSignOut }: SettingsTabProps) {
                 </div>
               )}
             </div>
-
-            <Button type="submit">Save Config</Button>
-          </form>
+          </div>
         </Form>
       </section>
 
