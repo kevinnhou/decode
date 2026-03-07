@@ -4,7 +4,8 @@
     "rules": {
       "style": {
         "useConsistentTypeDefinitions": "off",
-        "noNestedTernary": "off"
+        "noNestedTernary": "off",
+        "useFilenamingConvention": "off"
       },
       "performance": {
         "useTopLevelRegex": "off"
