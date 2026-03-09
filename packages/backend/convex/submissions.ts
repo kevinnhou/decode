@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { requireUserProfile } from "./auth";
 import {
   allianceColourValidator,
@@ -353,5 +353,38 @@ export const getPitSubmissions = mutation({
       .collect();
 
     return submissions;
+  },
+});
+
+/**
+ * Get a map of team number → submission count for pit scouting submissions
+ * for the current user's organisation and event.
+ *
+ * @param ctx - The Convex query context
+ * @param args - Event code to filter by
+ * @returns Record of team number strings to submission counts
+ */
+export const getPitSubmissionCounts = query({
+  args: {
+    eventCode: v.string(),
+  },
+  async handler(ctx, args) {
+    const { profile } = await requireUserProfile(ctx);
+
+    const submissions = await ctx.db
+      .query("pitSubmissions")
+      .withIndex("by_org_and_event", (q) =>
+        q
+          .eq("organisationId", profile.organisationId)
+          .eq("eventCode", args.eventCode)
+      )
+      .collect();
+
+    const counts: Record<string, number> = {};
+    for (const s of submissions) {
+      const key = String(s.teamNumber);
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    return counts;
   },
 });

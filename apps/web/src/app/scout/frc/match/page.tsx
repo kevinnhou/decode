@@ -29,12 +29,13 @@ import { memo, useCallback, useEffect, useState } from "react";
 import { useInput } from "@/hooks/use-input";
 import { useMyDuties } from "@/hooks/use-my-duties";
 import { useShortcuts } from "@/hooks/use-shortcuts";
+import { useTeamsMap } from "@/hooks/use-teams-map";
 import {
   getFrcPeriodProgress,
   useMatchTimerFRC,
   usePeriodActionTimer,
 } from "@/hooks/use-timer";
-import { getConfig, getTeamsMap, setTeamsMap } from "@/lib/config";
+import { getConfig } from "@/lib/config";
 import type { FrcPeriod } from "@/lib/form/constants";
 import {
   ALLIANCE_COLOUR_OPTIONS,
@@ -60,6 +61,7 @@ import { FrcFieldInput } from "~/form/field-input";
 import { MatchTimerFRC } from "~/form/match-timer";
 import { PeriodSlide } from "~/form/period-slide";
 import { SummaryView } from "~/form/summary-view";
+import { TeamCombobox } from "~/form/team-combobox";
 import { AssignmentSidebar } from "~/sidebar/assignment-sidebar";
 import {
   setSidebarAssignmentContent,
@@ -96,7 +98,7 @@ export default function MatchScouting() {
     useState<FrcPeriodDataMap>(INITIAL_PERIOD_DATA);
   const [frcFieldEvents, setFrcFieldEvents] = useState<FrcFieldEvent[]>([]);
   const [autoPath, setAutoPath] = useState<FrcAutoPath>([]);
-  const [teamsMap] = useState<Record<string, string>>(() => getTeamsMap());
+  const teamsMap = useTeamsMap();
   const [activeDuty, setActiveDuty] = useState<{
     delegationType: "team" | "position";
     teamNumber?: number;
@@ -236,10 +238,6 @@ export default function MatchScouting() {
   const handleRemoveFrcEvent = useCallback((index: number) => {
     setFrcFieldEvents((prev) => prev.filter((_, i) => i !== index));
   }, []);
-
-  useEffect(() => {
-    setTeamsMap(teamsMap);
-  }, [teamsMap]);
 
   const { tick: scoringTick } = scoringTimer;
   const { tick: feedingTick } = feedingTimer;
@@ -560,12 +558,17 @@ export default function MatchScouting() {
                     <FormItem>
                       <FormLabel>Team Number</FormLabel>
                       <FormControl>
-                        <Input
+                        <TeamCombobox
                           disabled={activeDuty?.delegationType === "team"}
-                          inputMode="numeric"
-                          placeholder="Enter team number"
-                          type="number"
-                          {...formatNumberFieldProps(field)}
+                          onChange={(num, name) => {
+                            field.onChange(num);
+                            form.setValue("meta.teamName", name, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            });
+                          }}
+                          teamsMap={teamsMap}
+                          value={field.value || undefined}
                         />
                       </FormControl>
                       <FormMessage />

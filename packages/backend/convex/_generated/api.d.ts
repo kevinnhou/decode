@@ -14,6 +14,7 @@ import type * as duties from "../duties.js";
 import type * as firstApi from "../firstApi.js";
 import type * as http from "../http.js";
 import type * as submissions from "../submissions.js";
+import type * as teams from "../teams.js";
 
 import type {
   ApiFromModules,
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   firstApi: typeof firstApi;
   http: typeof http;
   submissions: typeof submissions;
+  teams: typeof teams;
 }>;
 
 /**

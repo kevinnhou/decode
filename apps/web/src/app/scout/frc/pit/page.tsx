@@ -1,5 +1,6 @@
 "use client";
 
+import { api } from "@decode/backend/convex/_generated/api";
 import { Button } from "@decode/ui/components/button";
 import { Checkbox } from "@decode/ui/components/checkbox";
 import {
@@ -23,8 +24,10 @@ import { toast } from "@decode/ui/components/sonner";
 import { Textarea } from "@decode/ui/components/textarea";
 import { useForm } from "@decode/ui/lib/react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "convex/react";
 import { ChevronLeft, ChevronRight, UploadIcon, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTeamsMap } from "@/hooks/use-teams-map";
 import { getConfig } from "@/lib/config";
 import {
   CLIMB_LEVEL_OPTIONS,
@@ -35,6 +38,7 @@ import {
 import type { PhotoPreview } from "@/lib/form/types";
 import { formatNumberFieldProps } from "@/lib/form/utils";
 import { type FrcPitFormSchema, frcPitFormSchema } from "@/schema/scouting";
+import { TeamCombobox } from "~/form/team-combobox";
 import { setPitSectionsState } from "~/sidebar/pit-sections";
 import { getPhotoUploadUrl, submitPit } from "./actions";
 
@@ -85,6 +89,13 @@ export default function PitScouting() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoPreviewsRef = useRef(photoPreviews);
   photoPreviewsRef.current = photoPreviews;
+
+  const pitEventCode = getConfig()?.eventCode ?? "";
+  const teamsMap = useTeamsMap();
+  const scoutedCounts = useQuery(
+    api.submissions.getPitSubmissionCounts,
+    pitEventCode ? { eventCode: pitEventCode } : "skip"
+  );
 
   const form = useForm<FrcPitFormSchema>({
     resolver: zodResolver(frcPitFormSchema),
@@ -460,11 +471,11 @@ export default function PitScouting() {
                         Team Number
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          className="w-full bg-background text-lg"
-                          placeholder="Enter team number"
-                          type="number"
-                          {...formatNumberFieldProps(field)}
+                        <TeamCombobox
+                          onChange={(num) => field.onChange(num)}
+                          scoutedCounts={scoutedCounts ?? undefined}
+                          teamsMap={teamsMap}
+                          value={field.value || undefined}
                         />
                       </FormControl>
                       <FormMessage />
@@ -869,6 +880,7 @@ export default function PitScouting() {
                 <Button
                   className="flex-1 font-mono"
                   disabled={isSubmitting}
+                  key="submit"
                   size="lg"
                   type="submit"
                 >
@@ -878,6 +890,7 @@ export default function PitScouting() {
                 <Button
                   className="flex-1 font-mono"
                   disabled={isSubmitting}
+                  key="continue"
                   onClick={handleContinue}
                   size="lg"
                   type="button"
