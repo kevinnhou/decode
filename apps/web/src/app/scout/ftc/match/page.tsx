@@ -34,8 +34,8 @@ import { EventsList } from "~/form/events-list";
 import { EVENT_TO_FORM_KEY, FieldInput } from "~/form/field-input";
 import { MatchTimer } from "~/form/match-timer";
 import { FormFields } from "~/form/render";
+import { TeamCombobox } from "~/form/team-combobox";
 import { setSidebarContent, setSidebarFooterContent } from "~/sidebar/slot";
-import { TeamCombobox } from "~/team-combobox";
 import { submitUnified } from "./actions";
 
 export default function MatchScouting() {
