@@ -61,6 +61,7 @@ import { FrcFieldInput } from "~/form/field-input";
 import { MatchTimerFRC } from "~/form/match-timer";
 import { PeriodSlide } from "~/form/period-slide";
 import { SummaryView } from "~/form/summary-view";
+import { TeamCombobox } from "~/form/team-combobox";
 import { AssignmentSidebar } from "~/sidebar/assignment-sidebar";
 import {
   setSidebarAssignmentContent,
@@ -557,12 +558,17 @@ export default function MatchScouting() {
                     <FormItem>
                       <FormLabel>Team Number</FormLabel>
                       <FormControl>
-                        <Input
+                        <TeamCombobox
                           disabled={activeDuty?.delegationType === "team"}
-                          inputMode="numeric"
-                          placeholder="Enter team number"
-                          type="number"
-                          {...formatNumberFieldProps(field)}
+                          onChange={(num, name) => {
+                            field.onChange(num);
+                            form.setValue("meta.teamName", name, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            });
+                          }}
+                          teamsMap={teamsMap}
+                          value={field.value || undefined}
                         />
                       </FormControl>
                       <FormMessage />
