@@ -274,7 +274,14 @@ export default defineSchema({
     .index("by_scout", ["scoutUserId"])
     .index("by_competition_type", ["competitionType"]),
 
-  // FRC FIRST API cache (events, teams, schedule)
+  teamMaps: defineTable({
+    organisationId: v.id("organisations"),
+    eventCode: v.string(),
+    map: v.any(),
+    importedBy: v.string(), // userId of the lead scout / admin
+    importedAt: v.number(),
+  }).index("by_org_event", ["organisationId", "eventCode"]),
+
   firstApiEvents: defineTable({
     eventCode: v.string(),
     season: v.number(),

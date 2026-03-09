@@ -41,6 +41,7 @@ import {
   Pencil,
   RefreshCw,
   Upload,
+  Users,
   X,
 } from "lucide-react";
 import type { Route } from "next";
@@ -49,7 +50,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useShortcuts } from "@/hooks/use-shortcuts";
 import { authClient } from "@/lib/auth-client";
-import { getConfig, getTeamsMap, setConfig, setTeamsMap } from "@/lib/config";
+import { getConfig, setConfig, setTeamsMap } from "@/lib/config";
 import {
   formatShortcutKey,
   type ScoutingShortcuts,
@@ -361,15 +362,16 @@ function KeyCaptureButton({
 
 interface SettingsTabProps {
   onSignOut: () => Promise<void>;
+  canManage: boolean;
 }
 
-function SettingsTab({ onSignOut }: SettingsTabProps) {
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: PASS
+function SettingsTab({ onSignOut, canManage }: SettingsTabProps) {
   const { shortcuts, setShortcut, resetShortcuts } = useShortcuts();
-  const [loadedCount, setLoadedCount] = useState(
-    () => Object.keys(getTeamsMap()).length
-  );
   const [teamFiles, setTeamFiles] = useState<File[]>();
   const [isTeamMapLoading, setIsTeamMapLoading] = useState(false);
+
+  const saveTeamsMapMutation = useMutation(api.teams.saveTeamsMap);
 
   const form = useForm<SpreadsheetConfigSchema>({
     // biome-ignore lint/suspicious/noExplicitAny: PASS
@@ -380,6 +382,17 @@ function SettingsTab({ onSignOut }: SettingsTabProps) {
       sheetId: "",
     },
   });
+
+  const watchedEventCode = form.watch("eventCode");
+
+  const teamsMapResult = useQuery(
+    api.teams.getTeamsMapForEvent,
+    watchedEventCode?.trim() ? { eventCode: watchedEventCode.trim() } : "skip"
+  );
+
+  const backendMapCount = teamsMapResult?.map
+    ? Object.keys(teamsMapResult.map as Record<string, string>).length
+    : 0;
 
   useEffect(() => {
     const config = getConfig();
@@ -394,59 +407,68 @@ function SettingsTab({ onSignOut }: SettingsTabProps) {
     }
   }, [form]);
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: JSON parsing and validation logic
-  const handleTeamMapDrop = useCallback(async (acceptedFiles: File[]) => {
-    const [file] = acceptedFiles;
-    if (!file) {
-      return;
-    }
-
-    setIsTeamMapLoading(true);
-    try {
-      const content = await file.text();
-      const parsed = JSON.parse(content) as unknown;
-
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        throw new Error("Invalid JSON shape");
+  const handleTeamMapDrop = useCallback(
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: PASS
+    async (acceptedFiles: File[]) => {
+      const [file] = acceptedFiles;
+      if (!file) {
+        return;
       }
 
-      const entries = Object.entries(parsed as Record<string, unknown>).reduce(
-        (acc, [key, value]) => {
-          if (typeof value !== "string") {
-            return acc;
-          }
-          const normalisedKey = key.trim();
-          if (!normalisedKey) {
-            return acc;
-          }
-          acc[normalisedKey] = value.trim();
-          return acc;
-        },
-        {} as Record<string, string>
-      );
-
-      if (Object.keys(entries).length === 0) {
-        throw new Error("No team names found");
+      const eventCode = form.getValues("eventCode")?.trim();
+      if (!eventCode) {
+        toast.error("Set an event code before importing a team map");
+        return;
       }
 
-      setTeamFiles([file]);
-      const priorCount = Object.keys(getTeamsMap()).length;
-      const merged = { ...getTeamsMap(), ...entries };
-      setTeamsMap(merged);
-      setLoadedCount(Object.keys(merged).length);
-      toast.success(
-        `Loaded ${Object.keys(entries).length} team${
-          Object.keys(entries).length === 1 ? "" : "s"
-        }${priorCount > 0 ? " (merged with existing)" : ""}`
-      );
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Invalid team JSON file";
-      toast.error(message);
-    } finally {
-      setIsTeamMapLoading(false);
-    }
-  }, []);
+      setIsTeamMapLoading(true);
+      try {
+        const content = await file.text();
+        const parsed = JSON.parse(content) as unknown;
+
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          throw new Error("Invalid JSON shape");
+        }
+
+        const entries = Object.entries(
+          parsed as Record<string, unknown>
+        ).reduce(
+          (acc, [key, value]) => {
+            if (typeof value !== "string") {
+              return acc;
+            }
+            const normalisedKey = key.trim();
+            if (!normalisedKey) {
+              return acc;
+            }
+            acc[normalisedKey] = value.trim();
+            return acc;
+          },
+          {} as Record<string, string>
+        );
+
+        if (Object.keys(entries).length === 0) {
+          throw new Error("No team names found");
+        }
+
+        setTeamFiles([file]);
+        setTeamsMap(entries);
+        await saveTeamsMapMutation({ eventCode, map: entries });
+        toast.success(
+          `Imported ${Object.keys(entries).length} team${
+            Object.keys(entries).length === 1 ? "" : "s"
+          } for ${eventCode}`
+        );
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Invalid team JSON file";
+        toast.error(message);
+      } finally {
+        setIsTeamMapLoading(false);
+      }
+    },
+    [form, saveTeamsMapMutation]
+  );
 
   const shortcutActions = Object.keys(
     SHORTCUT_LABELS
@@ -535,48 +557,87 @@ function SettingsTab({ onSignOut }: SettingsTabProps) {
 
             <div className="space-y-2">
               <FormLabel>Team Map</FormLabel>
-              <DropzoneComponent
-                accept={{ "application/json": [".json"] }}
-                className="w-full"
-                disabled={isTeamMapLoading}
-                maxFiles={1}
-                onDrop={(accepted) => {
-                  handleTeamMapDrop(accepted).catch(() => {
-                    //
-                  });
-                }}
-                src={teamFiles}
-              >
-                <DropzoneContent />
-                <DropzoneEmptyState>
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <div className="flex size-10 items-center justify-center rounded-full bg-muted">
-                      {isTeamMapLoading ? (
-                        <Upload className="size-5 animate-pulse text-muted-foreground" />
-                      ) : (
-                        <FileJson className="size-5 text-muted-foreground" />
-                      )}
+              {canManage ? (
+                <>
+                  <DropzoneComponent
+                    accept={{ "application/json": [".json"] }}
+                    className="w-full"
+                    disabled={isTeamMapLoading}
+                    maxFiles={1}
+                    onDrop={(accepted) => {
+                      handleTeamMapDrop(accepted).catch(() => {
+                        //
+                      });
+                    }}
+                    src={teamFiles}
+                  >
+                    <DropzoneContent />
+                    <DropzoneEmptyState>
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+                          {isTeamMapLoading ? (
+                            <Upload className="size-5 animate-pulse text-muted-foreground" />
+                          ) : (
+                            <FileJson className="size-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="space-y-1 text-center">
+                          <p className="font-medium text-sm">
+                            {isTeamMapLoading ? "Importing..." : "Import Teams"}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            {backendMapCount > 0
+                              ? "Drop a new teams.json to replace the current map"
+                              : "Drag & drop or click to upload teams.json"}
+                          </p>
+                        </div>
+                      </div>
+                    </DropzoneEmptyState>
+                  </DropzoneComponent>
+                  {backendMapCount > 0 && (
+                    <div className="flex items-center gap-2 rounded-full bg-muted/50 px-3 py-1 text-muted-foreground text-xs">
+                      <span className="relative flex size-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                        <span className="relative inline-flex size-2 rounded-full bg-green-500" />
+                      </span>
+                      {backendMapCount} teams shared with your organisation
                     </div>
-                    <div className="space-y-1 text-center">
-                      <p className="font-medium text-sm">
-                        {isTeamMapLoading ? "Loading..." : "Upload Teams"}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        {loadedCount > 0
-                          ? "Drag & drop or click to add more teams"
-                          : "Drag & drop or click to upload JSON"}
-                      </p>
-                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center gap-3 rounded-lg border bg-muted/30 px-4 py-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                    <Users className="size-4 text-muted-foreground" />
                   </div>
-                </DropzoneEmptyState>
-              </DropzoneComponent>
-              {loadedCount > 0 && (
-                <div className="flex items-center gap-2 rounded-full bg-muted/50 px-3 py-1 text-muted-foreground text-xs">
-                  <span className="relative flex size-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-                    <span className="relative inline-flex size-2 rounded-full bg-green-500" />
-                  </span>
-                  {loadedCount} entries loaded
+                  <div className="min-w-0">
+                    {teamsMapResult === undefined ? (
+                      <p className="text-muted-foreground text-sm">
+                        Loading team map…
+                      </p>
+                    ) : teamsMapResult === null ? (
+                      <p className="text-muted-foreground text-sm">
+                        No team map imported yet. Ask your lead scout or admin
+                        to import one.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="font-medium text-sm">
+                          {backendMapCount} team
+                          {backendMapCount === 1 ? "" : "s"} loaded
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          Last imported{" "}
+                          {new Date(
+                            teamsMapResult.importedAt
+                          ).toLocaleDateString(undefined, {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </p>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -950,7 +1011,7 @@ export default function ProfilePage() {
           ) : null}
 
           {activeTab === "settings" ? (
-            <SettingsTab onSignOut={handleSignOut} />
+            <SettingsTab canManage={canManage} onSignOut={handleSignOut} />
           ) : null}
 
           {activeTab === "organisation" ? (

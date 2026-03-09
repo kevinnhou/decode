@@ -9,8 +9,9 @@ import { useForm } from "@decode/ui/lib/react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useState } from "react";
 import { useInput } from "@/hooks/use-input";
+import { useTeamsMap } from "@/hooks/use-teams-map";
 import { useMatchTimer } from "@/hooks/use-timer";
-import { getConfig, getTeamsMap, setTeamsMap } from "@/lib/config";
+import { getConfig } from "@/lib/config";
 import { getInitialFormValues } from "@/lib/form/utils";
 import type { FieldSchema, FormSchema } from "@/schema/scouting";
 import { formSchema } from "@/schema/scouting";
@@ -26,7 +27,7 @@ export default function MatchScouting() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldEvents, setFieldEvents] = useState<FieldSchema>([]);
-  const [teamsMap] = useState<Record<string, string>>(() => getTeamsMap());
+  const teamsMap = useTeamsMap();
   const timer = useMatchTimer();
 
   const form = useForm<FormSchema>({
@@ -141,10 +142,6 @@ export default function MatchScouting() {
   ]);
 
   const watchedTeamNumber = form.watch("meta.teamNumber");
-
-  useEffect(() => {
-    setTeamsMap(teamsMap);
-  }, [teamsMap]);
 
   useEffect(() => {
     if (!watchedTeamNumber) {
