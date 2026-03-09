@@ -880,6 +880,7 @@ export default function PitScouting() {
                 <Button
                   className="flex-1 font-mono"
                   disabled={isSubmitting}
+                  key="submit"
                   size="lg"
                   type="submit"
                 >
@@ -889,6 +890,7 @@ export default function PitScouting() {
                 <Button
                   className="flex-1 font-mono"
                   disabled={isSubmitting}
+                  key="continue"
                   onClick={handleContinue}
                   size="lg"
                   type="button"
