@@ -326,7 +326,7 @@ function TeamSelector({
             value={input}
           />
           <Button
-            className="h-7 w-7"
+            className="size-7"
             disabled={input.length === 0}
             size="icon"
             type="submit"

@@ -97,7 +97,7 @@ export default function OnboardingPage() {
     <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4 py-12">
       <div className="grid w-full max-w-4xl gap-12 md:grid-cols-2 md:gap-16">
         <div className="flex flex-col justify-center space-y-6 max-md:items-center max-md:text-center">
-          <Logo className="h-16 w-16 text-foreground" />
+          <Logo className="size-16 text-foreground" />
           <div className="space-y-2">
             <h1 className="font-semibold text-3xl tracking-tight">
               Join an organisation
