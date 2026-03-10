@@ -171,9 +171,7 @@ function SubmissionCard({
         <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
           <Link
             className="font-mono font-semibold hover:underline"
-            href={
-              `/analyse/events/${eventCode}/teams/${sub.teamNumber}` as Route
-            }
+            href={`/analyse/${eventCode}/teams/${sub.teamNumber}` as Route}
           >
             Team {sub.teamNumber}
           </Link>
@@ -265,7 +263,7 @@ export default function MatchViewer() {
           <span>/</span>
           <Link
             className="hover:text-foreground"
-            href={`/analyse/events/${eventCode}` as Route}
+            href={`/analyse/${eventCode}` as Route}
           >
             {eventCode}
           </Link>
@@ -274,7 +272,7 @@ export default function MatchViewer() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link href={`/analyse/events/${eventCode}` as Route}>
+          <Link href={`/analyse/${eventCode}` as Route}>
             <Button size="icon" variant="ghost">
               <ArrowLeft className="size-4" />
             </Button>

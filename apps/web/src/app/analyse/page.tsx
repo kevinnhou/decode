@@ -32,7 +32,7 @@ function EventCard({
   return (
     <Link
       className="group flex flex-col gap-3 rounded-xl border bg-card p-5 transition-colors hover:bg-muted/50"
-      href={`/analyse/events/${eventCode}` as Route}
+      href={`/analyse/${eventCode}` as Route}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-1">
@@ -89,7 +89,7 @@ export default function Analyse() {
     const num = Number.parseInt(teamSearch.trim(), 10);
     if (!Number.isNaN(num) && num > 0 && goEventCode.trim()) {
       router.push(
-        `/analyse/events/${goEventCode.toUpperCase().trim()}/teams/${num}` as Route
+        `/analyse/${goEventCode.toUpperCase().trim()}/teams/${num}` as Route
       );
     }
   }

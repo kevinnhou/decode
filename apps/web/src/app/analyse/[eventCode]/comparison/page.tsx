@@ -302,7 +302,7 @@ function TeamSelector({
           <span className="font-mono font-semibold">{n}</span>
           <Link
             className="text-muted-foreground text-xs hover:text-foreground"
-            href={`/analyse/events/${eventCode}/teams/${n}` as Route}
+            href={`/analyse/${eventCode}/teams/${n}` as Route}
           >
             ↗
           </Link>
@@ -360,9 +360,7 @@ function TeamPitCard({
           />
           <Link
             className="font-mono hover:underline"
-            href={
-              `/analyse/events/${eventCode}/teams/${team.teamNumber}` as Route
-            }
+            href={`/analyse/${eventCode}/teams/${team.teamNumber}` as Route}
           >
             Team {team.teamNumber}
           </Link>
@@ -454,7 +452,7 @@ export default function ComparisonBoard() {
           <span>/</span>
           <Link
             className="hover:text-foreground"
-            href={`/analyse/events/${eventCode}` as Route}
+            href={`/analyse/${eventCode}` as Route}
           >
             {eventCode}
           </Link>
@@ -463,7 +461,7 @@ export default function ComparisonBoard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          <Link href={`/analyse/events/${eventCode}` as Route}>
+          <Link href={`/analyse/${eventCode}` as Route}>
             <Button size="icon" variant="ghost">
               <ArrowLeft className="size-4" />
             </Button>

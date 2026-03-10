@@ -95,9 +95,7 @@ function TeamRow({
       <TableCell>
         <Link
           className="font-mono font-semibold text-sm hover:underline"
-          href={
-            `/analyse/events/${eventCode}/teams/${team.teamNumber}` as Route
-          }
+          href={`/analyse/${eventCode}/teams/${team.teamNumber}` as Route}
         >
           {team.teamNumber}
         </Link>
@@ -173,9 +171,7 @@ export default function EventDashboard() {
       return;
     }
     const teamParam = Array.from(selectedTeams).join(",");
-    router.push(
-      `/analyse/events/${eventCode}/comparison?teams=${teamParam}` as Route
-    );
+    router.push(`/analyse/${eventCode}/comparison?teams=${teamParam}` as Route);
   }
 
   const sorted = [...(aggregates ?? [])].sort(
@@ -253,7 +249,7 @@ export default function EventDashboard() {
               </Button>
             ) : null}
 
-            <Link href={`/analyse/events/${eventCode}/comparison` as Route}>
+            <Link href={`/analyse/${eventCode}/comparison` as Route}>
               <Button size="sm" variant="outline">
                 <GitCompareArrows className="mr-1.5 size-4" />
                 Compare

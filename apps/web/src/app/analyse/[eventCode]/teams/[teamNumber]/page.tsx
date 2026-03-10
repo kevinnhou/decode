@@ -394,9 +394,7 @@ function MatchHistoryRow({
       <div className="flex items-center gap-3">
         <Link
           className="font-mono font-semibold text-sm hover:underline"
-          href={
-            `/analyse/events/${eventCode}/match/${sub.matchNumber}` as Route
-          }
+          href={`/analyse/${eventCode}/match/${sub.matchNumber}` as Route}
         >
           Q{sub.matchNumber}
         </Link>
@@ -491,8 +489,7 @@ function TeamProfileBody({
 }) {
   const { matchCount, climbRate, avgClimb, avgScoring } =
     useTeamMetrics(matchSubs);
-  const scoringUnit =
-    matchSubs[0]?.inputMode === "form" ? "s/match" : "events/match";
+  const scoringUnit = matchSubs[0]?.inputMode === "form" ? "s/match" : "match";
   const allNotes = matchSubs
     .filter((s) => s.notes?.trim())
     .map((s) => ({ matchNumber: s.matchNumber, note: s.notes ?? "" }));
@@ -589,7 +586,7 @@ export default function TeamProfile() {
           <span>/</span>
           <Link
             className="hover:text-foreground"
-            href={`/analyse/events/${eventCode}` as Route}
+            href={`/analyse/${eventCode}` as Route}
           >
             {eventCode}
           </Link>
@@ -599,7 +596,7 @@ export default function TeamProfile() {
 
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Link href={`/analyse/events/${eventCode}` as Route}>
+            <Link href={`/analyse/${eventCode}` as Route}>
               <Button size="icon" variant="ghost">
                 <ArrowLeft className="size-4" />
               </Button>
@@ -619,7 +616,7 @@ export default function TeamProfile() {
 
           <Link
             href={
-              `/analyse/events/${eventCode}/comparison?teams=${teamNumber}` as Route
+              `/analyse/${eventCode}/comparison?teams=${teamNumber}` as Route
             }
           >
             <Button size="sm" variant="outline">
