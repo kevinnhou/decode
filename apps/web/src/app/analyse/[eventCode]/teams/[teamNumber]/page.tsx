@@ -21,7 +21,10 @@ import { useQuery } from "convex/react";
 import {
   ArrowLeft,
   CheckCircle2,
+  ClipboardList,
+  Gauge,
   GitCompareArrows,
+  Target,
   TrendingUp,
   Wrench,
   XCircle,
@@ -29,6 +32,7 @@ import {
 import type { Route } from "next";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import type React from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 // --- Constants ---
@@ -118,6 +122,56 @@ type PitSub = {
 
 // --- Helpers ---
 
+function shiftPointsFromFuel(s1: number, s2: number, s3: number, s4: number) {
+  const s13 = s1 + s3;
+  const s24 = s2 + s4;
+  return s13 >= s24 ? s13 : s24;
+}
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: PASS
+function scoringPointsForMatch(
+  sub: MatchSub,
+  shootingSpeed?: number
+): number | null {
+  if (sub.inputMode === "form" && sub.periodData) {
+    if (typeof shootingSpeed !== "number" || shootingSpeed <= 0) {
+      return null;
+    }
+    const pd = sub.periodData;
+    const secondsToFuel = (s: number) => Math.round(s * shootingSpeed);
+    const auto = secondsToFuel(pd.auto?.scoring ?? 0);
+    const shiftPts = shiftPointsFromFuel(
+      secondsToFuel(pd.shift1?.scoring ?? 0),
+      secondsToFuel(pd.shift2?.scoring ?? 0),
+      secondsToFuel(pd.shift3?.scoring ?? 0),
+      secondsToFuel(pd.shift4?.scoring ?? 0)
+    );
+    const transition = secondsToFuel(pd.transition?.scoring ?? 0);
+    const endGame = secondsToFuel(pd.endGame?.scoring ?? 0);
+    return auto + shiftPts + transition + endGame;
+  }
+  if (sub.inputMode === "field" && sub.frcFieldEvents) {
+    const events = sub.frcFieldEvents.filter(
+      (e) => e.eventType === "shooting" && e.action === "scoring"
+    );
+    const byPeriod: Record<string, number> = {};
+    for (const e of events) {
+      byPeriod[e.period] = (byPeriod[e.period] ?? 0) + 1;
+    }
+    const auto = byPeriod.AUTO ?? 0;
+    const shiftPts = shiftPointsFromFuel(
+      byPeriod.SHIFT_1 ?? 0,
+      byPeriod.SHIFT_2 ?? 0,
+      byPeriod.SHIFT_3 ?? 0,
+      byPeriod.SHIFT_4 ?? 0
+    );
+    const transition = byPeriod.TRANSITION ?? 0;
+    const endGame = byPeriod.END_GAME ?? 0;
+    return auto + shiftPts + transition + endGame;
+  }
+  return 0;
+}
+
 function scoringForMatch(sub: MatchSub): number {
   if (sub.inputMode === "form" && sub.periodData) {
     return Object.values(sub.periodData).reduce(
@@ -206,19 +260,26 @@ function MetricCard({
   label,
   value,
   sub,
+  icon: Icon,
 }: {
   label: string;
   value: string | number;
   sub?: string;
+  icon: React.ComponentType<{ className?: string }>;
 }) {
   return (
-    <div className="flex flex-col gap-1 rounded-lg border bg-card p-4">
-      <span className="text-muted-foreground text-xs">{label}</span>
-      <div className="flex items-baseline gap-1">
+    <div className="flex items-start gap-3 py-3">
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+        <Icon className="size-5 text-muted-foreground" />
+      </div>
+      <div className="min-w-0 flex-1">
         <span className="font-mono font-semibold text-xl">{value}</span>
         {sub ? (
-          <span className="text-muted-foreground text-xs">{sub}</span>
+          <span className="text-muted-foreground text-xs"> {sub}</span>
         ) : null}
+        <div className="mt-0.5 flex items-center gap-1.5">
+          <span className="text-muted-foreground text-xs">{label}</span>
+        </div>
       </div>
     </div>
   );
@@ -454,20 +515,11 @@ function NotesSection({
 
 // --- Main page ---
 
-function useTeamMetrics(matchSubs: MatchSub[] | undefined) {
+function useTeamMetrics(
+  matchSubs: MatchSub[] | undefined,
+  shootingSpeed?: number
+) {
   const matchCount = matchSubs?.length ?? 0;
-  const climbSuccess =
-    matchSubs?.filter((s) => (s.climbLevel ?? 0) > 0).length ?? 0;
-  const climbRate =
-    matchCount > 0 ? Math.round((climbSuccess / matchCount) * 100) : 0;
-  const avgClimb =
-    matchCount > 0 && matchSubs
-      ? Math.round(
-          (matchSubs.reduce((s, m) => s + (m.climbLevel ?? 0), 0) /
-            matchCount) *
-            10
-        ) / 10
-      : 0;
   const avgScoring =
     matchCount > 0 && matchSubs
       ? Math.round(
@@ -475,7 +527,18 @@ function useTeamMetrics(matchSubs: MatchSub[] | undefined) {
             10
         ) / 10
       : 0;
-  return { matchCount, climbRate, avgClimb, avgScoring };
+  const scoringPointValues =
+    matchSubs?.map((m) => scoringPointsForMatch(m, shootingSpeed)) ?? [];
+  const validScores = scoringPointValues.filter(
+    (v): v is number => typeof v === "number"
+  );
+  const avgScoringPoints =
+    validScores.length > 0
+      ? Math.round(
+          (validScores.reduce((a, b) => a + b, 0) / validScores.length) * 10
+        ) / 10
+      : null;
+  return { matchCount, avgScoring, avgScoringPoints };
 }
 
 function TeamProfileBody({
@@ -487,27 +550,67 @@ function TeamProfileBody({
   pitData: PitSub | null;
   eventCode: string;
 }) {
-  const { matchCount, climbRate, avgClimb, avgScoring } =
-    useTeamMetrics(matchSubs);
+  const shootingSpeed = pitData?.shootingSpeed;
+  const { matchCount, avgScoring, avgScoringPoints } = useTeamMetrics(
+    matchSubs,
+    shootingSpeed
+  );
   const scoringUnit = matchSubs[0]?.inputMode === "form" ? "s/match" : "match";
+  const shootingSpeedDisplay =
+    shootingSpeed === undefined ? "—" : String(shootingSpeed);
+  const scoringPointsDisplay =
+    avgScoringPoints === null ? "—" : String(avgScoringPoints);
   const allNotes = matchSubs
     .filter((s) => s.notes?.trim())
     .map((s) => ({ matchNumber: s.matchNumber, note: s.notes ?? "" }));
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="Matches Scouted" value={matchCount} />
-        <MetricCard label="Climb Success Rate" value={`${climbRate}%`} />
-        <MetricCard label="Avg Climb Level" value={avgClimb} />
-        <MetricCard
-          label="Avg Scoring Activity"
-          sub={scoringUnit}
-          value={avgScoring}
-        />
-      </div>
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch">
+        <div className="min-w-0 shrink-0 lg:w-72 xl:w-80">
+          <div className="h-full overflow-hidden rounded-lg border bg-card">
+            <div className="border-primary border-l-4">
+              <div className="border-b px-4 last:border-b-0">
+                <MetricCard
+                  icon={ClipboardList}
+                  label="Matches Scouted"
+                  value={matchCount}
+                />
+              </div>
+              <div className="border-b px-4 last:border-b-0">
+                <MetricCard
+                  icon={Gauge}
+                  label="Shooting Speed"
+                  {...(typeof shootingSpeed === "number" ? { sub: "/s" } : {})}
+                  value={shootingSpeedDisplay}
+                />
+              </div>
+              <div className="border-b px-4 last:border-b-0">
+                <MetricCard
+                  icon={TrendingUp}
+                  label="Avg Points"
+                  {...(avgScoringPoints !== null ? { sub: "pts/match" } : {})}
+                  value={scoringPointsDisplay}
+                />
+              </div>
+              <div className="px-4">
+                <MetricCard
+                  icon={Target}
+                  label="Avg Scoring Activity"
+                  sub={scoringUnit}
+                  value={avgScoring}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
 
-      {pitData ? <PitCard pit={pitData} /> : null}
+        {pitData ? (
+          <div className="min-w-0 flex-1">
+            <PitCard pit={pitData} />
+          </div>
+        ) : null}
+      </div>
 
       {matchSubs.length > 0 ? (
         <Card>

@@ -1,14 +1,7 @@
 "use client";
 
 import { api } from "@decode/backend/convex/_generated/api";
-import { Badge, badgeVariants } from "@decode/ui/components/badge";
 import { Button } from "@decode/ui/components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@decode/ui/components/dropdown-menu";
 import {
   Dropzone as DropzoneComponent,
   DropzoneContent,
@@ -35,7 +28,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "convex/react";
 import {
   Check,
-  ChevronDown,
   FileJson,
   LogOut,
   Pencil,
@@ -707,15 +699,6 @@ interface OrganisationTabProps {
       }
     | null
     | undefined;
-  members:
-    | Array<{
-        _id: string;
-        userId: string;
-        role: string;
-        displayName: string;
-      }>
-    | undefined;
-  userId: string;
   isAdmin: boolean;
   canManage: boolean;
 }
@@ -723,14 +706,11 @@ interface OrganisationTabProps {
 function OrganisationTab({
   profile,
   organisation,
-  members,
-  userId,
   isAdmin,
   canManage,
 }: OrganisationTabProps) {
   const updateOrgName = useMutation(api.auth.updateOrganisationName);
   const regenerateCode = useMutation(api.auth.regenerateInviteCode);
-  const updateRole = useMutation(api.auth.updateUserRole);
 
   const [isEditingOrgName, setIsEditingOrgName] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
@@ -776,20 +756,7 @@ function OrganisationTab({
     }
   }
 
-  async function handleRoleChange(targetUserId: string, newRole: string) {
-    try {
-      await updateRole({
-        targetUserId,
-        newRole: newRole as "admin" | "leadScout" | "scout",
-      });
-      toast.success("Role updated");
-    } catch {
-      toast.error("Failed to update role");
-    }
-  }
-
   const showEditOrgName = isEditingOrgName && isAdmin;
-  const hasMembers = members ? members.length > 0 : false;
 
   if (!organisation) {
     return null;
@@ -880,74 +847,6 @@ function OrganisationTab({
         </p>
       </div>
 
-      <Separator />
-
-      <div className="space-y-4">
-        <Label className="text-muted-foreground">Members</Label>
-        <div className="space-y-3">
-          {hasMembers
-            ? members?.map((member) => {
-                const canEditRole =
-                  isAdmin === true && member.userId !== userId;
-                return (
-                  <div
-                    className="flex items-center justify-between rounded-lg border bg-card p-3"
-                    key={member._id}
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">
-                        {member.displayName}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {canEditRole ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              className={cn(
-                                badgeVariants({ variant: "outline" }),
-                                "cursor-pointer gap-1 capitalize"
-                              )}
-                              type="button"
-                            >
-                              {member.role === "leadScout"
-                                ? "Lead Scout"
-                                : member.role}
-                              <ChevronDown className="size-3 opacity-60" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {[
-                              { value: "scout", label: "Scout" },
-                              { value: "leadScout", label: "Lead Scout" },
-                              { value: "admin", label: "Admin" },
-                            ].map((role) => (
-                              <DropdownMenuItem
-                                key={role.value}
-                                onClick={() =>
-                                  handleRoleChange(member.userId, role.value)
-                                }
-                              >
-                                {role.label}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      ) : (
-                        <Badge className="capitalize" variant="outline">
-                          {member.role === "leadScout"
-                            ? "Lead Scout"
-                            : member.role}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            : null}
-        </div>
-      </div>
-
       <DutiesAssignment />
 
       {canManage ? (
@@ -966,7 +865,6 @@ export default function ProfilePage() {
   const user = useQuery(api.auth.getCurrentUser);
   const profile = useQuery(api.auth.getCurrentUserProfile);
   const organisation = useQuery(api.auth.getOrganisation);
-  const members = useQuery(api.auth.getOrganisationMembers);
 
   const [activeTab, setActiveTab] = useState("personal");
 
@@ -1018,10 +916,8 @@ export default function ProfilePage() {
             <OrganisationTab
               canManage={canManage}
               isAdmin={isAdmin}
-              members={members}
               organisation={organisation}
               profile={profile}
-              userId={user._id}
             />
           ) : null}
         </div>
