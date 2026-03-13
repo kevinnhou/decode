@@ -285,122 +285,125 @@ function MetricCard({
   );
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Pit card has multiple conditional sections
 function PitCard({ pit }: { pit: PitSub }) {
   const intakeMethods = pit.intakeMethods ?? [];
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Wrench className="size-4 text-muted-foreground" />
-          Pit Data
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {pit.drivetrainType ? (
-            <div className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-xs">Drivetrain</span>
-              <span className="font-medium text-sm capitalize">
-                {pit.drivetrainType}
-              </span>
-            </div>
-          ) : null}
-          {pit.weight !== undefined ? (
-            <div className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-xs">Weight</span>
-              <span className="font-medium text-sm">{pit.weight} kg</span>
-            </div>
-          ) : null}
-          {pit.hopperCapacity !== undefined ? (
-            <div className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-xs">
-                Hopper Capacity
-              </span>
-              <span className="font-medium text-sm">{pit.hopperCapacity}</span>
-            </div>
-          ) : null}
-          {pit.shootingSpeed !== undefined ? (
-            <div className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-xs">
-                Shooting Speed
-              </span>
-              <span className="font-medium text-sm">
-                {pit.shootingSpeed} /s
-              </span>
-            </div>
-          ) : null}
-          {pit.maxClimbLevel !== undefined ? (
-            <div className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-xs">
-                Max Climb Capability
-              </span>
-              {climbBadgeVariant(pit.maxClimbLevel)}
-            </div>
-          ) : null}
-          {pit.robotDimensions ? (
-            <div className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-xs">
-                Dimensions (cm)
-              </span>
-              <span className="font-medium text-sm">
-                {pit.robotDimensions.length} × {pit.robotDimensions.width} ×{" "}
-                {pit.robotDimensions.height}
-              </span>
-            </div>
-          ) : null}
-        </div>
+  const metrics = [
+    pit.drivetrainType && { label: "Drivetrain", value: pit.drivetrainType },
+    pit.weight !== undefined && { label: "Weight", value: `${pit.weight} kg` },
+    pit.hopperCapacity !== undefined && {
+      label: "Hopper",
+      value: String(pit.hopperCapacity),
+    },
+    pit.shootingSpeed !== undefined && {
+      label: "Shooting",
+      value: `${pit.shootingSpeed}/s`,
+    },
+    pit.maxClimbLevel !== undefined && {
+      label: "Max climb",
+      value: climbBadgeVariant(pit.maxClimbLevel),
+    },
+    pit.robotDimensions && {
+      label: "Dimensions",
+      value: `${pit.robotDimensions.length} × ${pit.robotDimensions.width} × ${pit.robotDimensions.height} cm`,
+    },
+  ].filter(Boolean) as { label: string; value: React.ReactNode }[];
 
-        {intakeMethods.length > 0 ? (
-          <div className="mt-3 flex flex-col gap-1">
-            <span className="text-muted-foreground text-xs">
-              Intake Methods
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {intakeMethods.map((m) => (
-                <Badge className="text-xs capitalize" key={m} variant="outline">
-                  {m}
-                </Badge>
+  const hasCapabilities =
+    intakeMethods.length > 0 ||
+    pit.canPassTrench !== undefined ||
+    pit.canCrossBump !== undefined;
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
+      <div className="flex flex-1 flex-col border-primary border-l-4">
+        <div className="flex flex-1 flex-col gap-0">
+          <div className="border-b px-4 py-3">
+            <div className="flex items-center gap-2">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                <Wrench className="size-5 text-muted-foreground" />
+              </div>
+              <span className="font-semibold text-sm">Pit Data</span>
+            </div>
+          </div>
+
+          {metrics.length > 0 ? (
+            <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-0 border-b px-4 py-3 sm:grid-cols-3">
+              {metrics.map((m) => (
+                <div className="py-1" key={m.label}>
+                  <span className="block text-muted-foreground text-xs">
+                    {m.label}
+                  </span>
+                  <span className="font-medium text-sm">{m.value}</span>
+                </div>
               ))}
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        <div className="mt-3 flex gap-4">
-          <span className="flex items-center gap-1.5">
-            {pit.canPassTrench ? (
-              <CheckCircle2 className="size-3.5 text-green-500" />
-            ) : (
-              <XCircle className="size-3.5 text-muted-foreground/50" />
-            )}
-            <span className="text-xs">Trench</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            {pit.canCrossBump ? (
-              <CheckCircle2 className="size-3.5 text-green-500" />
-            ) : (
-              <XCircle className="size-3.5 text-muted-foreground/50" />
-            )}
-            <span className="text-xs">Bump</span>
-          </span>
+          {hasCapabilities ? (
+            <div className="border-b px-4 py-3">
+              <span className="block text-muted-foreground text-xs">
+                Capabilities
+              </span>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+                {intakeMethods.length > 0 && (
+                  <span className="flex gap-1.5">
+                    {intakeMethods.map((m) => (
+                      <Badge
+                        className="text-xs capitalize"
+                        key={m}
+                        variant="outline"
+                      >
+                        {m}
+                      </Badge>
+                    ))}
+                  </span>
+                )}
+                <span className="flex items-center gap-1 text-sm">
+                  {pit.canPassTrench ? (
+                    <CheckCircle2 className="size-3.5 text-green-500" />
+                  ) : (
+                    <XCircle className="size-3.5 text-muted-foreground/50" />
+                  )}
+                  Trench
+                </span>
+                <span className="flex items-center gap-1 text-sm">
+                  {pit.canCrossBump ? (
+                    <CheckCircle2 className="size-3.5 text-green-500" />
+                  ) : (
+                    <XCircle className="size-3.5 text-muted-foreground/50" />
+                  )}
+                  Bump
+                </span>
+              </div>
+            </div>
+          ) : null}
+
+          {pit.autoCapabilities || pit.notes ? (
+            <div className="flex-1 space-y-2 px-4 py-3">
+              {pit.autoCapabilities ? (
+                <div>
+                  <span className="block text-muted-foreground text-xs">
+                    Auto
+                  </span>
+                  <p className="mt-0.5 text-sm leading-snug">
+                    {pit.autoCapabilities}
+                  </p>
+                </div>
+              ) : null}
+              {pit.notes ? (
+                <div>
+                  <span className="block text-muted-foreground text-xs">
+                    Notes
+                  </span>
+                  <p className="mt-0.5 text-sm leading-snug">{pit.notes}</p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
-
-        {pit.autoCapabilities ? (
-          <div className="mt-3 flex flex-col gap-1">
-            <span className="text-muted-foreground text-xs">
-              Auto Capabilities
-            </span>
-            <p className="text-sm">{pit.autoCapabilities}</p>
-          </div>
-        ) : null}
-
-        {pit.notes ? (
-          <div className="mt-3 flex flex-col gap-1">
-            <span className="text-muted-foreground text-xs">Notes</span>
-            <p className="text-sm">{pit.notes}</p>
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
