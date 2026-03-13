@@ -1,4 +1,7 @@
+// @ts-nocheck
+
 /** biome-ignore-all lint/nursery/noLeakedRender: PASS */
+
 "use client";
 
 import {

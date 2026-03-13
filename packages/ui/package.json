@@ -30,8 +30,8 @@
     "@turbo/gen": "^2.5.5",
     "@types/js-cookie": "^3.0.6",
     "@types/node": "^20.19.9",
-    "@types/react": "^19.1.9",
-    "@types/react-dom": "^19.1.7",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
     "tailwindcss": "^4.1.11",
     "typescript": "^5.9.2"
   },

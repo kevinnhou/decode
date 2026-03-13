@@ -112,7 +112,7 @@ export function TagSelector({
                 <CommandItem key={tag} onSelect={handleSelect} value={tag}>
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4",
+                      "mr-2 size-4",
                       selectedTags.includes(tag) ? "opacity-100" : "opacity-0",
                     )}
                   />
@@ -123,8 +123,8 @@ export function TagSelector({
             {inputValue.trim() !== "" &&
               !availableTags.includes(inputValue.toLowerCase()) && (
                 <CommandGroup heading="Create Tag">
-                  <CommandItem onSelect={handleCreate} value={inputValue}>
-                    <Check className="mr-2 h-4 w-4 opacity-100" />
+                    <CommandItem onSelect={handleCreate} value={inputValue}>
+                      <Check className="mr-2 h-4 w-4 opacity-100" />
                     Create "{inputValue}"
                   </CommandItem>
                 </CommandGroup>

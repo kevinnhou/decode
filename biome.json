@@ -25,6 +25,7 @@
       "!**/.source",
       "!**/_generated",
       "!packages/ui/src/components/*",
+      "!**/bun.lock",
       "!**/*.css"
     ]
   },
