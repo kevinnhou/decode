@@ -17,7 +17,9 @@ import {
   ArrowLeft,
   ArrowUpDown,
   BarChart3,
+  ClipboardList,
   GitCompareArrows,
+  Wrench,
 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
@@ -38,6 +40,7 @@ type TeamAggregate = {
   teamNumber: number;
   rank: number;
   matchCount: number;
+  pitCount: number;
   climbSuccessRate: number;
   avgClimbLevel: number;
   avgClimbDuration: number;
@@ -87,6 +90,7 @@ function TeamRow({
   onToggle: (n: number) => void;
 }) {
   const unit = team.primaryInputMode === "form" ? "s" : "ev";
+  const hasMatchData = team.matchCount > 0;
   return (
     <TableRow className={isSelected ? "bg-muted/40" : ""}>
       <TableCell className="font-mono text-muted-foreground text-xs">
@@ -101,19 +105,53 @@ function TeamRow({
         </Link>
       </TableCell>
       <TableCell className="text-right text-sm">{team.matchCount}</TableCell>
+      <TableCell className="text-right text-sm">
+        {team.pitCount > 0 ? (
+          <Badge
+            className="inline-flex items-center gap-1 text-xs"
+            title={`${team.pitCount} pit submission${team.pitCount !== 1 ? "s" : ""}`}
+            variant="secondary"
+          >
+            <Wrench className="size-3" />
+            {team.pitCount}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
       <TableCell className="text-right font-mono text-sm">
-        {team.avgScoringActivity}
-        <span className="ml-1 text-muted-foreground text-xs">{unit}</span>
+        {hasMatchData ? (
+          <>
+            {team.avgScoringActivity}
+            <span className="ml-1 text-muted-foreground text-xs">{unit}</span>
+          </>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
       </TableCell>
       <TableCell className="text-right text-sm">
-        {team.climbSuccessRate}%
+        {hasMatchData ? (
+          `${team.climbSuccessRate}%`
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
       </TableCell>
       <TableCell className="text-right">
-        {climbBadge(team.avgClimbLevel)}
+        {hasMatchData ? (
+          climbBadge(team.avgClimbLevel)
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
       </TableCell>
       <TableCell className="text-right font-mono text-sm">
-        {team.avgDefenseActivity}
-        <span className="ml-1 text-muted-foreground text-xs">{unit}</span>
+        {hasMatchData ? (
+          <>
+            {team.avgDefenseActivity}
+            <span className="ml-1 text-muted-foreground text-xs">{unit}</span>
+          </>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
       </TableCell>
       <TableCell className="text-right">
         <button
@@ -142,6 +180,9 @@ export default function EventDashboard() {
   const [selectedTeams, setSelectedTeams] = useState<Set<number>>(new Set());
 
   const aggregates = useQuery(api.analysis.getEventAggregates, {
+    eventCode,
+  });
+  const submissionCounts = useQuery(api.analysis.getEventSubmissionCounts, {
     eventCode,
   });
 
@@ -231,7 +272,24 @@ export default function EventDashboard() {
               <h1 className="font-semibold text-xl tracking-tight">
                 {eventCode}
               </h1>
-              <p className="text-muted-foreground text-sm">Event Dashboard</p>
+              <p className="text-muted-foreground text-sm">
+                Event Dashboard
+                {submissionCounts ? (
+                  <span className="ml-2 inline-flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1">
+                      <ClipboardList className="size-3.5" />
+                      {submissionCounts.matchCount} match
+                      {submissionCounts.matchCount !== 1 ? "es" : ""}
+                    </span>
+                    <span className="text-muted-foreground/60">•</span>
+                    <span className="inline-flex items-center gap-1">
+                      <Wrench className="size-3.5" />
+                      {submissionCounts.pitCount} pit
+                      {submissionCounts.pitCount !== 1 ? "s" : ""}
+                    </span>
+                  </span>
+                ) : null}
+              </p>
             </div>
           </div>
 
@@ -272,7 +330,7 @@ export default function EventDashboard() {
           <div className="flex flex-col gap-1">
             <p className="font-medium text-sm">No data yet</p>
             <p className="text-muted-foreground text-sm">
-              Submit FRC match scouting data for this event to see rankings.
+              Submit FRC match or pit scouting data for this event to see teams.
             </p>
           </div>
         </div>
@@ -290,6 +348,7 @@ export default function EventDashboard() {
                 <TableHead className="text-right">
                   <SortButton field="matches">Matches</SortButton>
                 </TableHead>
+                <TableHead className="text-right">Pit</TableHead>
                 <TableHead className="text-right">
                   <SortButton field="scoring">Avg Scoring</SortButton>
                 </TableHead>
