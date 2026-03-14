@@ -17,7 +17,6 @@ import {
   ArrowLeft,
   ArrowUpDown,
   BarChart3,
-  ClipboardList,
   GitCompareArrows,
   Wrench,
 } from "lucide-react";
@@ -206,17 +205,14 @@ export default function EventDashboard() {
                 {eventCode}
               </h1>
               <p className="text-muted-foreground text-sm">
-                Event Dashboard
                 {submissionCounts ? (
-                  <span className="ml-2 inline-flex items-center gap-2">
+                  <span className="inline-flex items-center gap-2">
                     <span className="inline-flex items-center gap-1">
-                      <ClipboardList className="size-3.5" />
                       {submissionCounts.matchCount} match
                       {submissionCounts.matchCount !== 1 ? "es" : ""}
                     </span>
-                    <span className="text-muted-foreground/60">•</span>
+                    <span className="text-muted-foreground/60">/</span>
                     <span className="inline-flex items-center gap-1">
-                      <Wrench className="size-3.5" />
                       {submissionCounts.pitCount} pit
                       {submissionCounts.pitCount !== 1 ? "s" : ""}
                     </span>
