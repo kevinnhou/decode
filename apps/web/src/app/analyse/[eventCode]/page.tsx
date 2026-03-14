@@ -26,14 +26,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
-type SortField =
-  | "rank"
-  | "team"
-  | "matches"
-  | "climbRate"
-  | "avgClimb"
-  | "scoring"
-  | "defense";
+type SortField = "rank" | "team" | "matches" | "scoring" | "defense";
 type SortDir = "asc" | "desc";
 
 type TeamAggregate = {
@@ -41,42 +34,10 @@ type TeamAggregate = {
   rank: number;
   matchCount: number;
   pitCount: number;
-  climbSuccessRate: number;
-  avgClimbLevel: number;
-  avgClimbDuration: number;
   avgScoringActivity: number;
   avgDefenseActivity: number;
   primaryInputMode: "form" | "field";
 };
-
-function climbBadge(level: number) {
-  if (level === 0) {
-    return (
-      <Badge className="text-xs" variant="outline">
-        None
-      </Badge>
-    );
-  }
-  if (level < 1.5) {
-    return (
-      <Badge className="bg-yellow-500/10 text-xs text-yellow-600 dark:text-yellow-400">
-        L1
-      </Badge>
-    );
-  }
-  if (level < 2.5) {
-    return (
-      <Badge className="bg-blue-500/10 text-blue-600 text-xs dark:text-blue-400">
-        L2
-      </Badge>
-    );
-  }
-  return (
-    <Badge className="bg-green-500/10 text-green-600 text-xs dark:text-green-400">
-      L3
-    </Badge>
-  );
-}
 
 function TeamRow({
   team,
@@ -125,20 +86,6 @@ function TeamRow({
             {team.avgScoringActivity}
             <span className="ml-1 text-muted-foreground text-xs">{unit}</span>
           </>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </TableCell>
-      <TableCell className="text-right text-sm">
-        {hasMatchData ? (
-          `${team.climbSuccessRate}%`
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </TableCell>
-      <TableCell className="text-right">
-        {hasMatchData ? (
-          climbBadge(team.avgClimbLevel)
         ) : (
           <span className="text-muted-foreground">—</span>
         )}
@@ -221,8 +168,6 @@ export default function EventDashboard() {
         rank: a.rank - b.rank,
         team: a.teamNumber - b.teamNumber,
         matches: a.matchCount - b.matchCount,
-        climbRate: a.climbSuccessRate - b.climbSuccessRate,
-        avgClimb: a.avgClimbLevel - b.avgClimbLevel,
         scoring: a.avgScoringActivity - b.avgScoringActivity,
         defense: a.avgDefenseActivity - b.avgDefenseActivity,
       };
@@ -351,12 +296,6 @@ export default function EventDashboard() {
                 <TableHead className="text-right">Pit</TableHead>
                 <TableHead className="text-right">
                   <SortButton field="scoring">Avg Scoring</SortButton>
-                </TableHead>
-                <TableHead className="text-right">
-                  <SortButton field="climbRate">Climb Rate</SortButton>
-                </TableHead>
-                <TableHead className="text-right">
-                  <SortButton field="avgClimb">Avg Climb</SortButton>
                 </TableHead>
                 <TableHead className="text-right">
                   <SortButton field="defense">Avg Defense</SortButton>
