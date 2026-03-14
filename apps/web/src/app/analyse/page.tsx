@@ -102,7 +102,7 @@ export default function Analyse() {
     ) ?? [];
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-10 sm:px-6">
+    <div className="container mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <div className="mb-6 flex flex-col">
         <div className="flex items-center gap-2">
           <ChartNoAxesGantt className="size-5 text-muted-foreground" />

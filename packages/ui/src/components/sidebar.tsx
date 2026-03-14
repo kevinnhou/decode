@@ -167,7 +167,7 @@ function Sidebar({
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 
   const showSidebar =
-    ((pathname?.includes("/match") || pathname?.includes("/pit")) ?? false)
+    /^\/scout\/(ftc|frc)\/(match|pit)(?:\/|$)/.test(pathname ?? "")
 
   if (!showSidebar) {
     return null;

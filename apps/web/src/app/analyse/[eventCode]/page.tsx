@@ -17,7 +17,6 @@ import {
   ArrowLeft,
   ArrowUpDown,
   BarChart3,
-  ClipboardList,
   GitCompareArrows,
   Wrench,
 } from "lucide-react";
@@ -25,58 +24,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-
-type SortField =
-  | "rank"
-  | "team"
-  | "matches"
-  | "climbRate"
-  | "avgClimb"
-  | "scoring"
-  | "defense";
-type SortDir = "asc" | "desc";
-
-type TeamAggregate = {
-  teamNumber: number;
-  rank: number;
-  matchCount: number;
-  pitCount: number;
-  climbSuccessRate: number;
-  avgClimbLevel: number;
-  avgClimbDuration: number;
-  avgScoringActivity: number;
-  avgDefenseActivity: number;
-  primaryInputMode: "form" | "field";
-};
-
-function climbBadge(level: number) {
-  if (level === 0) {
-    return (
-      <Badge className="text-xs" variant="outline">
-        None
-      </Badge>
-    );
-  }
-  if (level < 1.5) {
-    return (
-      <Badge className="bg-yellow-500/10 text-xs text-yellow-600 dark:text-yellow-400">
-        L1
-      </Badge>
-    );
-  }
-  if (level < 2.5) {
-    return (
-      <Badge className="bg-blue-500/10 text-blue-600 text-xs dark:text-blue-400">
-        L2
-      </Badge>
-    );
-  }
-  return (
-    <Badge className="bg-green-500/10 text-green-600 text-xs dark:text-green-400">
-      L3
-    </Badge>
-  );
-}
+import type { SortDir, SortField, TeamAggregate } from "@/lib/analyse";
 
 function TeamRow({
   team,
@@ -125,20 +73,6 @@ function TeamRow({
             {team.avgScoringActivity}
             <span className="ml-1 text-muted-foreground text-xs">{unit}</span>
           </>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </TableCell>
-      <TableCell className="text-right text-sm">
-        {hasMatchData ? (
-          `${team.climbSuccessRate}%`
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </TableCell>
-      <TableCell className="text-right">
-        {hasMatchData ? (
-          climbBadge(team.avgClimbLevel)
         ) : (
           <span className="text-muted-foreground">—</span>
         )}
@@ -221,8 +155,6 @@ export default function EventDashboard() {
         rank: a.rank - b.rank,
         team: a.teamNumber - b.teamNumber,
         matches: a.matchCount - b.matchCount,
-        climbRate: a.climbSuccessRate - b.climbSuccessRate,
-        avgClimb: a.avgClimbLevel - b.avgClimbLevel,
         scoring: a.avgScoringActivity - b.avgScoringActivity,
         defense: a.avgDefenseActivity - b.avgDefenseActivity,
       };
@@ -251,7 +183,7 @@ export default function EventDashboard() {
   );
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex flex-col gap-4">
         <div className="flex items-center gap-2 text-muted-foreground text-sm">
           <Link className="hover:text-foreground" href={"/analyse" as Route}>
@@ -273,17 +205,14 @@ export default function EventDashboard() {
                 {eventCode}
               </h1>
               <p className="text-muted-foreground text-sm">
-                Event Dashboard
                 {submissionCounts ? (
-                  <span className="ml-2 inline-flex items-center gap-2">
+                  <span className="inline-flex items-center gap-2">
                     <span className="inline-flex items-center gap-1">
-                      <ClipboardList className="size-3.5" />
                       {submissionCounts.matchCount} match
                       {submissionCounts.matchCount !== 1 ? "es" : ""}
                     </span>
-                    <span className="text-muted-foreground/60">•</span>
+                    <span className="text-muted-foreground/60">/</span>
                     <span className="inline-flex items-center gap-1">
-                      <Wrench className="size-3.5" />
                       {submissionCounts.pitCount} pit
                       {submissionCounts.pitCount !== 1 ? "s" : ""}
                     </span>
@@ -351,12 +280,6 @@ export default function EventDashboard() {
                 <TableHead className="text-right">Pit</TableHead>
                 <TableHead className="text-right">
                   <SortButton field="scoring">Avg Scoring</SortButton>
-                </TableHead>
-                <TableHead className="text-right">
-                  <SortButton field="climbRate">Climb Rate</SortButton>
-                </TableHead>
-                <TableHead className="text-right">
-                  <SortButton field="avgClimb">Avg Climb</SortButton>
                 </TableHead>
                 <TableHead className="text-right">
                   <SortButton field="defense">Avg Defense</SortButton>

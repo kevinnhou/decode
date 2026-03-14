@@ -95,14 +95,6 @@ export function MatchTimer({
           {state === "paused" && (
             <>
               <Button
-                className="size-10 rounded-full"
-                onClick={resume}
-                size="icon"
-                type="button"
-              >
-                <Play className="size-4 fill-current" />
-              </Button>
-              <Button
                 className="size-10 rounded-full text-muted-foreground hover:text-foreground"
                 onClick={reset}
                 size="icon"
@@ -110,6 +102,14 @@ export function MatchTimer({
                 variant="ghost"
               >
                 <RotateCcw className="size-4" />
+              </Button>
+              <Button
+                className="size-10 rounded-full"
+                onClick={resume}
+                size="icon"
+                type="button"
+              >
+                <Play className="size-4 fill-current" />
               </Button>
             </>
           )}

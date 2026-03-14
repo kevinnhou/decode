@@ -15,7 +15,11 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@decode/ui/components/chart";
-import { Dialog, DialogContent } from "@decode/ui/components/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@decode/ui/components/dialog";
 import { Separator } from "@decode/ui/components/separator";
 import { Skeleton } from "@decode/ui/components/skeleton";
 import { useQuery } from "convex/react";
@@ -38,45 +42,13 @@ import { useParams } from "next/navigation";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-
-// --- Constants ---
-
-const PERIOD_LABELS: Record<string, string> = {
-  AUTO: "Auto",
-  TRANSITION: "Trans.",
-  SHIFT_1: "Shift 1",
-  SHIFT_2: "Shift 2",
-  SHIFT_3: "Shift 3",
-  SHIFT_4: "Shift 4",
-  END_GAME: "End",
-};
-
-const PERIOD_TO_PD_KEY: Record<string, string> = {
-  AUTO: "auto",
-  TRANSITION: "transition",
-  SHIFT_1: "shift1",
-  SHIFT_2: "shift2",
-  SHIFT_3: "shift3",
-  SHIFT_4: "shift4",
-  END_GAME: "endGame",
-};
-
-const CHART_PERIODS = [
-  "AUTO",
-  "TRANSITION",
-  "SHIFT_1",
-  "SHIFT_2",
-  "SHIFT_3",
-  "SHIFT_4",
-  "END_GAME",
-] as const;
-
-const CLIMB_LABELS: Record<number, string> = {
-  0: "No climb",
-  1: "Level 1",
-  2: "Level 2",
-  3: "Level 3",
-};
+import {
+  CHART_PERIODS,
+  CLIMB_LABELS,
+  PERIOD_LABELS,
+  PERIOD_TO_PD_KEY,
+  type PitSubBase,
+} from "@/lib/analyse";
 
 const periodChartConfig: ChartConfig = {
   scoring: {
@@ -84,8 +56,6 @@ const periodChartConfig: ChartConfig = {
     color: "hsl(var(--chart-1))",
   },
 };
-
-// --- Types ---
 
 type MatchSub = {
   _id: string;
@@ -109,23 +79,13 @@ type MatchSub = {
   scoutName: string;
 };
 
-type PitSub = {
-  drivetrainType?: string;
+type PitSub = PitSubBase & {
   robotDimensions?: { length: number; width: number; height: number };
-  weight?: number;
-  hopperCapacity?: number;
   shootingSpeed?: number;
-  intakeMethods?: string[];
-  canPassTrench?: boolean;
-  canCrossBump?: boolean;
-  maxClimbLevel?: number;
-  autoCapabilities?: string;
   notes?: string;
   photoUrls?: string[];
   submissionCount?: number;
 };
-
-// --- Helpers ---
 
 function shiftPointsFromFuel(s1: number, s2: number, s3: number, s4: number) {
   const s13 = s1 + s3;
@@ -243,8 +203,6 @@ function buildPeriodChartData(matchSubs: MatchSub[]) {
   }));
 }
 
-// --- Sub-components ---
-
 function climbBadgeVariant(level?: number) {
   if (!level || level === 0) {
     return <Badge variant="outline">None</Badge>;
@@ -290,7 +248,7 @@ function MetricCard({
   );
 }
 
-function PitPhotoPreview({
+function PhotoPreview({
   photoUrls,
   renderTrigger,
 }: {
@@ -356,6 +314,7 @@ function PitPhotoPreview({
           className="max-h-[90vh] max-w-4xl gap-0 overflow-hidden border bg-background p-0"
           showCloseButton={false}
         >
+          <DialogTitle className="sr-only">Photos</DialogTitle>
           <div className="relative flex min-h-[50vh] items-center justify-center bg-muted/30 p-6">
             {lightboxIndex !== null ? (
               <>
@@ -448,7 +407,7 @@ function PitCard({ pit }: { pit: PitSub }) {
               </div>
             </div>
             {Array.isArray(pit.photoUrls) && pit.photoUrls.length > 0 ? (
-              <PitPhotoPreview
+              <PhotoPreview
                 photoUrls={pit.photoUrls}
                 renderTrigger={(onOpen) => (
                   <Button
@@ -487,7 +446,7 @@ function PitCard({ pit }: { pit: PitSub }) {
             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
               {intakeMethods.length > 0 && (
                 <span className="flex gap-1.5">
-                  {intakeMethods.map((m) => (
+                  {intakeMethods.map((m: string) => (
                     <Badge
                       className="text-xs capitalize"
                       key={m}
@@ -515,29 +474,6 @@ function PitCard({ pit }: { pit: PitSub }) {
                 Bump
               </span>
             </div>
-          </div>
-        ) : null}
-
-        {pit.autoCapabilities || pit.notes ? (
-          <div className="flex-1 space-y-2 px-4 py-3">
-            {pit.autoCapabilities ? (
-              <div>
-                <span className="block text-muted-foreground text-xs">
-                  Auto
-                </span>
-                <p className="mt-0.5 text-sm leading-snug">
-                  {pit.autoCapabilities}
-                </p>
-              </div>
-            ) : null}
-            {pit.notes ? (
-              <div>
-                <span className="block text-muted-foreground text-xs">
-                  Notes
-                </span>
-                <p className="mt-0.5 text-sm leading-snug">{pit.notes}</p>
-              </div>
-            ) : null}
           </div>
         ) : null}
       </div>
@@ -626,35 +562,73 @@ function MatchHistoryRow({
 
 function NotesSection({
   notes,
+  pitData,
 }: {
   notes: { matchNumber: number; note: string }[];
+  pitData: PitSub | null;
 }) {
-  if (notes.length === 0) {
+  const hasPitNotes = !!(pitData?.autoCapabilities || pitData?.notes);
+  const hasMatchNotes = notes.length > 0;
+  const showPitNotes = hasPitNotes && pitData !== null;
+
+  if (!(hasPitNotes || hasMatchNotes)) {
     return null;
   }
+
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm">Scout Notes</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <ClipboardList className="size-4 text-muted-foreground" />
+          Notes
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {notes.map(({ matchNumber, note }) => (
-            <div className="space-y-1" key={matchNumber}>
-              <Badge className="text-xs" variant="outline">
-                Q{matchNumber}
-              </Badge>
-              <p className="text-sm">{note}</p>
-              <Separator />
+      <CardContent className="space-y-6">
+        {showPitNotes ? (
+          <div className="space-y-4">
+            {pitData.autoCapabilities ? (
+              <div>
+                <span className="block text-muted-foreground text-xs">
+                  Auto
+                </span>
+                <p className="mt-1 text-sm leading-relaxed">
+                  {pitData.autoCapabilities}
+                </p>
+              </div>
+            ) : null}
+            {pitData.notes ? (
+              <div>
+                <span className="block text-muted-foreground text-xs">
+                  Pit Notes
+                </span>
+                <p className="mt-1 text-sm leading-relaxed">{pitData.notes}</p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {hasMatchNotes ? (
+          <div>
+            <span className="block text-muted-foreground text-xs">
+              Match Scout Notes
+            </span>
+            <div className="mt-2 space-y-3">
+              {notes.map(({ matchNumber, note }) => (
+                <div className="space-y-1" key={matchNumber}>
+                  <Badge className="text-xs" variant="outline">
+                    Q{matchNumber}
+                  </Badge>
+                  <p className="text-sm">{note}</p>
+                  <Separator />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
 }
-
-// --- Main page ---
 
 function useTeamMetrics(
   matchSubs: MatchSub[] | undefined,
@@ -746,11 +720,30 @@ function TeamProfileBody({
           </div>
         </div>
 
-        {pitData ? (
-          <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1">
+          {pitData ? (
             <PitCard pit={pitData} />
-          </div>
-        ) : null}
+          ) : (
+            <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
+              <div className="border-b px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <Wrench className="size-5 text-muted-foreground" />
+                  </div>
+                  <span className="font-semibold text-sm">Pit Data</span>
+                </div>
+              </div>
+              <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center">
+                <p className="text-muted-foreground text-sm">
+                  No pit scouting data submitted for this team yet.
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Submit pit data to see robot specs, photos and notes here.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {matchSubs.length > 0 ? (
@@ -792,7 +785,7 @@ function TeamProfileBody({
         </div>
       )}
 
-      <NotesSection notes={allNotes} />
+      <NotesSection notes={allNotes} pitData={pitData} />
     </div>
   );
 }
@@ -821,7 +814,7 @@ export default function TeamProfile() {
   const isLoading = matchSubs === undefined || pitData === undefined;
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex flex-col gap-4">
         <div className="flex items-center gap-2 text-muted-foreground text-sm">
           <Link className="hover:text-foreground" href={"/analyse" as Route}>

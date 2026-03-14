@@ -16,8 +16,7 @@ import { ArrowLeft, ClipboardList } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-
-// --- Types ---
+import { formatDuration } from "@/lib/analyse";
 
 type PeriodData = {
   auto: { scoring: number; feeding: number; defense: number };
@@ -57,35 +56,34 @@ type MatchSub = {
   createdAt: number;
 };
 
-// --- Constants ---
+const PERIOD_ORDER: (keyof PeriodData)[] = [
+  "auto",
+  "shift1",
+  "shift2",
+  "shift3",
+  "shift4",
+  "endGame",
+  "transition",
+];
 
-const PERIOD_DISPLAY: Record<string, string> = {
+const PERIOD_DISPLAY: Record<keyof PeriodData, string> = {
   auto: "Auto",
+  shift1: "S1",
+  shift2: "S2",
+  shift3: "S3",
+  shift4: "S4",
+  endGame: "Endgame",
   transition: "Transition",
-  shift1: "Shift 1",
-  shift2: "Shift 2",
-  shift3: "Shift 3",
-  shift4: "Shift 4",
-  endGame: "End Game",
 };
 
-// --- Helpers ---
-
-function formatDuration(ms: number): string {
-  const s = Math.round(ms / 1000);
-  if (s < 60) {
-    return `${s}s`;
-  }
-  return `${Math.floor(s / 60)}m ${s % 60}s`;
-}
-
-// --- Sub-components ---
-
 function PeriodDataTable({ pd }: { pd: PeriodData }) {
-  const entries = Object.entries(pd) as [
-    keyof PeriodData,
-    { scoring: number; feeding: number; defense: number },
-  ][];
+  const rows = PERIOD_ORDER.map((key) => ({ key, val: pd[key] }));
+  const totalScoring = rows.reduce((acc, { val }) => acc + val.scoring, 0);
+  const totalFeeding = rows.reduce((acc, { val }) => acc + val.feeding, 0);
+  const totalDefense = rows.reduce((acc, { val }) => acc + val.defense, 0);
+
+  const fmt = (n: number) => n.toFixed(1);
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -98,22 +96,32 @@ function PeriodDataTable({ pd }: { pd: PeriodData }) {
           </tr>
         </thead>
         <tbody>
-          {entries.map(([key, val]) => (
-            <tr className="border-b last:border-0" key={key}>
-              <td className="py-1.5 pr-4 text-xs">
-                {PERIOD_DISPLAY[key] ?? key}
+          {rows.map(({ key, val }) => (
+            <tr className="border-b" key={key}>
+              <td className="py-1.5 pr-4 text-xs">{PERIOD_DISPLAY[key]}</td>
+              <td className="py-1.5 pr-4 text-right font-mono text-xs">
+                {fmt(val.scoring)}
               </td>
               <td className="py-1.5 pr-4 text-right font-mono text-xs">
-                {val.scoring}
-              </td>
-              <td className="py-1.5 pr-4 text-right font-mono text-xs">
-                {val.feeding}
+                {fmt(val.feeding)}
               </td>
               <td className="py-1.5 text-right font-mono text-xs">
-                {val.defense}
+                {fmt(val.defense)}
               </td>
             </tr>
           ))}
+          <tr className="border-t-2 font-medium italic">
+            <td className="py-1.5 pr-4 font-bold text-xs">Total:</td>
+            <td className="py-1.5 pr-4 text-right font-mono text-xs">
+              {fmt(totalScoring)}
+            </td>
+            <td className="py-1.5 pr-4 text-right font-mono text-xs">
+              {fmt(totalFeeding)}
+            </td>
+            <td className="py-1.5 text-right font-mono text-xs">
+              {fmt(totalDefense)}
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -158,6 +166,7 @@ function FieldEventsList({ events }: { events: FrcFieldEvent[] }) {
   );
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: PASS
 function SubmissionCard({
   sub,
   eventCode,
@@ -188,7 +197,7 @@ function SubmissionCard({
           <Badge className="text-xs capitalize" variant="outline">
             {sub.inputMode}
           </Badge>
-          {sub.climbLevel !== undefined ? (
+          {sub.climbLevel !== undefined && sub.climbLevel > 0 ? (
             <Badge className="text-xs" variant="secondary">
               Climb L{sub.climbLevel}
               {sub.climbDuration !== undefined
@@ -239,8 +248,6 @@ function SubmissionCard({
   );
 }
 
-// --- Main page ---
-
 export default function MatchViewer() {
   const params = useParams<{ eventCode: string; matchNumber: string }>();
   const { eventCode, matchNumber: matchNumberStr } = params;
@@ -254,7 +261,7 @@ export default function MatchViewer() {
   const isLoading = submissions === undefined;
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex flex-col gap-4">
         <div className="flex items-center gap-2 text-muted-foreground text-sm">
           <Link className="hover:text-foreground" href={"/analyse" as Route}>
@@ -299,17 +306,12 @@ export default function MatchViewer() {
           <div className="flex flex-col gap-1">
             <p className="font-medium text-sm">No submissions found</p>
             <p className="text-muted-foreground text-sm">
-              No FRC match scouting data was submitted for Q{matchNumber} at{" "}
-              {eventCode}.
+              No data was submitted for Q{matchNumber} at {eventCode}.
             </p>
           </div>
         </div>
       ) : (
         <div className="space-y-4">
-          <p className="text-muted-foreground text-sm">
-            {submissions.length} submission
-            {submissions.length !== 1 ? "s" : ""} found
-          </p>
           {submissions.map((sub) => (
             <SubmissionCard eventCode={eventCode} key={sub._id} sub={sub} />
           ))}
