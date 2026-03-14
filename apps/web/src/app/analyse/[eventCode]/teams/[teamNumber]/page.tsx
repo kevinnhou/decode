@@ -862,7 +862,7 @@ export default function TeamProfile() {
   const isLoading = matchSubs === undefined || pitData === undefined;
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex flex-col gap-4">
         <div className="flex items-center gap-2 text-muted-foreground text-sm">
           <Link className="hover:text-foreground" href={"/analyse" as Route}>
