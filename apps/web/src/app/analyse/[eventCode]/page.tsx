@@ -25,19 +25,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-
-type SortField = "rank" | "team" | "matches" | "scoring" | "defense";
-type SortDir = "asc" | "desc";
-
-type TeamAggregate = {
-  teamNumber: number;
-  rank: number;
-  matchCount: number;
-  pitCount: number;
-  avgScoringActivity: number;
-  avgDefenseActivity: number;
-  primaryInputMode: "form" | "field";
-};
+import type { SortDir, SortField, TeamAggregate } from "@/lib/analyse";
 
 function TeamRow({
   team,

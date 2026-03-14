@@ -10,7 +10,6 @@ import {
   CardTitle,
 } from "@decode/ui/components/card";
 import {
-  type ChartConfig,
   ChartContainer,
   ChartLegend,
   ChartLegendContent,
@@ -26,19 +25,15 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-
-// --- Types ---
-
-type PitSub = {
-  drivetrainType?: string;
-  weight?: number;
-  hopperCapacity?: number;
-  maxClimbLevel?: number;
-  intakeMethods?: string[];
-  canPassTrench?: boolean;
-  canCrossBump?: boolean;
-  autoCapabilities?: string;
-};
+import {
+  buildChartConfig,
+  CHART_PERIODS,
+  CLIMB_LABELS,
+  PERIOD_LABELS_SHORT,
+  type PitSubBase,
+  parseTeamsParam,
+  TEAM_COLORS,
+} from "@/lib/analyse";
 
 type TeamComparisonData = {
   teamNumber: number;
@@ -50,74 +45,13 @@ type TeamComparisonData = {
   avgDefenseActivity: number;
   primaryInputMode: "form" | "field";
   avgPerPeriodScoring: Record<string, number>;
-  pitSubmission: PitSub | null;
+  pitSubmission: PitSubBase | null;
 };
-
-// --- Chart colours for up to 6 teams ---
-
-const TEAM_COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "hsl(221 83% 53%)",
-];
-
-const PERIOD_LABELS: Record<string, string> = {
-  AUTO: "Auto",
-  TRANSITION: "Trans.",
-  SHIFT_1: "S1",
-  SHIFT_2: "S2",
-  SHIFT_3: "S3",
-  SHIFT_4: "S4",
-  END_GAME: "End",
-};
-
-const CHART_PERIODS = [
-  "AUTO",
-  "TRANSITION",
-  "SHIFT_1",
-  "SHIFT_2",
-  "SHIFT_3",
-  "SHIFT_4",
-  "END_GAME",
-] as const;
-
-const CLIMB_LABELS: Record<number, string> = {
-  0: "No climb",
-  1: "Level 1",
-  2: "Level 2",
-  3: "Level 3",
-};
-
-// --- Helpers ---
-
-function parseTeamsParam(raw: string | null): number[] {
-  if (!raw) {
-    return [];
-  }
-  return raw
-    .split(",")
-    .map((s) => Number.parseInt(s.trim(), 10))
-    .filter((n) => !Number.isNaN(n) && n > 0);
-}
-
-function buildChartConfig(teamNumbers: number[]): ChartConfig {
-  const config: ChartConfig = {};
-  for (let i = 0; i < teamNumbers.length; i += 1) {
-    config[String(teamNumbers[i])] = {
-      label: `Team ${teamNumbers[i]}`,
-      color: TEAM_COLORS[i] ?? TEAM_COLORS[0],
-    };
-  }
-  return config;
-}
 
 function buildPeriodChartData(teams: TeamComparisonData[]) {
   return CHART_PERIODS.map((period) => {
     const entry: Record<string, string | number> = {
-      period: PERIOD_LABELS[period] ?? period,
+      period: PERIOD_LABELS_SHORT[period] ?? period,
     };
     for (const team of teams) {
       entry[String(team.teamNumber)] = team.avgPerPeriodScoring[period] ?? 0;
@@ -125,8 +59,6 @@ function buildPeriodChartData(teams: TeamComparisonData[]) {
     return entry;
   });
 }
-
-// --- Sub-components ---
 
 function MetricRow({
   label,
@@ -234,8 +166,8 @@ function PitRow({
   type,
 }: {
   label: string;
-  teams: { teamNumber: number; pit: PitSub | null }[];
-  field: keyof PitSub;
+  teams: { teamNumber: number; pit: PitSubBase | null }[];
+  field: keyof PitSubBase;
   type: "text" | "number" | "bool" | "climb";
 }) {
   return (
@@ -409,8 +341,6 @@ function TeamPitCard({
     </Card>
   );
 }
-
-// --- Main page ---
 
 export default function ComparisonBoard() {
   const params = useParams<{ eventCode: string }>();
@@ -591,7 +521,7 @@ export default function ComparisonBoard() {
       ) : (
         <div className="flex flex-col items-center gap-4 py-20 text-center">
           <p className="text-muted-foreground text-sm">
-            No scouting data found for the selected teams at {eventCode}.
+            No data found for the selected teams at {eventCode}.
           </p>
         </div>
       )}

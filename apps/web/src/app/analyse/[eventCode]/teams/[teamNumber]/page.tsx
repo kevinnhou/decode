@@ -42,45 +42,13 @@ import { useParams } from "next/navigation";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-
-// --- Constants ---
-
-const PERIOD_LABELS: Record<string, string> = {
-  AUTO: "Auto",
-  TRANSITION: "Trans.",
-  SHIFT_1: "Shift 1",
-  SHIFT_2: "Shift 2",
-  SHIFT_3: "Shift 3",
-  SHIFT_4: "Shift 4",
-  END_GAME: "End",
-};
-
-const PERIOD_TO_PD_KEY: Record<string, string> = {
-  AUTO: "auto",
-  TRANSITION: "transition",
-  SHIFT_1: "shift1",
-  SHIFT_2: "shift2",
-  SHIFT_3: "shift3",
-  SHIFT_4: "shift4",
-  END_GAME: "endGame",
-};
-
-const CHART_PERIODS = [
-  "AUTO",
-  "TRANSITION",
-  "SHIFT_1",
-  "SHIFT_2",
-  "SHIFT_3",
-  "SHIFT_4",
-  "END_GAME",
-] as const;
-
-const CLIMB_LABELS: Record<number, string> = {
-  0: "No climb",
-  1: "Level 1",
-  2: "Level 2",
-  3: "Level 3",
-};
+import {
+  CHART_PERIODS,
+  CLIMB_LABELS,
+  PERIOD_LABELS,
+  PERIOD_TO_PD_KEY,
+  type PitSubBase,
+} from "@/lib/analyse";
 
 const periodChartConfig: ChartConfig = {
   scoring: {
@@ -88,8 +56,6 @@ const periodChartConfig: ChartConfig = {
     color: "hsl(var(--chart-1))",
   },
 };
-
-// --- Types ---
 
 type MatchSub = {
   _id: string;
@@ -113,23 +79,13 @@ type MatchSub = {
   scoutName: string;
 };
 
-type PitSub = {
-  drivetrainType?: string;
+type PitSub = PitSubBase & {
   robotDimensions?: { length: number; width: number; height: number };
-  weight?: number;
-  hopperCapacity?: number;
   shootingSpeed?: number;
-  intakeMethods?: string[];
-  canPassTrench?: boolean;
-  canCrossBump?: boolean;
-  maxClimbLevel?: number;
-  autoCapabilities?: string;
   notes?: string;
   photoUrls?: string[];
   submissionCount?: number;
 };
-
-// --- Helpers ---
 
 function shiftPointsFromFuel(s1: number, s2: number, s3: number, s4: number) {
   const s13 = s1 + s3;
@@ -246,8 +202,6 @@ function buildPeriodChartData(matchSubs: MatchSub[]) {
     scoring: n > 0 ? Math.round(((totals[period] ?? 0) / n) * 10) / 10 : 0,
   }));
 }
-
-// --- Sub-components ---
 
 function climbBadgeVariant(level?: number) {
   if (!level || level === 0) {
@@ -492,7 +446,7 @@ function PitCard({ pit }: { pit: PitSub }) {
             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
               {intakeMethods.length > 0 && (
                 <span className="flex gap-1.5">
-                  {intakeMethods.map((m) => (
+                  {intakeMethods.map((m: string) => (
                     <Badge
                       className="text-xs capitalize"
                       key={m}
@@ -675,8 +629,6 @@ function NotesSection({
     </Card>
   );
 }
-
-// --- Main page ---
 
 function useTeamMetrics(
   matchSubs: MatchSub[] | undefined,

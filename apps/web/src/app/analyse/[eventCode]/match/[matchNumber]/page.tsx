@@ -16,8 +16,7 @@ import { ArrowLeft, ClipboardList } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-
-// --- Types ---
+import { formatDuration } from "@/lib/analyse";
 
 type PeriodData = {
   auto: { scoring: number; feeding: number; defense: number };
@@ -57,8 +56,6 @@ type MatchSub = {
   createdAt: number;
 };
 
-// --- Constants ---
-
 const PERIOD_ORDER: (keyof PeriodData)[] = [
   "auto",
   "shift1",
@@ -78,18 +75,6 @@ const PERIOD_DISPLAY: Record<keyof PeriodData, string> = {
   endGame: "Endgame",
   transition: "Transition",
 };
-
-// --- Helpers ---
-
-function formatDuration(ms: number): string {
-  const s = Math.round(ms / 1000);
-  if (s < 60) {
-    return `${s}s`;
-  }
-  return `${Math.floor(s / 60)}m ${s % 60}s`;
-}
-
-// --- Sub-components ---
 
 function PeriodDataTable({ pd }: { pd: PeriodData }) {
   const rows = PERIOD_ORDER.map((key) => ({ key, val: pd[key] }));
@@ -262,8 +247,6 @@ function SubmissionCard({
     </Card>
   );
 }
-
-// --- Main page ---
 
 export default function MatchViewer() {
   const params = useParams<{ eventCode: string; matchNumber: string }>();
