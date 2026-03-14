@@ -382,15 +382,245 @@ export const getTeamPitData = query({
   },
 });
 
+function avgNumeric(
+  subs: { weight?: number }[],
+  key: "weight"
+): number | undefined;
+function avgNumeric(
+  subs: { hopperCapacity?: number }[],
+  key: "hopperCapacity"
+): number | undefined;
+function avgNumeric(
+  subs: { shootingSpeed?: number }[],
+  key: "shootingSpeed"
+): number | undefined;
+function avgNumeric(subs: unknown[], key: string): number | undefined {
+  const vals = (subs as { [k: string]: number | undefined }[])
+    .map((item) => item[key])
+    .filter((val): val is number => typeof val === "number");
+  if (vals.length === 0) {
+    return;
+  }
+  const sum = vals.reduce((a, b) => a + b, 0);
+  return Math.round((sum / vals.length) * 10) / 10;
+}
+
+function computeAvgPitClimbLevel(
+  subs: { maxClimbLevel?: number }[]
+): 0 | 1 | 2 | 3 | undefined {
+  const vals = subs
+    .filter((item) => item.maxClimbLevel !== undefined)
+    .map((item) => item.maxClimbLevel as number);
+  if (vals.length === 0) {
+    return;
+  }
+  const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+  return Math.max(0, Math.min(3, avg)) as 0 | 1 | 2 | 3;
+}
+
+function aggregatePitDimensions(
+  subs: {
+    robotDimensions?: { length?: number; width?: number; height?: number };
+  }[]
+) {
+  const dimSubs = subs.filter(
+    (s) =>
+      s.robotDimensions?.length !== undefined &&
+      s.robotDimensions?.width !== undefined &&
+      s.robotDimensions?.height !== undefined
+  );
+  if (dimSubs.length === 0) {
+    return;
+  }
+  return {
+    length: Math.round(
+      dimSubs.reduce((sum, x) => sum + (x.robotDimensions?.length ?? 0), 0) /
+        dimSubs.length
+    ),
+    width: Math.round(
+      dimSubs.reduce((sum, x) => sum + (x.robotDimensions?.width ?? 0), 0) /
+        dimSubs.length
+    ),
+    height: Math.round(
+      dimSubs.reduce((sum, x) => sum + (x.robotDimensions?.height ?? 0), 0) /
+        dimSubs.length
+    ),
+  };
+}
+
+function aggregatePitDrivetrain(
+  subs: { drivetrainType?: string }[]
+): "swerve" | "tank" | "other" | undefined {
+  const votes = new Map<string, number>();
+  for (const sub of subs) {
+    if (sub.drivetrainType) {
+      votes.set(sub.drivetrainType, (votes.get(sub.drivetrainType) ?? 0) + 1);
+    }
+  }
+  let result: "swerve" | "tank" | "other" | undefined;
+  let maxVotes = 0;
+  for (const [dt, count] of votes) {
+    if (count > maxVotes) {
+      maxVotes = count;
+      result = dt as "swerve" | "tank" | "other";
+    }
+  }
+  return result;
+}
+
+function aggregatePitText(
+  subs: { autoCapabilities?: string; notes?: string }[],
+  key: "autoCapabilities" | "notes"
+): string | undefined {
+  const parts = subs
+    .filter((s) => ((s[key] as string) ?? "").trim())
+    .map((s) => ((s[key] as string) ?? "").trim());
+  return parts.length > 0 ? [...new Set(parts)].join(" | ") : undefined;
+}
+
+/**
+ * Returns aggregated pit data from all FRC pit submissions for a team at an event.
+ * Numeric values are averaged; photos are collected from all submissions with URLs resolved.
+ *
+ * @param ctx - The Convex query context
+ * @param args.eventCode - The event code
+ * @param args.teamNumber - The team number
+ * @returns Aggregated pit data with photoUrls, or null if no submissions
+ */
+export const getTeamPitDataAggregated = query({
+  args: {
+    eventCode: v.string(),
+    teamNumber: v.number(),
+  },
+  returns: v.any(),
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: pit field aggregation
+  async handler(ctx, args) {
+    const { profile } = await requireUserProfile(ctx);
+
+    const submissions = await ctx.db
+      .query("pitSubmissions")
+      .withIndex("by_org_event_team", (q) =>
+        q
+          .eq("organisationId", profile.organisationId)
+          .eq("eventCode", args.eventCode)
+          .eq("teamNumber", args.teamNumber)
+      )
+      .collect();
+
+    const frcSubs = submissions.filter((s) => s.competitionType === "FRC");
+    if (frcSubs.length === 0) {
+      return null;
+    }
+
+    const n = frcSubs.length;
+    const weight = avgNumeric(frcSubs, "weight");
+    const hopperAvg = avgNumeric(frcSubs, "hopperCapacity");
+    const hopperCapacity =
+      hopperAvg !== undefined ? Math.round(hopperAvg) : undefined;
+    const shootingSpeed = avgNumeric(frcSubs, "shootingSpeed");
+
+    const robotDimensions = aggregatePitDimensions(frcSubs);
+    const maxClimbLevel = computeAvgPitClimbLevel(frcSubs);
+
+    const intakeSet = new Set<string>();
+    for (const sub of frcSubs) {
+      for (const m of sub.intakeMethods ?? []) {
+        intakeSet.add(m);
+      }
+    }
+    const intakeMethods =
+      intakeSet.size > 0 ? Array.from(intakeSet) : undefined;
+
+    const canPassTrench = frcSubs.some((s) => s.canPassTrench === true);
+    const canCrossBump = frcSubs.some((s) => s.canCrossBump === true);
+    const drivetrainType = aggregatePitDrivetrain(frcSubs);
+    const autoCapabilities = aggregatePitText(frcSubs, "autoCapabilities");
+    const notes = aggregatePitText(frcSubs, "notes");
+
+    const photoIds = new Set<string>();
+    for (const sub of frcSubs) {
+      for (const id of sub.photos ?? []) {
+        photoIds.add(id);
+      }
+    }
+    const photoUrls: string[] = [];
+    for (const id of photoIds) {
+      const url = await ctx.storage.getUrl(id as `${string}_${string}`);
+      if (url) {
+        photoUrls.push(url);
+      }
+    }
+
+    return {
+      weight,
+      hopperCapacity,
+      shootingSpeed,
+      robotDimensions,
+      maxClimbLevel,
+      intakeMethods,
+      canPassTrench: canPassTrench || undefined,
+      canCrossBump: canCrossBump || undefined,
+      drivetrainType,
+      autoCapabilities,
+      notes,
+      photoUrls,
+      submissionCount: n,
+    };
+  },
+});
+
+/**
+ * Returns match and pit submission counts for a given event.
+ *
+ * @param ctx - The Convex query context
+ * @param args.eventCode - The event code
+ * @returns Object with matchCount and pitCount
+ */
+export const getEventSubmissionCounts = query({
+  args: {
+    eventCode: v.string(),
+  },
+  returns: v.any(),
+  async handler(ctx, args) {
+    const { profile } = await requireUserProfile(ctx);
+
+    const [matchSubs, pitSubs] = await Promise.all([
+      ctx.db
+        .query("matchSubmissions")
+        .withIndex("by_org_and_event", (q) =>
+          q
+            .eq("organisationId", profile.organisationId)
+            .eq("eventCode", args.eventCode)
+        )
+        .collect(),
+      ctx.db
+        .query("pitSubmissions")
+        .withIndex("by_org_and_event", (q) =>
+          q
+            .eq("organisationId", profile.organisationId)
+            .eq("eventCode", args.eventCode)
+        )
+        .collect(),
+    ]);
+
+    const matchCount = matchSubs.filter(
+      (s) => s.competitionType === "FRC"
+    ).length;
+    const pitCount = pitSubs.filter((s) => s.competitionType === "FRC").length;
+
+    return { matchCount, pitCount };
+  },
+});
+
 /**
  * Returns aggregated per-team metrics for all FRC teams at a given event, ranked by scoring activity.
- * Handles both form-mode (periodData) and field-mode (frcFieldEvents) submissions.
+ * Includes teams with match data and teams with pit-only data. Each aggregate includes pitCount.
  *
  * @param ctx - The Convex query context
  * @param args.eventCode - The event code
  * @param args.allianceFilter - Optional alliance colour filter
  * @param args.stageFilter - Optional match stage filter
- * @returns Ranked array of team aggregates
+ * @returns Ranked array of team aggregates with pitCount
  */
 export const getEventAggregates = query({
   args: {
@@ -411,16 +641,26 @@ export const getEventAggregates = query({
   async handler(ctx, args) {
     const { profile } = await requireUserProfile(ctx);
 
-    const allSubs = await ctx.db
-      .query("matchSubmissions")
-      .withIndex("by_org_and_event", (q) =>
-        q
-          .eq("organisationId", profile.organisationId)
-          .eq("eventCode", args.eventCode)
-      )
-      .collect();
+    const [allMatchSubs, pitSubs] = await Promise.all([
+      ctx.db
+        .query("matchSubmissions")
+        .withIndex("by_org_and_event", (q) =>
+          q
+            .eq("organisationId", profile.organisationId)
+            .eq("eventCode", args.eventCode)
+        )
+        .collect(),
+      ctx.db
+        .query("pitSubmissions")
+        .withIndex("by_org_and_event", (q) =>
+          q
+            .eq("organisationId", profile.organisationId)
+            .eq("eventCode", args.eventCode)
+        )
+        .collect(),
+    ]);
 
-    let subs = allSubs.filter((s) => s.competitionType === "FRC");
+    let subs = allMatchSubs.filter((s) => s.competitionType === "FRC");
 
     if (args.allianceFilter && args.allianceFilter !== "all") {
       subs = subs.filter((s) => s.allianceColour === args.allianceFilter);
@@ -437,19 +677,62 @@ export const getEventAggregates = query({
       teamMap.get(sub.teamNumber)?.push(sub);
     }
 
-    const aggregates: ReturnType<typeof buildAggregateFromAccumulator>[] = [];
+    const pitCountMap = new Map<number, number>();
+    for (const sub of pitSubs.filter((s) => s.competitionType === "FRC")) {
+      pitCountMap.set(
+        sub.teamNumber,
+        (pitCountMap.get(sub.teamNumber) ?? 0) + 1
+      );
+    }
+
+    const aggregates: (ReturnType<typeof buildAggregateFromAccumulator> & {
+      pitCount: number;
+    })[] = [];
 
     for (const [teamNumber, teamSubs] of teamMap) {
       const acc = emptyAccumulator();
       for (const sub of teamSubs) {
         accumulateSubmission(acc, sub);
       }
-      aggregates.push(
-        buildAggregateFromAccumulator(teamNumber, acc, teamSubs.length)
-      );
+      aggregates.push({
+        ...buildAggregateFromAccumulator(teamNumber, acc, teamSubs.length),
+        pitCount: pitCountMap.get(teamNumber) ?? 0,
+      });
     }
 
-    aggregates.sort((a, b) => b.avgScoringActivity - a.avgScoringActivity);
+    const matchTeamNumbers = new Set(teamMap.keys());
+    const pitOnlyTeams = [...pitCountMap.keys()].filter(
+      (tn) => !matchTeamNumbers.has(tn)
+    );
+
+    for (const teamNumber of pitOnlyTeams.sort((a, b) => a - b)) {
+      aggregates.push({
+        teamNumber,
+        matchCount: 0,
+        climbSuccessRate: 0,
+        avgClimbLevel: 0,
+        avgClimbDuration: 0,
+        avgScoringActivity: 0,
+        avgDefenseActivity: 0,
+        primaryInputMode: "form" as const,
+        formMatchCount: 0,
+        fieldMatchCount: 0,
+        pitCount: pitCountMap.get(teamNumber) ?? 0,
+      });
+    }
+
+    aggregates.sort((a, b) => {
+      if (a.matchCount > 0 && b.matchCount > 0) {
+        return b.avgScoringActivity - a.avgScoringActivity;
+      }
+      if (a.matchCount > 0) {
+        return -1;
+      }
+      if (b.matchCount > 0) {
+        return 1;
+      }
+      return a.teamNumber - b.teamNumber;
+    });
 
     return aggregates.map((item, index) => ({ ...item, rank: index + 1 }));
   },

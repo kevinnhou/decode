@@ -15,6 +15,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@decode/ui/components/chart";
+import { Dialog, DialogContent } from "@decode/ui/components/dialog";
 import { Separator } from "@decode/ui/components/separator";
 import { Skeleton } from "@decode/ui/components/skeleton";
 import { useQuery } from "convex/react";
@@ -24,15 +25,18 @@ import {
   ClipboardList,
   Gauge,
   GitCompareArrows,
+  ImageIcon,
   Target,
   TrendingUp,
   Wrench,
   XCircle,
 } from "lucide-react";
 import type { Route } from "next";
+import NextImage from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type React from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 // --- Constants ---
@@ -117,7 +121,8 @@ type PitSub = {
   maxClimbLevel?: number;
   autoCapabilities?: string;
   notes?: string;
-  scoutName: string;
+  photoUrls?: string[];
+  submissionCount?: number;
 };
 
 // --- Helpers ---
@@ -285,6 +290,115 @@ function MetricCard({
   );
 }
 
+function PitPhotoPreview({
+  photoUrls,
+  renderTrigger,
+}: {
+  photoUrls: string[];
+  renderTrigger: (onOpen: () => void) => React.ReactNode;
+}) {
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  const openLightbox = useCallback(() => {
+    setLightboxIndex(0);
+  }, []);
+
+  const closeLightbox = useCallback(() => {
+    setLightboxIndex(null);
+  }, []);
+
+  const goPrev = useCallback(() => {
+    setLightboxIndex((i) =>
+      i === null ? null : i === 0 ? photoUrls.length - 1 : i - 1
+    );
+  }, [photoUrls.length]);
+
+  const goNext = useCallback(() => {
+    setLightboxIndex((i) =>
+      i === null ? null : i === photoUrls.length - 1 ? 0 : i + 1
+    );
+  }, [photoUrls.length]);
+
+  useEffect(() => {
+    if (lightboxIndex === null || photoUrls.length <= 1) {
+      return;
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        goPrev();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        goNext();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [lightboxIndex, photoUrls.length, goPrev, goNext]);
+
+  if (photoUrls.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      {renderTrigger(openLightbox)}
+
+      <Dialog
+        onOpenChange={(open) => {
+          if (!open) {
+            closeLightbox();
+          }
+        }}
+        open={lightboxIndex !== null}
+      >
+        <DialogContent
+          className="max-h-[90vh] max-w-4xl gap-0 overflow-hidden border bg-background p-0"
+          showCloseButton={false}
+        >
+          <div className="relative flex min-h-[50vh] items-center justify-center bg-muted/30 p-6">
+            {lightboxIndex !== null ? (
+              <>
+                <NextImage
+                  alt="Robot from pit scouting"
+                  className="max-h-[75vh] max-w-full object-contain"
+                  height={720}
+                  src={photoUrls[lightboxIndex]}
+                  width={1280}
+                />
+                {photoUrls.length > 1 ? (
+                  <>
+                    <button
+                      aria-label="Previous photo"
+                      className="absolute inset-y-0 left-0 w-1/2 cursor-pointer"
+                      onClick={goPrev}
+                      type="button"
+                    />
+                    <button
+                      aria-label="Next photo"
+                      className="absolute inset-y-0 right-0 w-1/2 cursor-pointer"
+                      onClick={goNext}
+                      type="button"
+                    />
+                  </>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+          {photoUrls.length > 1 ? (
+            <div className="border-t px-4 py-2 text-center">
+              <span className="text-muted-foreground text-xs">
+                {lightboxIndex !== null ? lightboxIndex + 1 : 0} /{" "}
+                {photoUrls.length}
+              </span>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Pit card has multiple conditional sections
 function PitCard({ pit }: { pit: PitSub }) {
   const intakeMethods = pit.intakeMethods ?? [];
@@ -316,92 +430,116 @@ function PitCard({ pit }: { pit: PitSub }) {
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
-      <div className="flex flex-1 flex-col border-primary border-l-4">
-        <div className="flex flex-1 flex-col gap-0">
-          <div className="border-b px-4 py-3">
+      <div className="flex flex-1 flex-col gap-0">
+        <div className="border-b px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
                 <Wrench className="size-5 text-muted-foreground" />
               </div>
-              <span className="font-semibold text-sm">Pit Data</span>
-            </div>
-          </div>
-
-          {metrics.length > 0 ? (
-            <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-0 border-b px-4 py-3 sm:grid-cols-3">
-              {metrics.map((m) => (
-                <div className="py-1" key={m.label}>
-                  <span className="block text-muted-foreground text-xs">
-                    {m.label}
+              <div>
+                <span className="font-semibold text-sm">Pit Data</span>
+                {typeof pit.submissionCount === "number" &&
+                pit.submissionCount > 1 ? (
+                  <span className="ml-2 text-muted-foreground text-xs">
+                    (avg of {pit.submissionCount} submissions)
                   </span>
-                  <span className="font-medium text-sm">{m.value}</span>
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          {hasCapabilities ? (
-            <div className="border-b px-4 py-3">
-              <span className="block text-muted-foreground text-xs">
-                Capabilities
-              </span>
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-                {intakeMethods.length > 0 && (
-                  <span className="flex gap-1.5">
-                    {intakeMethods.map((m) => (
-                      <Badge
-                        className="text-xs capitalize"
-                        key={m}
-                        variant="outline"
-                      >
-                        {m}
-                      </Badge>
-                    ))}
-                  </span>
-                )}
-                <span className="flex items-center gap-1 text-sm">
-                  {pit.canPassTrench ? (
-                    <CheckCircle2 className="size-3.5 text-green-500" />
-                  ) : (
-                    <XCircle className="size-3.5 text-muted-foreground/50" />
-                  )}
-                  Trench
-                </span>
-                <span className="flex items-center gap-1 text-sm">
-                  {pit.canCrossBump ? (
-                    <CheckCircle2 className="size-3.5 text-green-500" />
-                  ) : (
-                    <XCircle className="size-3.5 text-muted-foreground/50" />
-                  )}
-                  Bump
-                </span>
+                ) : null}
               </div>
             </div>
-          ) : null}
-
-          {pit.autoCapabilities || pit.notes ? (
-            <div className="flex-1 space-y-2 px-4 py-3">
-              {pit.autoCapabilities ? (
-                <div>
-                  <span className="block text-muted-foreground text-xs">
-                    Auto
-                  </span>
-                  <p className="mt-0.5 text-sm leading-snug">
-                    {pit.autoCapabilities}
-                  </p>
-                </div>
-              ) : null}
-              {pit.notes ? (
-                <div>
-                  <span className="block text-muted-foreground text-xs">
-                    Notes
-                  </span>
-                  <p className="mt-0.5 text-sm leading-snug">{pit.notes}</p>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+            {Array.isArray(pit.photoUrls) && pit.photoUrls.length > 0 ? (
+              <PitPhotoPreview
+                photoUrls={pit.photoUrls}
+                renderTrigger={(onOpen) => (
+                  <Button
+                    onClick={onOpen}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <ImageIcon className="mr-1.5 size-4" />
+                    View photos ({pit.photoUrls?.length ?? 0})
+                  </Button>
+                )}
+              />
+            ) : null}
+          </div>
         </div>
+
+        {metrics.length > 0 ? (
+          <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-0 border-b px-4 py-3 sm:grid-cols-3">
+            {metrics.map((m) => (
+              <div className="py-1" key={m.label}>
+                <span className="block text-muted-foreground text-xs">
+                  {m.label}
+                </span>
+                <span className="font-medium text-sm">{m.value}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {hasCapabilities ? (
+          <div className="border-b px-4 py-3">
+            <span className="block text-muted-foreground text-xs">
+              Capabilities
+            </span>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+              {intakeMethods.length > 0 && (
+                <span className="flex gap-1.5">
+                  {intakeMethods.map((m) => (
+                    <Badge
+                      className="text-xs capitalize"
+                      key={m}
+                      variant="outline"
+                    >
+                      {m}
+                    </Badge>
+                  ))}
+                </span>
+              )}
+              <span className="flex items-center gap-1 text-sm">
+                {pit.canPassTrench ? (
+                  <CheckCircle2 className="size-3.5 text-green-500" />
+                ) : (
+                  <XCircle className="size-3.5 text-muted-foreground/50" />
+                )}
+                Trench
+              </span>
+              <span className="flex items-center gap-1 text-sm">
+                {pit.canCrossBump ? (
+                  <CheckCircle2 className="size-3.5 text-green-500" />
+                ) : (
+                  <XCircle className="size-3.5 text-muted-foreground/50" />
+                )}
+                Bump
+              </span>
+            </div>
+          </div>
+        ) : null}
+
+        {pit.autoCapabilities || pit.notes ? (
+          <div className="flex-1 space-y-2 px-4 py-3">
+            {pit.autoCapabilities ? (
+              <div>
+                <span className="block text-muted-foreground text-xs">
+                  Auto
+                </span>
+                <p className="mt-0.5 text-sm leading-snug">
+                  {pit.autoCapabilities}
+                </p>
+              </div>
+            ) : null}
+            {pit.notes ? (
+              <div>
+                <span className="block text-muted-foreground text-xs">
+                  Notes
+                </span>
+                <p className="mt-0.5 text-sm leading-snug">{pit.notes}</p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -669,7 +807,7 @@ export default function TeamProfile() {
     teamNumber,
   }) as MatchSub[] | undefined;
 
-  const pitData = useQuery(api.analysis.getTeamPitData, {
+  const pitData = useQuery(api.analysis.getTeamPitDataAggregated, {
     eventCode,
     teamNumber,
   }) as PitSub | null | undefined;
