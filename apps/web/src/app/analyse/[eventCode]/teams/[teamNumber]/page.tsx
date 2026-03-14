@@ -15,7 +15,11 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@decode/ui/components/chart";
-import { Dialog, DialogContent } from "@decode/ui/components/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@decode/ui/components/dialog";
 import { Separator } from "@decode/ui/components/separator";
 import { Skeleton } from "@decode/ui/components/skeleton";
 import { useQuery } from "convex/react";
@@ -290,7 +294,7 @@ function MetricCard({
   );
 }
 
-function PitPhotoPreview({
+function PhotoPreview({
   photoUrls,
   renderTrigger,
 }: {
@@ -356,6 +360,7 @@ function PitPhotoPreview({
           className="max-h-[90vh] max-w-4xl gap-0 overflow-hidden border bg-background p-0"
           showCloseButton={false}
         >
+          <DialogTitle className="sr-only">Photos</DialogTitle>
           <div className="relative flex min-h-[50vh] items-center justify-center bg-muted/30 p-6">
             {lightboxIndex !== null ? (
               <>
@@ -448,7 +453,7 @@ function PitCard({ pit }: { pit: PitSub }) {
               </div>
             </div>
             {Array.isArray(pit.photoUrls) && pit.photoUrls.length > 0 ? (
-              <PitPhotoPreview
+              <PhotoPreview
                 photoUrls={pit.photoUrls}
                 renderTrigger={(onOpen) => (
                   <Button
@@ -515,29 +520,6 @@ function PitCard({ pit }: { pit: PitSub }) {
                 Bump
               </span>
             </div>
-          </div>
-        ) : null}
-
-        {pit.autoCapabilities || pit.notes ? (
-          <div className="flex-1 space-y-2 px-4 py-3">
-            {pit.autoCapabilities ? (
-              <div>
-                <span className="block text-muted-foreground text-xs">
-                  Auto
-                </span>
-                <p className="mt-0.5 text-sm leading-snug">
-                  {pit.autoCapabilities}
-                </p>
-              </div>
-            ) : null}
-            {pit.notes ? (
-              <div>
-                <span className="block text-muted-foreground text-xs">
-                  Notes
-                </span>
-                <p className="mt-0.5 text-sm leading-snug">{pit.notes}</p>
-              </div>
-            ) : null}
           </div>
         ) : null}
       </div>
@@ -626,29 +608,69 @@ function MatchHistoryRow({
 
 function NotesSection({
   notes,
+  pitData,
 }: {
   notes: { matchNumber: number; note: string }[];
+  pitData: PitSub | null;
 }) {
-  if (notes.length === 0) {
+  const hasPitNotes = !!(pitData?.autoCapabilities || pitData?.notes);
+  const hasMatchNotes = notes.length > 0;
+  const showPitNotes = hasPitNotes && pitData !== null;
+
+  if (!(hasPitNotes || hasMatchNotes)) {
     return null;
   }
+
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm">Scout Notes</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <ClipboardList className="size-4 text-muted-foreground" />
+          Notes
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {notes.map(({ matchNumber, note }) => (
-            <div className="space-y-1" key={matchNumber}>
-              <Badge className="text-xs" variant="outline">
-                Q{matchNumber}
-              </Badge>
-              <p className="text-sm">{note}</p>
-              <Separator />
+      <CardContent className="space-y-6">
+        {showPitNotes ? (
+          <div className="space-y-4">
+            {pitData.autoCapabilities ? (
+              <div>
+                <span className="block text-muted-foreground text-xs">
+                  Auto
+                </span>
+                <p className="mt-1 text-sm leading-relaxed">
+                  {pitData.autoCapabilities}
+                </p>
+              </div>
+            ) : null}
+            {pitData.notes ? (
+              <div>
+                <span className="block text-muted-foreground text-xs">
+                  Pit Notes
+                </span>
+                <p className="mt-1 text-sm leading-relaxed">{pitData.notes}</p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {hasMatchNotes ? (
+          <div>
+            <span className="block text-muted-foreground text-xs">
+              Match Scout Notes
+            </span>
+            <div className="mt-2 space-y-3">
+              {notes.map(({ matchNumber, note }) => (
+                <div className="space-y-1" key={matchNumber}>
+                  <Badge className="text-xs" variant="outline">
+                    Q{matchNumber}
+                  </Badge>
+                  <p className="text-sm">{note}</p>
+                  <Separator />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -811,7 +833,7 @@ function TeamProfileBody({
         </div>
       )}
 
-      <NotesSection notes={allNotes} />
+      <NotesSection notes={allNotes} pitData={pitData} />
     </div>
   );
 }
