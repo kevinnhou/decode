@@ -746,11 +746,30 @@ function TeamProfileBody({
           </div>
         </div>
 
-        {pitData ? (
-          <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1">
+          {pitData ? (
             <PitCard pit={pitData} />
-          </div>
-        ) : null}
+          ) : (
+            <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
+              <div className="border-b px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <Wrench className="size-5 text-muted-foreground" />
+                  </div>
+                  <span className="font-semibold text-sm">Pit Data</span>
+                </div>
+              </div>
+              <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center">
+                <p className="text-muted-foreground text-sm">
+                  No pit scouting data submitted for this team yet.
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Submit pit data to see robot specs, photos and notes here.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {matchSubs.length > 0 ? (
