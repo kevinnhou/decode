@@ -11,17 +11,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@decode/ui/components/dialog";
 import { Input } from "@decode/ui/components/input";
 import { Label } from "@decode/ui/components/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@decode/ui/components/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@decode/ui/components/popover";
 import { Skeleton } from "@decode/ui/components/skeleton";
 import { toast } from "@decode/ui/components/sonner";
 import {
@@ -29,16 +26,18 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@decode/ui/components/tooltip";
+import { cn } from "@decode/ui/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import {
+  Check,
   LayoutGrid,
   List as ListIcon,
   PauseCircle,
   PlayCircle,
-  Plus,
   Trash2,
+  UserRoundPlus,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Duty } from "@/lib/form/duties";
 import { dutyChipClass, formatDutyLabel } from "@/lib/form/duties";
 import { DutiesGrid } from "~/duties/grid";
@@ -111,9 +110,26 @@ type ScoutRowProps = {
   duties: Duty[];
   onToggleActive: (duty: Duty) => void;
   onDelete: (dutyId: Id<"scoutingDuties">) => void;
+  assignDisabled: boolean;
+  assignDisabledReason?: string;
+  onAssignPosition: (
+    scoutId: string,
+    alliance: "Red" | "Blue",
+    position: number
+  ) => Promise<void>;
+  onAssignTeam: (scoutId: string, teamNumber: number) => Promise<void>;
 };
 
-function ScoutRow({ scout, duties, onToggleActive, onDelete }: ScoutRowProps) {
+function ScoutRow({
+  scout,
+  duties,
+  onToggleActive,
+  onDelete,
+  assignDisabled,
+  assignDisabledReason,
+  onAssignPosition,
+  onAssignTeam,
+}: ScoutRowProps) {
   return (
     <div className="rounded-lg border bg-card p-4">
       <div className="flex items-start gap-3">
@@ -144,171 +160,407 @@ function ScoutRow({ scout, duties, onToggleActive, onDelete }: ScoutRowProps) {
             )}
           </div>
         </div>
+        <QuickAssignPopover
+          disabled={assignDisabled}
+          disabledReason={assignDisabledReason}
+          onAssignPosition={onAssignPosition}
+          onAssignTeam={onAssignTeam}
+          scout={scout}
+        />
       </div>
     </div>
   );
 }
 
-type CreateAssignmentDialogProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  scouts: Array<{ userId: string; displayName: string; role: string }>;
-  onSubmit: (args: CreateArgs) => Promise<void>;
-};
+type SlotTarget = { alliance: "Red" | "Blue"; position: number };
 
-function CreateAssignmentDialog({
-  open,
-  onOpenChange,
+function PositionSlotDialog({
+  slot,
   scouts,
-  onSubmit,
-}: CreateAssignmentDialogProps) {
-  const [scout, setScout] = useState("");
-  const [type, setType] = useState<"team" | "position">("team");
-  const [teamNumber, setTeamNumber] = useState("");
-  const [alliance, setAlliance] = useState<"Red" | "Blue">("Red");
-  const [position, setPosition] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  scoutNames,
+  duties,
+  onAdd,
+  onRemove,
+  onClose,
+}: {
+  slot: SlotTarget | null;
+  scouts: Array<{ userId: string; displayName: string; role: string }>;
+  scoutNames: Map<string, string>;
+  duties: Duty[];
+  onAdd: (args: CreateArgs, options?: { silent?: boolean }) => Promise<void>;
+  onRemove: (dutyId: Id<"scoutingDuties">) => void | Promise<void>;
+  onClose: () => void;
+}) {
+  const [selectedToAdd, setSelectedToAdd] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
-  function handleClose() {
-    onOpenChange(false);
-    setScout("");
-    setTeamNumber("");
+  useEffect(() => {
+    if (slot) {
+      setSelectedToAdd(new Set());
+    }
+  }, [slot]);
+
+  const open = slot !== null;
+  const alliance = slot?.alliance;
+  const position = slot?.position;
+
+  const dutiesOnSlot =
+    alliance !== undefined && position !== undefined
+      ? duties.filter(
+          (d) =>
+            d.delegationType === "position" &&
+            d.allianceColour === alliance &&
+            d.alliancePosition === position &&
+            d.deletedAt === undefined
+        )
+      : [];
+
+  const assignedIds = new Set(dutiesOnSlot.map((d) => d.scout));
+  const availableScouts = scouts.filter((s) => !assignedIds.has(s.userId));
+
+  function toggleSelected(scoutId: string) {
+    setSelectedToAdd((prev) => {
+      const next = new Set(prev);
+      if (next.has(scoutId)) {
+        next.delete(scoutId);
+      } else {
+        next.add(scoutId);
+      }
+      return next;
+    });
   }
 
-  async function handleSubmit() {
-    if (!scout) {
-      toast.error("Select a scout");
+  async function handleBulkAdd() {
+    if (!(alliance !== undefined && position !== undefined)) {
       return;
     }
-    setIsSubmitting(true);
+    const ids = [...selectedToAdd];
+    if (ids.length === 0) {
+      return;
+    }
+    setBulkBusy(true);
     try {
-      await onSubmit({
-        scout,
-        delegationType: type,
-        teamNumber,
-        allianceColour: alliance,
-        alliancePosition: position,
-      });
-      handleClose();
+      const results = await Promise.allSettled(
+        ids.map((scoutId) =>
+          onAdd(
+            {
+              scout: scoutId,
+              delegationType: "position",
+              allianceColour: alliance,
+              alliancePosition: position,
+            },
+            { silent: true }
+          )
+        )
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      const ok = results.length - failed;
+      if (ok > 0) {
+        toast.success(
+          ok === 1
+            ? "1 scout assigned"
+            : `${ok} scouts assigned to ${alliance} ${position}`
+        );
+      }
+      if (failed > 0) {
+        toast.error(
+          failed === 1
+            ? "One assignment could not be created"
+            : `${failed} assignments could not be created`
+        );
+      }
+      setSelectedToAdd(new Set());
+      if (failed === 0) {
+        onClose();
+      }
     } finally {
-      setIsSubmitting(false);
+      setBulkBusy(false);
     }
   }
 
+  const label =
+    alliance !== undefined && position !== undefined
+      ? `${alliance} ${position}`
+      : "Position";
+
   return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogTrigger asChild>
-        <Button size="sm" type="button">
-          <Plus className="size-3.5" />
-          Add assignment
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+    <Dialog
+      onOpenChange={(next) => {
+        if (!next) {
+          onClose();
+        }
+      }}
+      open={open}
+    >
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>New Assignment</DialogTitle>
+          {/** biome-ignore lint/suspicious/noCommentText: PASS */}
+          <DialogTitle>Assign // {label}</DialogTitle>
         </DialogHeader>
         <div className="space-y-5 py-1">
           <div className="space-y-2">
-            <Label>Scout</Label>
-            <Select onValueChange={setScout} value={scout}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a scout…" />
-              </SelectTrigger>
-              <SelectContent>
-                {scouts.map((s) => (
-                  <SelectItem key={s.userId} value={s.userId}>
-                    <span>{s.displayName}</span>
-                    <span className="ml-1.5 text-muted-foreground text-xs capitalize">
-                      {s.role === "leadScout" ? "Lead Scout" : s.role}
+            <Label className="text-muted-foreground text-xs">
+              Currently on this slot
+            </Label>
+            {dutiesOnSlot.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No one yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {dutiesOnSlot.map((duty) => (
+                  <li
+                    className="flex min-h-12 items-center justify-between gap-3 rounded-lg border bg-muted/40 px-3 py-2"
+                    key={duty._id}
+                  >
+                    <span className="min-w-0 truncate font-medium text-sm">
+                      {scoutNames.get(duty.scout) ?? duty.scout}
+                      {duty.isActive ? null : (
+                        <span className="ml-1.5 text-muted-foreground text-xs">
+                          (paused)
+                        </span>
+                      )}
                     </span>
-                  </SelectItem>
+                    <Button
+                      className="size-10 shrink-0 touch-manipulation"
+                      onClick={() => onRemove(duty._id)}
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </li>
                 ))}
-              </SelectContent>
-            </Select>
+              </ul>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label>Assignment Type</Label>
-            <Select
-              onValueChange={(v) => setType(v as "team" | "position")}
-              value={type}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="team">Track a specific team</SelectItem>
-                <SelectItem value="position">
-                  Track an alliance position
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <Label className="text-muted-foreground text-xs">
+              Add scouts to {label}
+            </Label>
+            {availableScouts.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                Everyone in your organisation is already on this slot.
+              </p>
+            ) : (
+              <ul className="max-h-[min(50vh,20rem)] space-y-2 overflow-y-auto pr-1">
+                {availableScouts.map((s) => {
+                  const selected = selectedToAdd.has(s.userId);
+                  return (
+                    <li key={s.userId}>
+                      <button
+                        aria-pressed={selected}
+                        className={cn(
+                          "flex min-h-12 w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          selected
+                            ? "border-primary bg-primary/10"
+                            : "border-border bg-card hover:bg-muted/60 active:bg-muted/80"
+                        )}
+                        onClick={() => toggleSelected(s.userId)}
+                        type="button"
+                      >
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary text-xs">
+                          {getInitials(s.displayName)}
+                        </div>
+                        <span className="min-w-0 flex-1 font-medium text-sm leading-snug">
+                          {s.displayName}
+                        </span>
+                        <span
+                          className={cn(
+                            "flex size-8 shrink-0 items-center justify-center rounded-md border-2",
+                            selected
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-muted-foreground/30 bg-transparent"
+                          )}
+                        >
+                          {selected ? (
+                            <Check
+                              aria-hidden
+                              className="size-4"
+                              strokeWidth={2.5}
+                            />
+                          ) : null}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
-
-          {type === "team" ? (
-            <div className="space-y-2">
-              <Label>Team Number</Label>
-              <Input
-                inputMode="numeric"
-                onChange={(e) => setTeamNumber(e.target.value)}
-                placeholder="e.g. 1234"
-                value={teamNumber}
-              />
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Alliance</Label>
-                <Select
-                  onValueChange={(v) => setAlliance(v as "Red" | "Blue")}
-                  value={alliance}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Red">
-                      <span className="text-red-600 dark:text-red-400">
-                        Red
-                      </span>
-                    </SelectItem>
-                    <SelectItem value="Blue">
-                      <span className="text-blue-600 dark:text-blue-400">
-                        Blue
-                      </span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Position</Label>
-                <Select
-                  onValueChange={(v) => setPosition(Number(v))}
-                  value={String(position)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Position 1</SelectItem>
-                    <SelectItem value="2">Position 2</SelectItem>
-                    <SelectItem value="3">Position 3</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
         </div>
-        <DialogFooter>
-          <Button onClick={handleClose} type="button" variant="outline">
-            Cancel
-          </Button>
-          <Button disabled={isSubmitting} onClick={handleSubmit} type="button">
-            {isSubmitting ? "Creating…" : "Create"}
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            disabled={
+              bulkBusy ||
+              selectedToAdd.size === 0 ||
+              availableScouts.length === 0
+            }
+            onClick={handleBulkAdd}
+            type="button"
+          >
+            {bulkBusy
+              ? "Assigning…"
+              : selectedToAdd.size === 0
+                ? "Assign selected"
+                : `Assign ${selectedToAdd.size} scout${selectedToAdd.size === 1 ? "" : "s"}`}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+type QuickAssignPopoverProps = {
+  scout: { userId: string; displayName: string; role: string };
+  disabled: boolean;
+  disabledReason?: string;
+  onAssignPosition: (
+    scoutId: string,
+    alliance: "Red" | "Blue",
+    position: number
+  ) => Promise<void>;
+  onAssignTeam: (scoutId: string, teamNumber: number) => Promise<void>;
+};
+
+function QuickAssignPopover({
+  scout,
+  disabled,
+  disabledReason,
+  onAssignPosition,
+  onAssignTeam,
+}: QuickAssignPopoverProps) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"position" | "team">("position");
+  const [teamInput, setTeamInput] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function handlePositionTap(alliance: "Red" | "Blue", position: number) {
+    setBusy(true);
+    try {
+      await onAssignPosition(scout.userId, alliance, position);
+      setOpen(false);
+    } catch {
+      //
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleTeamSubmit() {
+    const n = Number.parseInt(teamInput, 10);
+    if (Number.isNaN(n) || n < 1) {
+      toast.error("Enter a valid team number");
+      return;
+    }
+    setBusy(true);
+    try {
+      await onAssignTeam(scout.userId, n);
+      setOpen(false);
+      setTeamInput("");
+    } catch {
+      //
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const triggerButton = (
+    <Button
+      className="shrink-0 gap-1"
+      disabled={disabled}
+      size="sm"
+      type="button"
+      variant="outline"
+    >
+      <UserRoundPlus className="size-3.5" />
+      Assign
+    </Button>
+  );
+
+  return (
+    <Popover onOpenChange={setOpen} open={Boolean(!disabled && open)}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex">
+            <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          {disabled
+            ? (disabledReason ?? "Enter an event code to assign")
+            : "Assign to a team or alliance slot"}
+        </TooltipContent>
+      </Tooltip>
+      <PopoverContent align="end" className="w-72 p-3">
+        <div className="space-y-3">
+          <div className="flex gap-1 rounded-md border p-0.5">
+            <Button
+              className="h-7 flex-1 text-xs"
+              onClick={() => setMode("position")}
+              size="sm"
+              type="button"
+              variant={mode === "position" ? "secondary" : "ghost"}
+            >
+              Position
+            </Button>
+            <Button
+              className="h-7 flex-1 text-xs"
+              onClick={() => setMode("team")}
+              size="sm"
+              type="button"
+              variant={mode === "team" ? "secondary" : "ghost"}
+            >
+              Team
+            </Button>
+          </div>
+          {mode === "position" ? (
+            <div className="space-y-2">
+              <div className="grid grid-cols-3 gap-1.5">
+                {(["Red", "Blue"] as const).flatMap((a) =>
+                  [1, 2, 3].map((p) => (
+                    <Button
+                      className={
+                        a === "Red"
+                          ? "h-9 border-red-200 bg-red-50 text-red-800 text-xs hover:bg-red-100 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-950/60"
+                          : "h-9 border-blue-200 bg-blue-50 text-blue-800 text-xs hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-950/60"
+                      }
+                      disabled={busy}
+                      key={`${a}-${p}`}
+                      onClick={() => handlePositionTap(a, p)}
+                      type="button"
+                      variant="outline"
+                    >
+                      {a[0]}
+                      {p}
+                    </Button>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                className="h-9"
+                inputMode="numeric"
+                onChange={(e) => setTeamInput(e.target.value)}
+                placeholder="Team #"
+                value={teamInput}
+              />
+              <Button
+                disabled={busy}
+                onClick={() => handleTeamSubmit()}
+                size="sm"
+                type="button"
+              >
+                Add
+              </Button>
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -386,7 +638,7 @@ export function DutiesManagement() {
   const deleteDuty = useMutation(api.duties.deleteDuty);
 
   const handleCreate = useCallback(
-    async (args: CreateArgs) => {
+    async (args: CreateArgs, options?: { silent?: boolean }) => {
       if (!(organisation && eventCode.trim())) {
         toast.error("Enter an event code first");
         return;
@@ -407,7 +659,9 @@ export function DutiesManagement() {
             args
           );
         }
-        toast.success("Assignment created");
+        if (!options?.silent) {
+          toast.success("Assignment created");
+        }
       } catch (error) {
         const msg =
           error instanceof Error
@@ -507,7 +761,7 @@ type AssignmentContentProps = {
   totalAssignments: number;
   onViewModeChange: (mode: "list" | "grid") => void;
   onCreateOpenChange: (open: boolean) => void;
-  onCreate: (args: CreateArgs) => Promise<void>;
+  onCreate: (args: CreateArgs, options?: { silent?: boolean }) => Promise<void>;
   onToggleActive: (duty: Duty) => void;
   onDelete: (dutyId: Id<"scoutingDuties">) => void;
 };
@@ -519,14 +773,37 @@ function AssignmentContent({
   scoutNames,
   viewMode,
   isLoadingDuties,
-  isCreateOpen,
   totalAssignments,
   onViewModeChange,
-  onCreateOpenChange,
   onCreate,
   onToggleActive,
   onDelete,
 }: AssignmentContentProps) {
+  const [slotDialog, setSlotDialog] = useState<SlotTarget | null>(null);
+
+  const onAssignPosition = useCallback(
+    async (scoutId: string, alliance: "Red" | "Blue", position: number) => {
+      await onCreate({
+        scout: scoutId,
+        delegationType: "position",
+        allianceColour: alliance,
+        alliancePosition: position,
+      });
+    },
+    [onCreate]
+  );
+
+  const onAssignTeam = useCallback(
+    async (scoutId: string, teamNumber: number) => {
+      await onCreate({
+        scout: scoutId,
+        delegationType: "team",
+        teamNumber: String(teamNumber),
+      });
+    },
+    [onCreate]
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -569,17 +846,19 @@ function AssignmentContent({
               <TooltipContent>Grid view</TooltipContent>
             </Tooltip>
           </div>
-          <CreateAssignmentDialog
-            onOpenChange={onCreateOpenChange}
-            onSubmit={onCreate}
-            open={isCreateOpen}
-            scouts={scouts}
-          />
         </div>
       </div>
 
       {viewMode === "grid" ? (
-        <DutiesGrid duties={duties} scoutNames={scoutNames} />
+        <DutiesGrid
+          duties={duties}
+          onPositionClick={
+            isLoadingDuties
+              ? undefined
+              : (alliance, position) => setSlotDialog({ alliance, position })
+          }
+          scoutNames={scoutNames}
+        />
       ) : isLoadingDuties ? (
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (
@@ -594,8 +873,14 @@ function AssignmentContent({
         <div className="space-y-2">
           {scouts.map((scout) => (
             <ScoutRow
+              assignDisabled={isLoadingDuties}
+              {...(isLoadingDuties
+                ? { assignDisabledReason: "Loading assignments…" as const }
+                : {})}
               duties={dutiesByScout.get(scout.userId) ?? []}
               key={scout.userId}
+              onAssignPosition={onAssignPosition}
+              onAssignTeam={onAssignTeam}
               onDelete={onDelete}
               onToggleActive={onToggleActive}
               scout={scout}
@@ -603,6 +888,15 @@ function AssignmentContent({
           ))}
         </div>
       )}
+      <PositionSlotDialog
+        duties={duties}
+        onAdd={onCreate}
+        onClose={() => setSlotDialog(null)}
+        onRemove={onDelete}
+        scoutNames={scoutNames}
+        scouts={scouts}
+        slot={slotDialog}
+      />
     </div>
   );
 }
