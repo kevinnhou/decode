@@ -3,6 +3,7 @@
 import { api } from "@decode/backend/convex/_generated/api";
 import type { Doc } from "@decode/backend/convex/_generated/dataModel";
 import { useQuery } from "convex/react";
+import { useConfigRevision } from "@/hooks/use-config-revision";
 import { getConfig } from "@/lib/config";
 
 /**
@@ -15,6 +16,7 @@ export function useMyDuties(): {
   duties: Doc<"scoutingDuties">[] | null;
   isLoading: boolean;
 } {
+  useConfigRevision();
   const config = getConfig();
   const eventCode = config?.eventCode?.trim() ?? null;
 
