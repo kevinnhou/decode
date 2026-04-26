@@ -37,6 +37,10 @@ const SIDEBAR_HEADER_CONFIGS: SidebarHeaderConfig[] = [
     pattern: /\/scout\/frc\/pit$/,
     component: <PitSections />,
   },
+  {
+    pattern: /\/scout\/ftc\/pit$/,
+    component: <PitSections />,
+  },
 ];
 
 function DynamicSidebarHeader({ pathname }: { pathname: string }) {

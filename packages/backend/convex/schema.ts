@@ -109,6 +109,12 @@ export default defineSchema({
     autonomousMissed: v.optional(v.number()),
     teleopMade: v.optional(v.number()),
     teleopMissed: v.optional(v.number()),
+    ftcPeriodData: v.optional(
+      v.object({
+        auto: v.object({ made: v.number(), missed: v.number() }),
+        teleop: v.object({ made: v.number(), missed: v.number() }),
+      })
+    ),
     tags: v.optional(v.array(v.string())),
     fieldEvents: v.optional(
       v.array(
@@ -249,7 +255,8 @@ export default defineSchema({
     ),
     photos: v.optional(v.array(v.string())),
     notes: v.optional(v.string()),
-    // FTC pit fields (to be defined later)
+    // FTC pit fields
+    canShootDeep: v.optional(v.boolean()),
     // FRC pit fields
     hopperCapacity: v.optional(v.number()),
     shootingSpeed: v.optional(v.number()),

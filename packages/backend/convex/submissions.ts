@@ -32,6 +32,12 @@ export const submitMatchFTC = mutation({
     autonomousMissed: v.number(),
     teleopMade: v.number(),
     teleopMissed: v.number(),
+    ftcPeriodData: v.optional(
+      v.object({
+        auto: v.object({ made: v.number(), missed: v.number() }),
+        teleop: v.object({ made: v.number(), missed: v.number() }),
+      })
+    ),
     tags: v.array(v.string()),
     fieldEvents: v.optional(
       v.array(
@@ -69,6 +75,7 @@ export const submitMatchFTC = mutation({
       autonomousMissed: args.autonomousMissed,
       teleopMade: args.teleopMade,
       teleopMissed: args.teleopMissed,
+      ftcPeriodData: args.ftcPeriodData,
       tags: args.tags,
       fieldEvents: args.fieldEvents,
       createdAt: now,
@@ -236,6 +243,8 @@ export const submitPit = mutation({
     ),
     photos: v.optional(v.array(v.string())),
     notes: v.optional(v.string()),
+    // FTC pit fields
+    canShootDeep: v.optional(v.boolean()),
     // FRC pit fields
     hopperCapacity: v.optional(v.number()),
     shootingSpeed: v.optional(v.number()),
@@ -270,6 +279,8 @@ export const submitPit = mutation({
       drivetrainType: args.drivetrainType,
       photos: args.photos,
       notes: args.notes,
+      // FTC pit fields
+      canShootDeep: args.canShootDeep,
       // FRC pit fields
       hopperCapacity: args.hopperCapacity,
       shootingSpeed: args.shootingSpeed,

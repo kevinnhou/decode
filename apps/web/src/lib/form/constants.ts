@@ -74,6 +74,41 @@ export type FrcPeriod =
   | "SHIFT_4"
   | "END_GAME";
 
+export const FTC_INITIAL_TIME_SECONDS = 165;
+
+export type FtcPeriod = "AUTO" | "TRANSITION" | "TELEOP";
+
+export const FTC_PERIOD_BOUNDARIES: {
+  start: number;
+  end: number;
+  period: FtcPeriod;
+}[] = [
+  { start: 0, end: 30, period: "AUTO" },
+  { start: 30, end: 45, period: "TRANSITION" },
+  { start: 45, end: 165, period: "TELEOP" },
+];
+
+export const FTC_PERIOD_TO_KEY: Record<
+  FtcPeriod,
+  "auto" | "transition" | "teleop"
+> = {
+  AUTO: "auto",
+  TRANSITION: "transition",
+  TELEOP: "teleop",
+};
+
+export const FTC_INTAKE_METHOD_OPTIONS = [
+  { id: "floor" as const, label: "Floor" },
+  { id: "outpost" as const, label: "Human Player" },
+];
+
+export const FTC_PIT_SECTION_CONFIG: SectionConfig[] = [
+  { id: "metadata", label: "Metadata" },
+  { id: "robotDimensions", label: "Robot Dimensions" },
+  { id: "capabilities", label: "Capabilities" },
+  { id: "notes", label: "Notes" },
+];
+
 export const FRC_PERIOD_BOUNDARIES: {
   start: number;
   end: number;

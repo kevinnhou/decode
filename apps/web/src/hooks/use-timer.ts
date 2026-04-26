@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { FrcPeriod, TimerState } from "@/lib/form/constants";
+import type { FrcPeriod, FtcPeriod, TimerState } from "@/lib/form/constants";
 import {
   FINAL_TIME_SECONDS,
   FRC_PERIOD_BOUNDARIES,
+  FTC_INITIAL_TIME_SECONDS,
+  FTC_PERIOD_BOUNDARIES,
   INITIAL_TIME_SECONDS,
   PAUSE_TIME_SECONDS,
 } from "@/lib/form/constants";
@@ -355,6 +357,196 @@ export function useMatchTimerFRC(): UseMatchTimerFRCReturn {
   const getCurrentPeriod = useCallback((): FrcPeriod => {
     const elapsed = INITIAL_TIME_SECONDS - timeRemaining;
     return getFrcPeriodFromElapsed(elapsed);
+  }, [timeRemaining]);
+
+  return {
+    timeRemaining,
+    elapsedTime,
+    state,
+    startTimestamp,
+    start,
+    pause,
+    resume,
+    reset,
+    formatTime,
+    getEventTimestamp,
+    getCurrentPeriod,
+  };
+}
+
+export function getFtcPeriodFromElapsed(elapsedSeconds: number): FtcPeriod {
+  for (const { end, period } of FTC_PERIOD_BOUNDARIES) {
+    if (elapsedSeconds <= end) {
+      return period;
+    }
+  }
+  return "TELEOP";
+}
+
+export function getFtcPeriodProgress(elapsedSeconds: number): {
+  period: FtcPeriod;
+  periodDuration: number;
+  elapsedInPeriod: number;
+  timeRemainingInPeriod: number;
+} {
+  const period = getFtcPeriodFromElapsed(elapsedSeconds);
+  const bounds = FTC_PERIOD_BOUNDARIES.find((b) => b.period === period);
+  if (!bounds) {
+    return {
+      period: "TELEOP",
+      periodDuration: 120,
+      elapsedInPeriod: 120,
+      timeRemainingInPeriod: 0,
+    };
+  }
+  const periodDuration = bounds.end - bounds.start;
+  const elapsedInPeriod = Math.min(
+    elapsedSeconds - bounds.start,
+    periodDuration
+  );
+  const timeRemainingInPeriod = Math.max(0, periodDuration - elapsedInPeriod);
+  return { period, periodDuration, elapsedInPeriod, timeRemainingInPeriod };
+}
+
+interface UseMatchTimerFTCReturn extends UseMatchTimerReturn {
+  getCurrentPeriod: () => FtcPeriod;
+}
+
+export function useMatchTimerFTC(): UseMatchTimerFTCReturn {
+  const [timeRemaining, setTimeRemaining] = useState(FTC_INITIAL_TIME_SECONDS);
+  const [state, setState] = useState<TimerState>("idle");
+  const [startTimestamp, setStartTimestamp] = useState<string | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const pausedTimeRef = useRef<number>(0);
+  const lastDisplayedSecondRef = useRef<number>(FTC_INITIAL_TIME_SECONDS);
+  const stateRef = useRef<TimerState>("idle");
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  const cancelAnimationFrame = useCallback(() => {
+    if (animationFrameRef.current !== null) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  }, []);
+
+  const formatTime = useCallback((seconds: number): string => {
+    const rounded = Math.floor(seconds);
+    const mins = Math.floor(rounded / 60);
+    const secs = rounded % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  }, []);
+
+  const updateTimerRef = useRef<(() => void) | undefined>(undefined);
+
+  updateTimerRef.current = () => {
+    if (stateRef.current !== "running") {
+      return;
+    }
+
+    const now = Date.now();
+    const elapsed = (now - (startTimeRef.current ?? now)) / 1000;
+    const remaining = FTC_INITIAL_TIME_SECONDS - elapsed;
+    const roundedRemaining = Math.floor(remaining);
+
+    if (roundedRemaining !== lastDisplayedSecondRef.current) {
+      lastDisplayedSecondRef.current = roundedRemaining;
+      setTimeRemaining(remaining);
+    }
+
+    if (remaining <= FINAL_TIME_SECONDS) {
+      setTimeRemaining(FINAL_TIME_SECONDS);
+      setState("finished");
+      cancelAnimationFrame();
+      return;
+    }
+
+    if (updateTimerRef.current) {
+      animationFrameRef.current = window.requestAnimationFrame(
+        updateTimerRef.current
+      );
+    }
+  };
+
+  const start = useCallback(() => {
+    if (stateRef.current === "running") {
+      return;
+    }
+
+    if (stateRef.current === "idle") {
+      setStartTimestamp(new Date().toISOString());
+      lastDisplayedSecondRef.current = FTC_INITIAL_TIME_SECONDS;
+    }
+
+    setState("running");
+    startTimeRef.current = Date.now() - pausedTimeRef.current * 1000;
+    if (updateTimerRef.current) {
+      animationFrameRef.current = window.requestAnimationFrame(
+        updateTimerRef.current
+      );
+    }
+  }, []);
+
+  const pause = useCallback(() => {
+    if (stateRef.current !== "running") {
+      return;
+    }
+
+    const now = Date.now();
+    const elapsed = (now - (startTimeRef.current ?? now)) / 1000;
+    pausedTimeRef.current = elapsed;
+
+    setState("paused");
+    cancelAnimationFrame();
+  }, [cancelAnimationFrame]);
+
+  const resume = useCallback(() => {
+    if (stateRef.current !== "paused") {
+      return;
+    }
+
+    setState("running");
+    startTimeRef.current = Date.now() - pausedTimeRef.current * 1000;
+    if (updateTimerRef.current) {
+      animationFrameRef.current = window.requestAnimationFrame(
+        updateTimerRef.current
+      );
+    }
+  }, []);
+
+  const reset = useCallback(() => {
+    cancelAnimationFrame();
+    setTimeRemaining(FTC_INITIAL_TIME_SECONDS);
+    setState("idle");
+    setStartTimestamp(null);
+    startTimeRef.current = null;
+    pausedTimeRef.current = 0;
+    lastDisplayedSecondRef.current = FTC_INITIAL_TIME_SECONDS;
+  }, [cancelAnimationFrame]);
+
+  useEffect(
+    () => () => {
+      cancelAnimationFrame();
+    },
+    [cancelAnimationFrame]
+  );
+
+  const elapsedTime = useMemo(
+    () => FTC_INITIAL_TIME_SECONDS - timeRemaining,
+    [timeRemaining]
+  );
+
+  const getEventTimestamp = useCallback((): string => {
+    const currentElapsed = FTC_INITIAL_TIME_SECONDS - timeRemaining;
+    return formatTime(currentElapsed);
+  }, [timeRemaining, formatTime]);
+
+  const getCurrentPeriod = useCallback((): FtcPeriod => {
+    const elapsed = FTC_INITIAL_TIME_SECONDS - timeRemaining;
+    return getFtcPeriodFromElapsed(elapsed);
   }, [timeRemaining]);
 
   return {

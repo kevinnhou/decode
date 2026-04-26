@@ -11,7 +11,7 @@ import { FormLabel } from "@decode/ui/components/form";
 import type { UseFormReturn } from "@decode/ui/lib/react-hook-form";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PAUSE_TIME_SECONDS, type TimerState } from "@/lib/form/constants";
+import type { FtcPeriod, TimerState } from "@/lib/form/constants";
 import type {
   FieldEventSchema,
   FieldSchema,
@@ -42,7 +42,7 @@ interface FieldInputProps {
   form: UseFormReturn<FormSchema>;
   onEventsChange: (events: FieldSchema) => void;
   getEventTimestamp: () => string;
-  timeRemaining: number;
+  getCurrentPeriod: () => FtcPeriod;
   timerState: TimerState;
 }
 
@@ -64,7 +64,7 @@ export function FieldInput({
   form,
   onEventsChange,
   getEventTimestamp,
-  timeRemaining,
+  getCurrentPeriod,
   timerState,
 }: FieldInputProps) {
   const [pendingEvent, setPendingEvent] = useState<PendingEvent | null>(null);
@@ -74,7 +74,9 @@ export function FieldInput({
   const imageRef = useRef<HTMLDivElement>(null);
 
   const isTimerStarted = timerState !== "idle";
-  const isAutonomous = timeRemaining > PAUSE_TIME_SECONDS;
+  const currentPeriod = isTimerStarted ? getCurrentPeriod() : null;
+  const isAutonomous =
+    currentPeriod === "AUTO" || currentPeriod === "TRANSITION";
 
   const availableEventTypes = useMemo(() => {
     if (!isTimerStarted) {
@@ -120,11 +122,8 @@ export function FieldInput({
     const normalizedX = (clickX / rect.width) * ORIGINAL_IMAGE_WIDTH;
     const normalizedY = (clickY / rect.height) * ORIGINAL_IMAGE_HEIGHT;
 
-    const defaultEventType: EventType = isTimerStarted
-      ? isAutonomous
-        ? "autonomous_made"
-        : "teleop_made"
-      : "teleop_made";
+    const defaultEventType: EventType =
+      isTimerStarted && isAutonomous ? "autonomous_made" : "teleop_made";
 
     setPendingEvent({ x: normalizedX, y: normalizedY });
     setDialogEventType(defaultEventType);
