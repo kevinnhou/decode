@@ -34,6 +34,11 @@ export const createAuth = (ctx: GenericCtx<DataModel>) =>
       enabled: true,
       requireEmailVerification: false,
     },
+    user: {
+      deleteUser: {
+        enabled: true,
+      },
+    },
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? {
           socialProviders: {
@@ -461,6 +466,35 @@ export const regenerateInviteCode = mutation({
     });
 
     return newInviteCode;
+  },
+});
+
+/**
+ * Deletes the current user's app data (profile and scouting duties) in preparation for account deletion.
+ * Must be called before the Better Auth `deleteUser` call on the client, which removes auth credentials.
+ *
+ * @param ctx - The Convex mutation context
+ * @param _args - No arguments
+ * @returns void
+ * @throws ConvexError if not authenticated
+ */
+export const deleteAccount = mutation({
+  args: {},
+  returns: v.null(),
+  async handler(ctx, _args) {
+    const { authUser, profile } = await requireUserProfile(ctx);
+
+    const duties = await ctx.db
+      .query("scoutingDuties")
+      .withIndex("by_scout", (q) => q.eq("scout", authUser._id))
+      .collect();
+    for (const duty of duties) {
+      await ctx.db.delete(duty._id);
+    }
+
+    await ctx.db.delete(profile._id);
+
+    return null;
   },
 });
 

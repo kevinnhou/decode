@@ -354,14 +354,23 @@ function KeyCaptureButton({
 
 interface SettingsTabProps {
   onSignOut: () => Promise<void>;
+  onDeleteAccount: () => Promise<void>;
   canManage: boolean;
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: PASS
-function SettingsTab({ onSignOut, canManage }: SettingsTabProps) {
+function SettingsTab({
+  onSignOut,
+  onDeleteAccount,
+  canManage,
+}: SettingsTabProps) {
   const { shortcuts, setShortcut, resetShortcuts } = useShortcuts();
   const [teamFiles, setTeamFiles] = useState<File[]>();
   const [isTeamMapLoading, setIsTeamMapLoading] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [holdProgress, setHoldProgress] = useState(0);
+  const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const HOLD_DURATION_MS = 5000;
 
   const saveTeamsMapMutation = useMutation(api.teams.saveTeamsMap);
 
@@ -679,10 +688,101 @@ function SettingsTab({ onSignOut, canManage }: SettingsTabProps) {
         <div>
           <h3 className="font-medium text-sm">Account</h3>
         </div>
-        <Button className="gap-2" onClick={onSignOut} variant="destructive">
-          <LogOut className="size-4" />
-          Sign Out
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button className="gap-2" onClick={onSignOut} variant="destructive">
+            <LogOut className="size-4" />
+            Sign Out
+          </Button>
+          <button
+            className={cn(
+              "relative h-9 select-none overflow-hidden rounded-md border px-4 text-sm transition-colors",
+              isDeletingAccount
+                ? "cursor-not-allowed border-destructive/50 text-destructive/50"
+                : "cursor-pointer border-border text-foreground hover:border-destructive/50 hover:text-destructive"
+            )}
+            disabled={isDeletingAccount}
+            onMouseDown={() => {
+              if (isDeletingAccount) {
+                return;
+              }
+              const start = Date.now();
+              const tick = 50;
+              holdIntervalRef.current = setInterval(() => {
+                const elapsed = Date.now() - start;
+                const progress = Math.min(elapsed / HOLD_DURATION_MS, 1);
+                setHoldProgress(progress);
+                if (progress >= 1) {
+                  if (holdIntervalRef.current) {
+                    clearInterval(holdIntervalRef.current);
+                    holdIntervalRef.current = null;
+                  }
+                  setIsDeletingAccount(true);
+                  onDeleteAccount().finally(() => {
+                    setIsDeletingAccount(false);
+                    setHoldProgress(0);
+                  });
+                }
+              }, tick);
+            }}
+            onMouseLeave={() => {
+              if (holdIntervalRef.current) {
+                clearInterval(holdIntervalRef.current);
+                holdIntervalRef.current = null;
+              }
+              setHoldProgress(0);
+            }}
+            onMouseUp={() => {
+              if (holdIntervalRef.current) {
+                clearInterval(holdIntervalRef.current);
+                holdIntervalRef.current = null;
+              }
+              setHoldProgress(0);
+            }}
+            onTouchEnd={() => {
+              if (holdIntervalRef.current) {
+                clearInterval(holdIntervalRef.current);
+                holdIntervalRef.current = null;
+              }
+              setHoldProgress(0);
+            }}
+            onTouchStart={() => {
+              if (isDeletingAccount) {
+                return;
+              }
+              const start = Date.now();
+              const tick = 50;
+              holdIntervalRef.current = setInterval(() => {
+                const elapsed = Date.now() - start;
+                const progress = Math.min(elapsed / HOLD_DURATION_MS, 1);
+                setHoldProgress(progress);
+                if (progress >= 1) {
+                  if (holdIntervalRef.current) {
+                    clearInterval(holdIntervalRef.current);
+                    holdIntervalRef.current = null;
+                  }
+                  setIsDeletingAccount(true);
+                  onDeleteAccount().finally(() => {
+                    setIsDeletingAccount(false);
+                    setHoldProgress(0);
+                  });
+                }
+              }, tick);
+            }}
+            type="button"
+          >
+            <span
+              className="absolute inset-0 origin-left bg-destructive/15 transition-none"
+              style={{ transform: `scaleX(${holdProgress})` }}
+            />
+            <span className="relative">
+              {isDeletingAccount
+                ? "Deleting…"
+                : holdProgress > 0
+                  ? "Keep holding…"
+                  : "Delete Account"}
+            </span>
+          </button>
+        </div>
       </section>
     </div>
   );
@@ -866,6 +966,8 @@ export default function ProfilePage() {
   const profile = useQuery(api.auth.getCurrentUserProfile);
   const organisation = useQuery(api.auth.getOrganisation);
 
+  const deleteAccountMutation = useMutation(api.auth.deleteAccount);
+
   const [activeTab, setActiveTab] = useState("personal");
 
   const isAdmin = profile?.role === "admin";
@@ -875,6 +977,17 @@ export default function ProfilePage() {
     await authClient.signOut();
     router.push("/" as Route);
     router.refresh();
+  }
+
+  async function handleDeleteAccount() {
+    try {
+      await deleteAccountMutation();
+      await authClient.deleteUser();
+      router.push("/" as Route);
+      router.refresh();
+    } catch {
+      toast.error("Failed to delete account. Please try again.");
+    }
   }
 
   if (!(user && profile)) {
@@ -909,7 +1022,11 @@ export default function ProfilePage() {
           ) : null}
 
           {activeTab === "settings" ? (
-            <SettingsTab canManage={canManage} onSignOut={handleSignOut} />
+            <SettingsTab
+              canManage={canManage}
+              onDeleteAccount={handleDeleteAccount}
+              onSignOut={handleSignOut}
+            />
           ) : null}
 
           {activeTab === "organisation" ? (
