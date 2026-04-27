@@ -18,6 +18,7 @@ import {
   ArrowUpDown,
   BarChart3,
   GitCompareArrows,
+  MapPin,
   Wrench,
 } from "lucide-react";
 import type { Route } from "next";
@@ -32,6 +33,31 @@ import {
   type TeamAggregate,
   withAnalyseCompetition,
 } from "@/lib/analyse";
+
+function SpatialMapBadge({
+  hasMatchData,
+  matchCount,
+}: {
+  hasMatchData: boolean;
+  matchCount?: number;
+}) {
+  if (!hasMatchData) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  if (typeof matchCount === "number" && matchCount > 0) {
+    return (
+      <Badge
+        className="inline-flex items-center gap-0.5 px-1.5 text-[10px]"
+        title={`${matchCount} match${matchCount !== 1 ? "es" : ""} with field map data`}
+        variant="outline"
+      >
+        <MapPin className="size-2.5" />
+        {matchCount}
+      </Badge>
+    );
+  }
+  return <span className="text-muted-foreground">—</span>;
+}
 
 function TeamRow({
   team,
@@ -48,11 +74,11 @@ function TeamRow({
 }) {
   const unit =
     competitionType === "FTC"
-      ? "makes/match"
+      ? "artifacts"
       : team.primaryInputMode === "form"
         ? "s"
-        : "ev";
-  const defenseUnit = competitionType === "FTC" ? "w/ tag/match" : unit;
+        : "events";
+  const defenseUnit = competitionType === "FTC" ? "tags" : unit;
   const hasMatchData = team.matchCount > 0;
   return (
     <TableRow className={isSelected ? "bg-muted/40" : ""}>
@@ -86,6 +112,12 @@ function TeamRow({
         ) : (
           <span className="text-muted-foreground">—</span>
         )}
+      </TableCell>
+      <TableCell className="text-center">
+        <SpatialMapBadge
+          hasMatchData={hasMatchData}
+          matchCount={team.fieldSpatialMatchCount}
+        />
       </TableCell>
       <TableCell className="text-right font-mono text-sm">
         {hasMatchData ? (
@@ -319,6 +351,7 @@ export default function EventDashboard() {
                   <SortButton field="matches">Matches</SortButton>
                 </TableHead>
                 <TableHead className="text-right">Pit</TableHead>
+                <TableHead className="w-14 text-center text-xs">Map</TableHead>
                 <TableHead className="text-right">
                   <SortButton field="scoring">Avg Scoring</SortButton>
                 </TableHead>

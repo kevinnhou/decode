@@ -182,7 +182,7 @@ export function FieldInput({
           src="/ftc-field.webp"
           width={1200}
         />
-        {events.map((event) => {
+        {events.map((event, index) => {
           const leftPercent =
             (event.coordinates.x / ORIGINAL_IMAGE_WIDTH) * 100;
           const topPercent =
@@ -191,7 +191,7 @@ export function FieldInput({
           return (
             <div
               className="-translate-x-1/2 -translate-y-1/2 pointer-events-none absolute size-4 rounded-full border-2 border-red-500 bg-red-500/50"
-              key={event.event}
+              key={`${event.timestamp}-${event.coordinates.x}-${event.coordinates.y}-${index}`}
               style={{
                 left: `${leftPercent}%`,
                 top: `${topPercent}%`,

@@ -10,6 +10,7 @@
   "dependencies": {
     "@convex-dev/better-auth": "^0.10.10",
     "@decode/backend": "workspace:*",
+    "@decode/analytics": "workspace:*",
     "@decode/ui": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
     "@tanstack/react-form": "^1.12.3",

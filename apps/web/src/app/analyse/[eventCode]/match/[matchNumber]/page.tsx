@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  type FrcFieldEvent as AnalyticsFrcFieldEvent,
+  countFrcScoringEvents,
+  FRC_PERIOD_ORDER,
+  perPeriodScoringFromFieldEvents,
+  sumDefenseEventSeconds,
+} from "@decode/analytics";
 import { api } from "@decode/backend/convex/_generated/api";
 import { Badge } from "@decode/ui/components/badge";
 import { Button } from "@decode/ui/components/button";
@@ -11,17 +18,22 @@ import {
 } from "@decode/ui/components/card";
 import { Separator } from "@decode/ui/components/separator";
 import { Skeleton } from "@decode/ui/components/skeleton";
+import { cn } from "@decode/ui/lib/utils";
 import { useQuery } from "convex/react";
 import { ArrowLeft, ClipboardList } from "lucide-react";
 import type { Route } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import {
   type AnalyseCompetitionType,
   formatDuration,
+  PERIOD_LABELS_SHORT,
   parseAnalyseCompetitionType,
   withAnalyseCompetition,
 } from "@/lib/analyse";
+
+const FRC_FIELD_COORD_MAX = 2547;
 
 type PeriodData = {
   auto: { scoring: number; feeding: number; defense: number };
@@ -214,6 +226,127 @@ function FtcFieldEventsList({ events }: { events: FtcFieldEvent[] }) {
   );
 }
 
+function frcFieldMarkerClasses(ev: FrcFieldEvent): string {
+  if (ev.eventType === "shooting" && ev.action === "scoring") {
+    return "border-primary bg-primary/80";
+  }
+  if (ev.eventType === "shooting" && ev.action === "feeding") {
+    return "border-sky-500 bg-sky-500/75";
+  }
+  if (ev.eventType === "defense") {
+    return "border-amber-600 bg-amber-500/80";
+  }
+  if (ev.eventType === "intake") {
+    return "border-muted-foreground bg-muted-foreground/60";
+  }
+  if (ev.eventType === "climb") {
+    return "border-emerald-600 bg-emerald-500/85";
+  }
+  return "border-foreground/50 bg-foreground/35";
+}
+
+function FrcFieldInputSummary({ events }: { events: FrcFieldEvent[] }) {
+  const typed = events as AnalyticsFrcFieldEvent[];
+  const scoringTaps = countFrcScoringEvents(typed);
+  const defenceSeconds = sumDefenseEventSeconds(typed);
+  const defenceHolds = events.filter((e) => e.eventType === "defense").length;
+  const perPeriod = perPeriodScoringFromFieldEvents(typed);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        <Badge variant="secondary">
+          {scoringTaps} scoring tap{scoringTaps !== 1 ? "s" : ""}
+        </Badge>
+        <Badge variant="secondary">
+          {defenceHolds} defence hold{defenceHolds !== 1 ? "s" : ""} ·{" "}
+          {defenceSeconds.toFixed(1)}s total
+        </Badge>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div>
+          <p className="mb-2 text-muted-foreground text-xs">
+            Scoring taps by period
+          </p>
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground text-xs">
+                  <th className="px-3 py-2 font-normal">Period</th>
+                  <th className="px-3 py-2 text-right font-normal">Taps</th>
+                </tr>
+              </thead>
+              <tbody>
+                {FRC_PERIOD_ORDER.map((period) => {
+                  const n = perPeriod[period] ?? 0;
+                  if (n === 0) {
+                    return null;
+                  }
+                  return (
+                    <tr className="border-b last:border-0" key={period}>
+                      <td className="px-3 py-1.5 text-xs">
+                        {PERIOD_LABELS_SHORT[period] ?? period}
+                      </td>
+                      <td className="px-3 py-1.5 text-right font-mono text-xs">
+                        {n}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {scoringTaps === 0 ? (
+            <p className="mt-2 text-muted-foreground text-xs">
+              No scoring taps recorded on the field for this submission.
+            </p>
+          ) : null}
+        </div>
+
+        <div>
+          <p className="mb-2 text-muted-foreground text-xs">Field map</p>
+          <div className="relative w-full overflow-hidden rounded-lg border bg-muted/20">
+            <Image
+              alt="FRC field — event positions"
+              className="w-full select-none"
+              height={800}
+              src="/frc-field.webp"
+              width={1200}
+            />
+            {events.map((ev, i) => {
+              const left = (ev.coordinates.x / FRC_FIELD_COORD_MAX) * 100;
+              const top = (ev.coordinates.y / FRC_FIELD_COORD_MAX) * 100;
+              return (
+                <div
+                  className={cn(
+                    "-translate-x-1/2 -translate-y-1/2 pointer-events-none absolute size-3 rounded-full border-2 shadow-sm",
+                    frcFieldMarkerClasses(ev)
+                  )}
+                  key={`${i}-${ev.period}-${ev.eventType}-${ev.startTimestamp}-${ev.endTimestamp}`}
+                  style={{ left: `${left}%`, top: `${top}%` }}
+                  title={`${ev.eventType}${ev.action ? ` · ${ev.action}` : ""} · ${ev.period.replace(/_/g, " ")}`}
+                />
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground leading-relaxed">
+            Markers match scout colours: scoring, feeding, defence, intake,
+            climb. Axes match normalised field coordinates.
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-muted-foreground text-xs">
+          Event log ({events.length})
+        </p>
+        <FieldEventsList events={events} />
+      </div>
+    </div>
+  );
+}
+
 function FieldEventsList({ events }: { events: FrcFieldEvent[] }) {
   if (events.length === 0) {
     return (
@@ -222,10 +355,10 @@ function FieldEventsList({ events }: { events: FrcFieldEvent[] }) {
   }
   return (
     <div className="space-y-1.5">
-      {events.map((ev) => (
+      {events.map((ev, i) => (
         <div
           className="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-xs"
-          key={`${ev.period}-${ev.eventType}-${ev.startTimestamp}`}
+          key={`${i}-${ev.period}-${ev.eventType}-${ev.startTimestamp}-${ev.endTimestamp}`}
         >
           <Badge className="text-xs capitalize" variant="outline">
             {ev.eventType}
@@ -324,10 +457,8 @@ function SubmissionCard({
 
         {!isFtc && sub.inputMode === "field" && sub.frcFieldEvents ? (
           <div>
-            <p className="mb-2 text-muted-foreground text-xs">
-              Field Events ({sub.frcFieldEvents.length})
-            </p>
-            <FieldEventsList events={sub.frcFieldEvents} />
+            <p className="mb-2 text-muted-foreground text-xs">Field input</p>
+            <FrcFieldInputSummary events={sub.frcFieldEvents} />
           </div>
         ) : null}
 

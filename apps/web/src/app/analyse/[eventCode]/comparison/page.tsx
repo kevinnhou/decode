@@ -56,6 +56,7 @@ type TeamComparisonData = {
   avgScoringActivity: number;
   avgDefenseActivity: number;
   primaryInputMode: "form" | "field";
+  fieldSpatialMatchCount?: number;
   avgPerPeriodScoring: Record<string, number>;
   pitSubmission: PitSubBase | null;
 };

@@ -1,302 +1,20 @@
+import {
+  accumulateFrcSubmission,
+  accumulateFtcSubmission,
+  binHeatmap,
+  buildAggregateFromAccumulator,
+  type CompetitionType,
+  collectHeatSamplesForSubmission,
+  computeFrcPerPeriodAverages,
+  computeFtcPerPeriodAverages,
+  countSpatialEligibleMatches,
+  emptyAccumulator,
+  filterHeatSamplesByPhase,
+} from "@decode/analytics";
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { requireUserProfile } from "./auth";
 import { competitionTypeValidator } from "./schema";
-
-type PeriodData = {
-  auto: { scoring: number; feeding: number; defense: number };
-  transition: { scoring: number; feeding: number; defense: number };
-  shift1: { scoring: number; feeding: number; defense: number };
-  shift2: { scoring: number; feeding: number; defense: number };
-  shift3: { scoring: number; feeding: number; defense: number };
-  shift4: { scoring: number; feeding: number; defense: number };
-  endGame: { scoring: number; feeding: number; defense: number };
-};
-
-type FrcFieldEvent = {
-  coordinates: { x: number; y: number };
-  startTimestamp: string;
-  endTimestamp: string;
-  duration: number;
-  period: string;
-  eventType: string;
-  action?: string;
-  source?: string;
-  climbLevel?: number;
-};
-
-type TeamAccumulator = {
-  totalScoring: number;
-  totalDefense: number;
-  climbSuccess: number;
-  totalClimbLevel: number;
-  totalClimbDuration: number;
-  climbDurationCount: number;
-  formCount: number;
-  fieldCount: number;
-};
-
-type PerPeriodMap = Record<string, number>;
-
-const PERIODS = [
-  "AUTO",
-  "TRANSITION",
-  "SHIFT_1",
-  "SHIFT_2",
-  "SHIFT_3",
-  "SHIFT_4",
-  "END_GAME",
-] as const;
-
-// --- Helpers ---
-
-function sumScoringSeconds(periodData: PeriodData): number {
-  return (
-    periodData.auto.scoring +
-    periodData.transition.scoring +
-    periodData.shift1.scoring +
-    periodData.shift2.scoring +
-    periodData.shift3.scoring +
-    periodData.shift4.scoring +
-    periodData.endGame.scoring
-  );
-}
-
-function sumDefenseSeconds(periodData: PeriodData): number {
-  return (
-    periodData.auto.defense +
-    periodData.transition.defense +
-    periodData.shift1.defense +
-    periodData.shift2.defense +
-    periodData.shift3.defense +
-    periodData.shift4.defense +
-    periodData.endGame.defense
-  );
-}
-
-function countScoringEvents(events: FrcFieldEvent[]): number {
-  return events.filter(
-    (e) => e.eventType === "shooting" && e.action === "scoring"
-  ).length;
-}
-
-function sumDefenseEventSeconds(events: FrcFieldEvent[]): number {
-  return events
-    .filter((e) => e.eventType === "defense")
-    .reduce((sum, e) => sum + e.duration / 1000, 0);
-}
-
-function perPeriodScoringFromPeriodData(periodData: PeriodData): PerPeriodMap {
-  return {
-    AUTO: periodData.auto.scoring,
-    TRANSITION: periodData.transition.scoring,
-    SHIFT_1: periodData.shift1.scoring,
-    SHIFT_2: periodData.shift2.scoring,
-    SHIFT_3: periodData.shift3.scoring,
-    SHIFT_4: periodData.shift4.scoring,
-    END_GAME: periodData.endGame.scoring,
-  };
-}
-
-function perPeriodScoringFromFieldEvents(
-  events: FrcFieldEvent[]
-): PerPeriodMap {
-  const result: PerPeriodMap = {};
-  for (const period of PERIODS) {
-    result[period] = events.filter(
-      (e) =>
-        e.period === period &&
-        e.eventType === "shooting" &&
-        e.action === "scoring"
-    ).length;
-  }
-  return result;
-}
-
-function emptyAccumulator(): TeamAccumulator {
-  return {
-    totalScoring: 0,
-    totalDefense: 0,
-    climbSuccess: 0,
-    totalClimbLevel: 0,
-    totalClimbDuration: 0,
-    climbDurationCount: 0,
-    formCount: 0,
-    fieldCount: 0,
-  };
-}
-
-type FtcPeriodDataDoc = {
-  auto: { made: number; missed: number };
-  teleop: { made: number; missed: number };
-};
-
-type FtcFieldEventDoc = {
-  event: string;
-  count: number;
-  coordinates: { x: number; y: number };
-  timestamp: string;
-};
-
-function ftcPeriodMakes(sub: {
-  inputMode: string;
-  ftcPeriodData?: FtcPeriodDataDoc;
-  autonomousMade?: number;
-  teleopMade?: number;
-  fieldEvents?: FtcFieldEventDoc[];
-}): { auto: number; teleop: number } {
-  if (sub.ftcPeriodData) {
-    return {
-      auto: sub.ftcPeriodData.auto.made,
-      teleop: sub.ftcPeriodData.teleop.made,
-    };
-  }
-  let auto = sub.autonomousMade ?? 0;
-  let teleop = sub.teleopMade ?? 0;
-  if (auto === 0 && teleop === 0 && sub.fieldEvents) {
-    for (const e of sub.fieldEvents) {
-      if (e.event === "autonomous_made") {
-        auto += e.count;
-      }
-      if (e.event === "teleop_made") {
-        teleop += e.count;
-      }
-    }
-  }
-  return { auto, teleop };
-}
-
-function ftcMakesPerSubmission(
-  sub: Parameters<typeof ftcPeriodMakes>[0]
-): number {
-  const { auto, teleop } = ftcPeriodMakes(sub);
-  return auto + teleop;
-}
-
-function ftcDefensePerSubmission(sub: { tags?: string[] }): number {
-  const tags = sub.tags ?? [];
-  return tags.some((t) => t.toLowerCase() === "defense") ? 1 : 0;
-}
-
-function accumulateFtcSubmission(
-  acc: TeamAccumulator,
-  sub: {
-    climbLevel?: number;
-    climbDuration?: number;
-    inputMode: string;
-    tags?: string[];
-  } & Parameters<typeof ftcPeriodMakes>[0]
-): void {
-  if ((sub.climbLevel ?? 0) > 0) {
-    acc.climbSuccess += 1;
-  }
-  acc.totalClimbLevel += sub.climbLevel ?? 0;
-  if (sub.climbDuration && sub.climbDuration > 0) {
-    acc.totalClimbDuration += sub.climbDuration;
-    acc.climbDurationCount += 1;
-  }
-
-  acc.totalScoring += ftcMakesPerSubmission(sub);
-  acc.totalDefense += ftcDefensePerSubmission(sub);
-
-  if (sub.inputMode === "form") {
-    acc.formCount += 1;
-  } else {
-    acc.fieldCount += 1;
-  }
-}
-
-function computeFtcPerPeriodAverages(
-  ftcSubs: Parameters<typeof ftcPeriodMakes>[0][]
-): Record<string, number> {
-  const n = ftcSubs.length;
-  if (n === 0) {
-    return { AUTO: 0, TELEOP: 0 };
-  }
-  let autoSum = 0;
-  let teleopSum = 0;
-  for (const sub of ftcSubs) {
-    const { auto, teleop } = ftcPeriodMakes(sub);
-    autoSum += auto;
-    teleopSum += teleop;
-  }
-  return {
-    AUTO: Math.round((autoSum / n) * 10) / 10,
-    TELEOP: Math.round((teleopSum / n) * 10) / 10,
-  };
-}
-
-function accumulateSubmission(
-  acc: TeamAccumulator,
-  sub: {
-    climbLevel?: number;
-    climbDuration?: number;
-    inputMode: string;
-    periodData?: unknown;
-    frcFieldEvents?: unknown;
-  }
-): void {
-  if ((sub.climbLevel ?? 0) > 0) {
-    acc.climbSuccess += 1;
-  }
-  acc.totalClimbLevel += sub.climbLevel ?? 0;
-  if (sub.climbDuration && sub.climbDuration > 0) {
-    acc.totalClimbDuration += sub.climbDuration;
-    acc.climbDurationCount += 1;
-  }
-
-  if (sub.inputMode === "form" && sub.periodData) {
-    acc.formCount += 1;
-    const pd = sub.periodData as PeriodData;
-    acc.totalScoring += sumScoringSeconds(pd);
-    acc.totalDefense += sumDefenseSeconds(pd);
-  } else if (
-    sub.inputMode === "field" &&
-    sub.frcFieldEvents &&
-    Array.isArray(sub.frcFieldEvents)
-  ) {
-    acc.fieldCount += 1;
-    const events = sub.frcFieldEvents as FrcFieldEvent[];
-    acc.totalScoring += countScoringEvents(events);
-    acc.totalDefense += sumDefenseEventSeconds(events);
-  }
-}
-
-function buildAggregateFromAccumulator(
-  teamNumber: number,
-  acc: TeamAccumulator,
-  matchCount: number
-) {
-  const climbSuccessRate =
-    matchCount > 0 ? Math.round((acc.climbSuccess / matchCount) * 100) : 0;
-  const avgClimbLevel =
-    matchCount > 0
-      ? Math.round((acc.totalClimbLevel / matchCount) * 10) / 10
-      : 0;
-  const avgClimbDuration =
-    acc.climbDurationCount > 0
-      ? Math.round(acc.totalClimbDuration / acc.climbDurationCount)
-      : 0;
-  const avgScoringActivity =
-    matchCount > 0 ? Math.round((acc.totalScoring / matchCount) * 10) / 10 : 0;
-  const avgDefenseActivity =
-    matchCount > 0 ? Math.round((acc.totalDefense / matchCount) * 10) / 10 : 0;
-  const primaryInputMode =
-    acc.formCount >= acc.fieldCount ? ("form" as const) : ("field" as const);
-
-  return {
-    teamNumber,
-    matchCount,
-    climbSuccessRate,
-    avgClimbLevel,
-    avgClimbDuration,
-    avgScoringActivity,
-    avgDefenseActivity,
-    primaryInputMode,
-    formMatchCount: acc.formCount,
-    fieldMatchCount: acc.fieldCount,
-  };
-}
 
 /**
  * Returns events (FRC and/or FTC) that have match or pit submissions for the current org.
@@ -848,6 +566,7 @@ export const getEventAggregates = query({
 
     const aggregates: (ReturnType<typeof buildAggregateFromAccumulator> & {
       pitCount: number;
+      fieldSpatialMatchCount: number;
     })[] = [];
 
     for (const [teamNumber, teamSubs] of teamMap) {
@@ -856,12 +575,20 @@ export const getEventAggregates = query({
         if (competitionType === "FTC") {
           accumulateFtcSubmission(acc, sub);
         } else {
-          accumulateSubmission(acc, sub);
+          accumulateFrcSubmission(acc, sub);
         }
       }
+      const spatialSlices = teamSubs.map((sub) => ({
+        ...sub,
+        competitionType: competitionType as CompetitionType,
+      }));
       aggregates.push({
         ...buildAggregateFromAccumulator(teamNumber, acc, teamSubs.length),
         pitCount: pitCountMap.get(teamNumber) ?? 0,
+        fieldSpatialMatchCount: countSpatialEligibleMatches(
+          spatialSlices,
+          competitionType as CompetitionType
+        ),
       });
     }
 
@@ -883,6 +610,7 @@ export const getEventAggregates = query({
         formMatchCount: 0,
         fieldMatchCount: 0,
         pitCount: pitCountMap.get(teamNumber) ?? 0,
+        fieldSpatialMatchCount: 0,
       });
     }
 
@@ -937,51 +665,79 @@ export const getMatchSubmissionsForMatch = query({
   },
 });
 
-function addPerPeriodFromSub(
-  totals: PerPeriodMap,
-  sub: { inputMode: string; periodData?: unknown; frcFieldEvents?: unknown }
-): void {
-  if (sub.inputMode === "form" && sub.periodData) {
-    const pp = perPeriodScoringFromPeriodData(sub.periodData as PeriodData);
-    for (const [key, val] of Object.entries(pp)) {
-      totals[key] = (totals[key] ?? 0) + val;
-    }
-  } else if (sub.inputMode === "field" && sub.frcFieldEvents) {
-    const pp = perPeriodScoringFromFieldEvents(
-      sub.frcFieldEvents as FrcFieldEvent[]
-    );
-    for (const [key, val] of Object.entries(pp)) {
-      totals[key] = (totals[key] ?? 0) + val;
-    }
-  }
-}
+const heatmapPeriodFilterValidator = v.union(
+  v.literal("all"),
+  v.literal("AUTO"),
+  v.literal("TRANSITION"),
+  v.literal("SHIFT_1"),
+  v.literal("SHIFT_2"),
+  v.literal("SHIFT_3"),
+  v.literal("SHIFT_4"),
+  v.literal("END_GAME"),
+  v.literal("TELEOP")
+);
 
-function computePerPeriodAverages(
-  frcMatchSubs: Array<{
-    inputMode: string;
-    periodData?: unknown;
-    frcFieldEvents?: unknown;
-  }>
-): PerPeriodMap {
-  const totals: PerPeriodMap = {
-    AUTO: 0,
-    TRANSITION: 0,
-    SHIFT_1: 0,
-    SHIFT_2: 0,
-    SHIFT_3: 0,
-    SHIFT_4: 0,
-    END_GAME: 0,
-  };
-  for (const sub of frcMatchSubs) {
-    addPerPeriodFromSub(totals, sub);
-  }
-  const matchCount = frcMatchSubs.length;
-  const avg: PerPeriodMap = {};
-  for (const [key, val] of Object.entries(totals)) {
-    avg[key] = matchCount > 0 ? Math.round((val / matchCount) * 10) / 10 : 0;
-  }
-  return avg;
-}
+/**
+ * Binned field scoring heat map for a team (field submissions with coordinates).
+ *
+ * @param ctx - The Convex query context
+ * @param args.periodFilter - FRC game period, `TELEOP` for FTC teleop makes, or `all`
+ */
+export const getTeamFieldHeatmap = query({
+  args: {
+    eventCode: v.string(),
+    teamNumber: v.number(),
+    competitionType: v.optional(competitionTypeValidator),
+    periodFilter: v.optional(heatmapPeriodFilterValidator),
+  },
+  returns: v.any(),
+  async handler(ctx, args) {
+    const { profile } = await requireUserProfile(ctx);
+    const competitionType = args.competitionType ?? "FRC";
+    const comp = competitionType as CompetitionType;
+
+    const submissions = await ctx.db
+      .query("matchSubmissions")
+      .withIndex("by_org_event_team", (q) =>
+        q
+          .eq("organisationId", profile.organisationId)
+          .eq("eventCode", args.eventCode)
+          .eq("teamNumber", args.teamNumber)
+      )
+      .collect();
+
+    const typed = submissions
+      .filter((s) => s.competitionType === competitionType)
+      .sort((a, b) => a.matchNumber - b.matchNumber);
+
+    const periodFilter = args.periodFilter ?? "all";
+    const slices = typed.map((sub) => ({
+      ...sub,
+      competitionType: comp,
+    }));
+
+    const allSamples = slices.flatMap((sub) =>
+      collectHeatSamplesForSubmission(sub, comp)
+    );
+    const hasFieldSpatialData = allSamples.length > 0;
+    const fieldSpatialMatchCount = countSpatialEligibleMatches(slices, comp);
+
+    const filteredSamples = filterHeatSamplesByPhase(
+      allSamples,
+      comp,
+      periodFilter
+    );
+    const binned = binHeatmap(filteredSamples);
+
+    return {
+      competitionType,
+      periodFilter,
+      hasFieldSpatialData,
+      fieldSpatialMatchCount,
+      ...binned,
+    };
+  },
+});
 
 /**
  * Returns batched match and pit data for multiple teams at a given event, used for side-by-side comparison.
@@ -1040,7 +796,7 @@ export const getComparisonData = query({
         if (competitionType === "FTC") {
           accumulateFtcSubmission(acc, sub);
         } else {
-          accumulateSubmission(acc, sub);
+          accumulateFrcSubmission(acc, sub);
         }
       }
 
@@ -1052,10 +808,19 @@ export const getComparisonData = query({
       const avgPerPeriodScoring =
         competitionType === "FTC"
           ? computeFtcPerPeriodAverages(typedMatchSubs)
-          : computePerPeriodAverages(typedMatchSubs);
+          : computeFrcPerPeriodAverages(typedMatchSubs);
+
+      const spatialSlices = typedMatchSubs.map((sub) => ({
+        ...sub,
+        competitionType: competitionType as CompetitionType,
+      }));
 
       results.push({
         ...base,
+        fieldSpatialMatchCount: countSpatialEligibleMatches(
+          spatialSlices,
+          competitionType as CompetitionType
+        ),
         pitSubmission: latestPit,
         avgPerPeriodScoring,
         matchSubmissions: typedMatchSubs,

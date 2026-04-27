@@ -8,7 +8,10 @@ const competitions = [
   {
     name: "FTC",
     description: "FIRST Tech Challenge",
-    routes: [{ label: "Match Scouting", href: "/scout/ftc/match" as Route }],
+    routes: [
+      { label: "Match Scouting", href: "/scout/ftc/match" as Route },
+      { label: "Pit Scouting", href: "/scout/ftc/pit" as Route },
+    ],
   },
   {
     name: "FRC",

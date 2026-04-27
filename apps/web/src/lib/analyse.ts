@@ -67,6 +67,7 @@ export type TeamAggregate = {
   avgScoringActivity: number;
   avgDefenseActivity: number;
   primaryInputMode: "form" | "field";
+  fieldSpatialMatchCount?: number;
 };
 
 export type PitSubBase = {
@@ -96,7 +97,6 @@ export function parseAnalyseCompetitionType(
   return raw === "FTC" ? "FTC" : "FRC";
 }
 
-/** Appends `competitionType=FTC` when viewing FTC events; FRC URLs stay unqualified. */
 export function withAnalyseCompetition(
   pathname: string,
   competitionType: AnalyseCompetitionType

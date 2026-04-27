@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  frcFuelPointsForMatch,
+  frcScoringSummaryForMatch,
+  ftcTotalMakes,
+  type MatchSubmissionSlice,
+} from "@decode/analytics";
 import { api } from "@decode/backend/convex/_generated/api";
 import { Badge } from "@decode/ui/components/badge";
 import { Button } from "@decode/ui/components/button";
@@ -9,12 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@decode/ui/components/card";
-import {
-  type ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@decode/ui/components/chart";
 import {
   Dialog,
   DialogContent,
@@ -41,24 +41,15 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { FieldHeatmapCard } from "@/features/analyse/field-heatmap";
+import { PerPeriodChart } from "@/features/analyse/per-period-chart";
 import {
   type AnalyseCompetitionType,
-  CHART_PERIODS,
   CLIMB_LABELS,
-  PERIOD_LABELS,
-  PERIOD_TO_PD_KEY,
   type PitSubBase,
   parseAnalyseCompetitionType,
   withAnalyseCompetition,
 } from "@/lib/analyse";
-
-const periodChartConfig: ChartConfig = {
-  scoring: {
-    label: "Scoring",
-    color: "hsl(var(--chart-1))",
-  },
-};
 
 type MatchSub = {
   _id: string;
@@ -98,141 +89,6 @@ type PitSub = PitSubBase & {
   photoUrls?: string[];
   submissionCount?: number;
 };
-
-function shiftPointsFromFuel(s1: number, s2: number, s3: number, s4: number) {
-  const s13 = s1 + s3;
-  const s24 = s2 + s4;
-  return s13 >= s24 ? s13 : s24;
-}
-
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: PASS
-function scoringPointsForMatch(
-  sub: MatchSub,
-  shootingSpeed?: number
-): number | null {
-  if (sub.inputMode === "form" && sub.periodData) {
-    if (typeof shootingSpeed !== "number" || shootingSpeed <= 0) {
-      return null;
-    }
-    const pd = sub.periodData;
-    const secondsToFuel = (s: number) => Math.round(s * shootingSpeed);
-    const auto = secondsToFuel(pd.auto?.scoring ?? 0);
-    const shiftPts = shiftPointsFromFuel(
-      secondsToFuel(pd.shift1?.scoring ?? 0),
-      secondsToFuel(pd.shift2?.scoring ?? 0),
-      secondsToFuel(pd.shift3?.scoring ?? 0),
-      secondsToFuel(pd.shift4?.scoring ?? 0)
-    );
-    const transition = secondsToFuel(pd.transition?.scoring ?? 0);
-    const endGame = secondsToFuel(pd.endGame?.scoring ?? 0);
-    return auto + shiftPts + transition + endGame;
-  }
-  if (sub.inputMode === "field" && sub.frcFieldEvents) {
-    const events = sub.frcFieldEvents.filter(
-      (e) => e.eventType === "shooting" && e.action === "scoring"
-    );
-    const byPeriod: Record<string, number> = {};
-    for (const e of events) {
-      byPeriod[e.period] = (byPeriod[e.period] ?? 0) + 1;
-    }
-    const auto = byPeriod.AUTO ?? 0;
-    const shiftPts = shiftPointsFromFuel(
-      byPeriod.SHIFT_1 ?? 0,
-      byPeriod.SHIFT_2 ?? 0,
-      byPeriod.SHIFT_3 ?? 0,
-      byPeriod.SHIFT_4 ?? 0
-    );
-    const transition = byPeriod.TRANSITION ?? 0;
-    const endGame = byPeriod.END_GAME ?? 0;
-    return auto + shiftPts + transition + endGame;
-  }
-  return 0;
-}
-
-function scoringForMatch(sub: MatchSub): number {
-  if (sub.inputMode === "form" && sub.periodData) {
-    return Object.values(sub.periodData).reduce(
-      (sum, p) => sum + (p.scoring ?? 0),
-      0
-    );
-  }
-  if (sub.inputMode === "field" && sub.frcFieldEvents) {
-    return sub.frcFieldEvents.filter(
-      (e) => e.eventType === "shooting" && e.action === "scoring"
-    ).length;
-  }
-  return 0;
-}
-
-function ftcMakesForMatch(sub: MatchSub): number {
-  if (sub.ftcPeriodData) {
-    return sub.ftcPeriodData.auto.made + sub.ftcPeriodData.teleop.made;
-  }
-  let auto = sub.autonomousMade ?? 0;
-  let teleop = sub.teleopMade ?? 0;
-  if (auto === 0 && teleop === 0 && sub.fieldEvents) {
-    for (const e of sub.fieldEvents) {
-      if (e.event === "autonomous_made") {
-        auto += e.count;
-      }
-      if (e.event === "teleop_made") {
-        teleop += e.count;
-      }
-    }
-  }
-  return auto + teleop;
-}
-
-function periodTotalsFromFormSub(
-  sub: MatchSub,
-  totals: Record<string, number>
-): void {
-  if (!sub.periodData) {
-    return;
-  }
-  for (const period of CHART_PERIODS) {
-    const pdKey = PERIOD_TO_PD_KEY[period] ?? period;
-    totals[period] =
-      (totals[period] ?? 0) + (sub.periodData[pdKey]?.scoring ?? 0);
-  }
-}
-
-function periodTotalsFromFieldSub(
-  sub: MatchSub,
-  totals: Record<string, number>
-): void {
-  if (!sub.frcFieldEvents) {
-    return;
-  }
-  for (const period of CHART_PERIODS) {
-    totals[period] =
-      (totals[period] ?? 0) +
-      sub.frcFieldEvents.filter(
-        (e) =>
-          e.period === period &&
-          e.eventType === "shooting" &&
-          e.action === "scoring"
-      ).length;
-  }
-}
-
-function buildPeriodChartData(matchSubs: MatchSub[]) {
-  const totals: Record<string, number> = {};
-  let n = 0;
-  for (const sub of matchSubs) {
-    if (sub.inputMode === "form" && sub.periodData) {
-      n += 1;
-      periodTotalsFromFormSub(sub, totals);
-    } else if (sub.inputMode === "field" && sub.frcFieldEvents) {
-      n += 1;
-      periodTotalsFromFieldSub(sub, totals);
-    }
-  }
-  return CHART_PERIODS.map((period) => ({
-    period: PERIOD_LABELS[period] ?? period,
-    scoring: n > 0 ? Math.round(((totals[period] ?? 0) / n) * 10) / 10 : 0,
-  }));
-}
 
 function climbBadgeVariant(level?: number) {
   if (!level || level === 0) {
@@ -534,95 +390,6 @@ function PitCard({
   );
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: period aggregation branches on stored vs legacy shape
-function buildFtcPeriodChartData(matchSubs: MatchSub[]) {
-  const n = matchSubs.length;
-  if (n === 0) {
-    return [];
-  }
-  let autoSum = 0;
-  let teleopSum = 0;
-  for (const sub of matchSubs) {
-    if (sub.ftcPeriodData) {
-      autoSum += sub.ftcPeriodData.auto.made;
-      teleopSum += sub.ftcPeriodData.teleop.made;
-    } else {
-      let auto = sub.autonomousMade ?? 0;
-      let teleop = sub.teleopMade ?? 0;
-      if (auto === 0 && teleop === 0 && sub.fieldEvents) {
-        for (const e of sub.fieldEvents) {
-          if (e.event === "autonomous_made") {
-            auto += e.count;
-          }
-          if (e.event === "teleop_made") {
-            teleop += e.count;
-          }
-        }
-      }
-      autoSum += auto;
-      teleopSum += teleop;
-    }
-  }
-  return [
-    {
-      period: "Auto",
-      scoring: Math.round((autoSum / n) * 10) / 10,
-    },
-    {
-      period: "Teleop",
-      scoring: Math.round((teleopSum / n) * 10) / 10,
-    },
-  ];
-}
-
-function PerPeriodChart({
-  matchSubs,
-  competitionType,
-}: {
-  matchSubs: MatchSub[];
-  competitionType: AnalyseCompetitionType;
-}) {
-  const data =
-    competitionType === "FTC"
-      ? buildFtcPeriodChartData(matchSubs)
-      : buildPeriodChartData(matchSubs);
-  const hasData = data.some((d) => d.scoring > 0);
-
-  if (!hasData) {
-    return (
-      <div className="flex h-48 items-center justify-center text-muted-foreground text-sm">
-        No period data available
-      </div>
-    );
-  }
-
-  return (
-    <ChartContainer className="h-48 w-full" config={periodChartConfig}>
-      <BarChart data={data}>
-        <CartesianGrid vertical={false} />
-        <XAxis
-          axisLine={false}
-          dataKey="period"
-          tick={{ fontSize: 11 }}
-          tickLine={false}
-        />
-        <YAxis
-          axisLine={false}
-          tick={{ fontSize: 11 }}
-          tickLine={false}
-          width={30}
-        />
-        <ChartTooltip content={<ChartTooltipContent />} />
-        <Bar
-          dataKey="scoring"
-          fill="var(--color-scoring)"
-          radius={[4, 4, 0, 0]}
-        />
-      </BarChart>
-    </ChartContainer>
-  );
-}
-
 function MatchHistoryRow({
   sub,
   eventCode,
@@ -632,8 +399,11 @@ function MatchHistoryRow({
   eventCode: string;
   competitionType: AnalyseCompetitionType;
 }) {
+  const slice = sub as MatchSubmissionSlice;
   const score =
-    competitionType === "FTC" ? ftcMakesForMatch(sub) : scoringForMatch(sub);
+    competitionType === "FTC"
+      ? ftcTotalMakes(slice)
+      : frcScoringSummaryForMatch(slice);
   const scoreUnit =
     competitionType === "FTC" ? "makes" : sub.inputMode === "form" ? "s" : "ev";
 
@@ -754,21 +524,24 @@ function useTeamMetrics(
   const avgScoring =
     matchCount > 0 && matchSubs
       ? Math.round(
-          (matchSubs.reduce(
-            (s, m) =>
+          (matchSubs.reduce((s, m) => {
+            const row = m as MatchSubmissionSlice;
+            return (
               s +
               (competitionType === "FTC"
-                ? ftcMakesForMatch(m)
-                : scoringForMatch(m)),
-            0
-          ) /
+                ? ftcTotalMakes(row)
+                : frcScoringSummaryForMatch(row))
+            );
+          }, 0) /
             matchCount) *
             10
         ) / 10
       : 0;
   const scoringPointValues =
     competitionType === "FRC"
-      ? (matchSubs?.map((m) => scoringPointsForMatch(m, shootingSpeed)) ?? [])
+      ? (matchSubs?.map((m) =>
+          frcFuelPointsForMatch(m as MatchSubmissionSlice, shootingSpeed)
+        ) ?? [])
       : [];
   const validScores = scoringPointValues.filter(
     (v): v is number => typeof v === "number"
@@ -786,11 +559,13 @@ function TeamProfileBody({
   matchSubs,
   pitData,
   eventCode,
+  teamNumber,
   competitionType,
 }: {
   matchSubs: MatchSub[];
   pitData: PitSub | null;
   eventCode: string;
+  teamNumber: number;
   competitionType: AnalyseCompetitionType;
 }) {
   const shootingSpeed = pitData?.shootingSpeed;
@@ -908,6 +683,12 @@ function TeamProfileBody({
           </CardContent>
         </Card>
       ) : null}
+
+      <FieldHeatmapCard
+        competitionType={competitionType}
+        eventCode={eventCode}
+        teamNumber={teamNumber}
+      />
 
       {matchSubs.length > 0 ? (
         <Card>
@@ -1051,6 +832,7 @@ export default function TeamProfile() {
           eventCode={eventCode}
           matchSubs={matchSubs ?? []}
           pitData={pitData ?? null}
+          teamNumber={teamNumber}
         />
       )}
     </div>
