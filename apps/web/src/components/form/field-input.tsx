@@ -11,7 +11,7 @@ import { FormLabel } from "@decode/ui/components/form";
 import type { UseFormReturn } from "@decode/ui/lib/react-hook-form";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PAUSE_TIME_SECONDS, type TimerState } from "@/lib/form/constants";
+import type { FtcPeriod, TimerState } from "@/lib/form/constants";
 import type {
   FieldEventSchema,
   FieldSchema,
@@ -42,7 +42,7 @@ interface FieldInputProps {
   form: UseFormReturn<FormSchema>;
   onEventsChange: (events: FieldSchema) => void;
   getEventTimestamp: () => string;
-  timeRemaining: number;
+  getCurrentPeriod: () => FtcPeriod;
   timerState: TimerState;
 }
 
@@ -64,7 +64,7 @@ export function FieldInput({
   form,
   onEventsChange,
   getEventTimestamp,
-  timeRemaining,
+  getCurrentPeriod,
   timerState,
 }: FieldInputProps) {
   const [pendingEvent, setPendingEvent] = useState<PendingEvent | null>(null);
@@ -74,7 +74,9 @@ export function FieldInput({
   const imageRef = useRef<HTMLDivElement>(null);
 
   const isTimerStarted = timerState !== "idle";
-  const isAutonomous = timeRemaining > PAUSE_TIME_SECONDS;
+  const currentPeriod = isTimerStarted ? getCurrentPeriod() : null;
+  const isAutonomous =
+    currentPeriod === "AUTO" || currentPeriod === "TRANSITION";
 
   const availableEventTypes = useMemo(() => {
     if (!isTimerStarted) {
@@ -120,11 +122,8 @@ export function FieldInput({
     const normalizedX = (clickX / rect.width) * ORIGINAL_IMAGE_WIDTH;
     const normalizedY = (clickY / rect.height) * ORIGINAL_IMAGE_HEIGHT;
 
-    const defaultEventType: EventType = isTimerStarted
-      ? isAutonomous
-        ? "autonomous_made"
-        : "teleop_made"
-      : "teleop_made";
+    const defaultEventType: EventType =
+      isTimerStarted && isAutonomous ? "autonomous_made" : "teleop_made";
 
     setPendingEvent({ x: normalizedX, y: normalizedY });
     setDialogEventType(defaultEventType);
@@ -183,7 +182,7 @@ export function FieldInput({
           src="/ftc-field.webp"
           width={1200}
         />
-        {events.map((event) => {
+        {events.map((event, index) => {
           const leftPercent =
             (event.coordinates.x / ORIGINAL_IMAGE_WIDTH) * 100;
           const topPercent =
@@ -192,7 +191,7 @@ export function FieldInput({
           return (
             <div
               className="-translate-x-1/2 -translate-y-1/2 pointer-events-none absolute size-4 rounded-full border-2 border-red-500 bg-red-500/50"
-              key={event.event}
+              key={`${event.timestamp}-${event.coordinates.x}-${event.coordinates.y}-${index}`}
               style={{
                 left: `${leftPercent}%`,
                 top: `${topPercent}%`,

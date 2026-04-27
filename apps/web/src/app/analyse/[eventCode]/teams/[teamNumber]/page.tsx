@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  frcFuelPointsForMatch,
+  frcScoringSummaryForMatch,
+  ftcTotalMakes,
+  type MatchSubmissionSlice,
+} from "@decode/analytics";
 import { api } from "@decode/backend/convex/_generated/api";
 import { Badge } from "@decode/ui/components/badge";
 import { Button } from "@decode/ui/components/button";
@@ -9,12 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@decode/ui/components/card";
-import {
-  type ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@decode/ui/components/chart";
 import {
   Dialog,
   DialogContent,
@@ -38,24 +38,18 @@ import {
 import type { Route } from "next";
 import NextImage from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { FieldHeatmapCard } from "@/features/analyse/field-heatmap";
+import { PerPeriodChart } from "@/features/analyse/per-period-chart";
 import {
-  CHART_PERIODS,
+  type AnalyseCompetitionType,
   CLIMB_LABELS,
-  PERIOD_LABELS,
-  PERIOD_TO_PD_KEY,
   type PitSubBase,
+  parseAnalyseCompetitionType,
+  withAnalyseCompetition,
 } from "@/lib/analyse";
-
-const periodChartConfig: ChartConfig = {
-  scoring: {
-    label: "Scoring",
-    color: "hsl(var(--chart-1))",
-  },
-};
 
 type MatchSub = {
   _id: string;
@@ -65,6 +59,7 @@ type MatchSub = {
   climbLevel?: number;
   climbDuration?: number;
   inputMode: string;
+  competitionType?: string;
   periodData?: Record<
     string,
     { scoring: number; feeding: number; defense: number }
@@ -75,6 +70,13 @@ type MatchSub = {
     duration: number;
     period: string;
   }>;
+  ftcPeriodData?: {
+    auto: { made: number; missed: number };
+    teleop: { made: number; missed: number };
+  };
+  autonomousMade?: number;
+  teleopMade?: number;
+  fieldEvents?: Array<{ event: string; count: number }>;
   notes?: string;
   scoutName: string;
 };
@@ -82,126 +84,11 @@ type MatchSub = {
 type PitSub = PitSubBase & {
   robotDimensions?: { length: number; width: number; height: number };
   shootingSpeed?: number;
+  canShootDeep?: boolean;
   notes?: string;
   photoUrls?: string[];
   submissionCount?: number;
 };
-
-function shiftPointsFromFuel(s1: number, s2: number, s3: number, s4: number) {
-  const s13 = s1 + s3;
-  const s24 = s2 + s4;
-  return s13 >= s24 ? s13 : s24;
-}
-
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: PASS
-function scoringPointsForMatch(
-  sub: MatchSub,
-  shootingSpeed?: number
-): number | null {
-  if (sub.inputMode === "form" && sub.periodData) {
-    if (typeof shootingSpeed !== "number" || shootingSpeed <= 0) {
-      return null;
-    }
-    const pd = sub.periodData;
-    const secondsToFuel = (s: number) => Math.round(s * shootingSpeed);
-    const auto = secondsToFuel(pd.auto?.scoring ?? 0);
-    const shiftPts = shiftPointsFromFuel(
-      secondsToFuel(pd.shift1?.scoring ?? 0),
-      secondsToFuel(pd.shift2?.scoring ?? 0),
-      secondsToFuel(pd.shift3?.scoring ?? 0),
-      secondsToFuel(pd.shift4?.scoring ?? 0)
-    );
-    const transition = secondsToFuel(pd.transition?.scoring ?? 0);
-    const endGame = secondsToFuel(pd.endGame?.scoring ?? 0);
-    return auto + shiftPts + transition + endGame;
-  }
-  if (sub.inputMode === "field" && sub.frcFieldEvents) {
-    const events = sub.frcFieldEvents.filter(
-      (e) => e.eventType === "shooting" && e.action === "scoring"
-    );
-    const byPeriod: Record<string, number> = {};
-    for (const e of events) {
-      byPeriod[e.period] = (byPeriod[e.period] ?? 0) + 1;
-    }
-    const auto = byPeriod.AUTO ?? 0;
-    const shiftPts = shiftPointsFromFuel(
-      byPeriod.SHIFT_1 ?? 0,
-      byPeriod.SHIFT_2 ?? 0,
-      byPeriod.SHIFT_3 ?? 0,
-      byPeriod.SHIFT_4 ?? 0
-    );
-    const transition = byPeriod.TRANSITION ?? 0;
-    const endGame = byPeriod.END_GAME ?? 0;
-    return auto + shiftPts + transition + endGame;
-  }
-  return 0;
-}
-
-function scoringForMatch(sub: MatchSub): number {
-  if (sub.inputMode === "form" && sub.periodData) {
-    return Object.values(sub.periodData).reduce(
-      (sum, p) => sum + (p.scoring ?? 0),
-      0
-    );
-  }
-  if (sub.inputMode === "field" && sub.frcFieldEvents) {
-    return sub.frcFieldEvents.filter(
-      (e) => e.eventType === "shooting" && e.action === "scoring"
-    ).length;
-  }
-  return 0;
-}
-
-function periodTotalsFromFormSub(
-  sub: MatchSub,
-  totals: Record<string, number>
-): void {
-  if (!sub.periodData) {
-    return;
-  }
-  for (const period of CHART_PERIODS) {
-    const pdKey = PERIOD_TO_PD_KEY[period] ?? period;
-    totals[period] =
-      (totals[period] ?? 0) + (sub.periodData[pdKey]?.scoring ?? 0);
-  }
-}
-
-function periodTotalsFromFieldSub(
-  sub: MatchSub,
-  totals: Record<string, number>
-): void {
-  if (!sub.frcFieldEvents) {
-    return;
-  }
-  for (const period of CHART_PERIODS) {
-    totals[period] =
-      (totals[period] ?? 0) +
-      sub.frcFieldEvents.filter(
-        (e) =>
-          e.period === period &&
-          e.eventType === "shooting" &&
-          e.action === "scoring"
-      ).length;
-  }
-}
-
-function buildPeriodChartData(matchSubs: MatchSub[]) {
-  const totals: Record<string, number> = {};
-  let n = 0;
-  for (const sub of matchSubs) {
-    if (sub.inputMode === "form" && sub.periodData) {
-      n += 1;
-      periodTotalsFromFormSub(sub, totals);
-    } else if (sub.inputMode === "field" && sub.frcFieldEvents) {
-      n += 1;
-      periodTotalsFromFieldSub(sub, totals);
-    }
-  }
-  return CHART_PERIODS.map((period) => ({
-    period: PERIOD_LABELS[period] ?? period,
-    scoring: n > 0 ? Math.round(((totals[period] ?? 0) / n) * 10) / 10 : 0,
-  }));
-}
 
 function climbBadgeVariant(level?: number) {
   if (!level || level === 0) {
@@ -359,19 +246,27 @@ function PhotoPreview({
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Pit card has multiple conditional sections
-function PitCard({ pit }: { pit: PitSub }) {
+function PitCard({
+  pit,
+  competitionType,
+}: {
+  pit: PitSub;
+  competitionType: AnalyseCompetitionType;
+}) {
   const intakeMethods = pit.intakeMethods ?? [];
   const metrics = [
     pit.drivetrainType && { label: "Drivetrain", value: pit.drivetrainType },
     pit.weight !== undefined && { label: "Weight", value: `${pit.weight} kg` },
-    pit.hopperCapacity !== undefined && {
-      label: "Hopper",
-      value: String(pit.hopperCapacity),
-    },
-    pit.shootingSpeed !== undefined && {
-      label: "Shooting",
-      value: `${pit.shootingSpeed}/s`,
-    },
+    competitionType === "FRC" &&
+      pit.hopperCapacity !== undefined && {
+        label: "Hopper",
+        value: String(pit.hopperCapacity),
+      },
+    competitionType === "FRC" &&
+      pit.shootingSpeed !== undefined && {
+        label: "Shooting",
+        value: `${pit.shootingSpeed}/s`,
+      },
     pit.maxClimbLevel !== undefined && {
       label: "Max climb",
       value: climbBadgeVariant(pit.maxClimbLevel),
@@ -384,8 +279,9 @@ function PitCard({ pit }: { pit: PitSub }) {
 
   const hasCapabilities =
     intakeMethods.length > 0 ||
-    pit.canPassTrench !== undefined ||
-    pit.canCrossBump !== undefined;
+    (competitionType === "FRC" &&
+      (pit.canPassTrench !== undefined || pit.canCrossBump !== undefined)) ||
+    competitionType === "FTC";
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
@@ -457,22 +353,35 @@ function PitCard({ pit }: { pit: PitSub }) {
                   ))}
                 </span>
               )}
-              <span className="flex items-center gap-1 text-sm">
-                {pit.canPassTrench ? (
-                  <CheckCircle2 className="size-3.5 text-green-500" />
-                ) : (
-                  <XCircle className="size-3.5 text-muted-foreground/50" />
-                )}
-                Trench
-              </span>
-              <span className="flex items-center gap-1 text-sm">
-                {pit.canCrossBump ? (
-                  <CheckCircle2 className="size-3.5 text-green-500" />
-                ) : (
-                  <XCircle className="size-3.5 text-muted-foreground/50" />
-                )}
-                Bump
-              </span>
+              {competitionType === "FRC" ? (
+                <>
+                  <span className="flex items-center gap-1 text-sm">
+                    {pit.canPassTrench ? (
+                      <CheckCircle2 className="size-3.5 text-green-500" />
+                    ) : (
+                      <XCircle className="size-3.5 text-muted-foreground/50" />
+                    )}
+                    Trench
+                  </span>
+                  <span className="flex items-center gap-1 text-sm">
+                    {pit.canCrossBump ? (
+                      <CheckCircle2 className="size-3.5 text-green-500" />
+                    ) : (
+                      <XCircle className="size-3.5 text-muted-foreground/50" />
+                    )}
+                    Bump
+                  </span>
+                </>
+              ) : (
+                <span className="flex items-center gap-1 text-sm">
+                  {pit.canShootDeep ? (
+                    <CheckCircle2 className="size-3.5 text-green-500" />
+                  ) : (
+                    <XCircle className="size-3.5 text-muted-foreground/50" />
+                  )}
+                  Shoot deep
+                </span>
+              )}
             </div>
           </div>
         ) : null}
@@ -481,58 +390,34 @@ function PitCard({ pit }: { pit: PitSub }) {
   );
 }
 
-function PerPeriodChart({ matchSubs }: { matchSubs: MatchSub[] }) {
-  const data = buildPeriodChartData(matchSubs);
-  const hasData = data.some((d) => d.scoring > 0);
-
-  if (!hasData) {
-    return (
-      <div className="flex h-48 items-center justify-center text-muted-foreground text-sm">
-        No period data available
-      </div>
-    );
-  }
-
-  return (
-    <ChartContainer className="h-48 w-full" config={periodChartConfig}>
-      <BarChart data={data}>
-        <CartesianGrid vertical={false} />
-        <XAxis
-          axisLine={false}
-          dataKey="period"
-          tick={{ fontSize: 11 }}
-          tickLine={false}
-        />
-        <YAxis
-          axisLine={false}
-          tick={{ fontSize: 11 }}
-          tickLine={false}
-          width={30}
-        />
-        <ChartTooltip content={<ChartTooltipContent />} />
-        <Bar
-          dataKey="scoring"
-          fill="var(--color-scoring)"
-          radius={[4, 4, 0, 0]}
-        />
-      </BarChart>
-    </ChartContainer>
-  );
-}
-
 function MatchHistoryRow({
   sub,
   eventCode,
+  competitionType,
 }: {
   sub: MatchSub;
   eventCode: string;
+  competitionType: AnalyseCompetitionType;
 }) {
+  const slice = sub as MatchSubmissionSlice;
+  const score =
+    competitionType === "FTC"
+      ? ftcTotalMakes(slice)
+      : frcScoringSummaryForMatch(slice);
+  const scoreUnit =
+    competitionType === "FTC" ? "makes" : sub.inputMode === "form" ? "s" : "ev";
+
   return (
     <div className="flex items-center justify-between rounded-lg border px-4 py-2.5">
       <div className="flex items-center gap-3">
         <Link
           className="font-mono font-semibold text-sm hover:underline"
-          href={`/analyse/${eventCode}/match/${sub.matchNumber}` as Route}
+          href={
+            withAnalyseCompetition(
+              `/analyse/${eventCode}/match/${sub.matchNumber}`,
+              competitionType
+            ) as Route
+          }
         >
           Q{sub.matchNumber}
         </Link>
@@ -549,12 +434,12 @@ function MatchHistoryRow({
       </div>
       <div className="flex items-center gap-3">
         <span className="font-mono text-xs">
-          {scoringForMatch(sub)}
+          {score}
           <span className="ml-1 text-muted-foreground text-xs">
-            {sub.inputMode === "form" ? "s" : "ev"}
+            {scoreUnit}
           </span>
         </span>
-        {climbBadgeVariant(sub.climbLevel)}
+        {competitionType === "FRC" ? climbBadgeVariant(sub.climbLevel) : null}
       </div>
     </div>
   );
@@ -632,18 +517,32 @@ function NotesSection({
 
 function useTeamMetrics(
   matchSubs: MatchSub[] | undefined,
-  shootingSpeed?: number
+  shootingSpeed: number | undefined,
+  competitionType: AnalyseCompetitionType
 ) {
   const matchCount = matchSubs?.length ?? 0;
   const avgScoring =
     matchCount > 0 && matchSubs
       ? Math.round(
-          (matchSubs.reduce((s, m) => s + scoringForMatch(m), 0) / matchCount) *
+          (matchSubs.reduce((s, m) => {
+            const row = m as MatchSubmissionSlice;
+            return (
+              s +
+              (competitionType === "FTC"
+                ? ftcTotalMakes(row)
+                : frcScoringSummaryForMatch(row))
+            );
+          }, 0) /
+            matchCount) *
             10
         ) / 10
       : 0;
   const scoringPointValues =
-    matchSubs?.map((m) => scoringPointsForMatch(m, shootingSpeed)) ?? [];
+    competitionType === "FRC"
+      ? (matchSubs?.map((m) =>
+          frcFuelPointsForMatch(m as MatchSubmissionSlice, shootingSpeed)
+        ) ?? [])
+      : [];
   const validScores = scoringPointValues.filter(
     (v): v is number => typeof v === "number"
   );
@@ -660,17 +559,27 @@ function TeamProfileBody({
   matchSubs,
   pitData,
   eventCode,
+  teamNumber,
+  competitionType,
 }: {
   matchSubs: MatchSub[];
   pitData: PitSub | null;
   eventCode: string;
+  teamNumber: number;
+  competitionType: AnalyseCompetitionType;
 }) {
   const shootingSpeed = pitData?.shootingSpeed;
   const { matchCount, avgScoring, avgScoringPoints } = useTeamMetrics(
     matchSubs,
-    shootingSpeed
+    shootingSpeed,
+    competitionType
   );
-  const scoringUnit = matchSubs[0]?.inputMode === "form" ? "s/match" : "match";
+  const scoringUnit =
+    competitionType === "FTC"
+      ? "makes/match"
+      : matchSubs[0]?.inputMode === "form"
+        ? "s/match"
+        : "match";
   const shootingSpeedDisplay =
     shootingSpeed === undefined ? "—" : String(shootingSpeed);
   const scoringPointsDisplay =
@@ -692,26 +601,38 @@ function TeamProfileBody({
                   value={matchCount}
                 />
               </div>
-              <div className="border-b px-4 last:border-b-0">
-                <MetricCard
-                  icon={Gauge}
-                  label="Shooting Speed"
-                  {...(typeof shootingSpeed === "number" ? { sub: "/s" } : {})}
-                  value={shootingSpeedDisplay}
-                />
-              </div>
-              <div className="border-b px-4 last:border-b-0">
-                <MetricCard
-                  icon={TrendingUp}
-                  label="Avg Points"
-                  {...(avgScoringPoints !== null ? { sub: "pts/match" } : {})}
-                  value={scoringPointsDisplay}
-                />
-              </div>
+              {competitionType === "FRC" ? (
+                <>
+                  <div className="border-b px-4 last:border-b-0">
+                    <MetricCard
+                      icon={Gauge}
+                      label="Shooting Speed"
+                      {...(typeof shootingSpeed === "number"
+                        ? { sub: "/s" }
+                        : {})}
+                      value={shootingSpeedDisplay}
+                    />
+                  </div>
+                  <div className="border-b px-4 last:border-b-0">
+                    <MetricCard
+                      icon={TrendingUp}
+                      label="Avg Points"
+                      {...(avgScoringPoints !== null
+                        ? { sub: "pts/match" }
+                        : {})}
+                      value={scoringPointsDisplay}
+                    />
+                  </div>
+                </>
+              ) : null}
               <div className="px-4">
                 <MetricCard
                   icon={Target}
-                  label="Avg Scoring Activity"
+                  label={
+                    competitionType === "FTC"
+                      ? "Avg Makes per Match"
+                      : "Avg Scoring Activity"
+                  }
                   sub={scoringUnit}
                   value={avgScoring}
                 />
@@ -722,7 +643,7 @@ function TeamProfileBody({
 
         <div className="min-w-0 flex-1">
           {pitData ? (
-            <PitCard pit={pitData} />
+            <PitCard competitionType={competitionType} pit={pitData} />
           ) : (
             <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
               <div className="border-b px-4 py-3">
@@ -755,10 +676,19 @@ function TeamProfileBody({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <PerPeriodChart matchSubs={matchSubs} />
+            <PerPeriodChart
+              competitionType={competitionType}
+              matchSubs={matchSubs}
+            />
           </CardContent>
         </Card>
       ) : null}
+
+      <FieldHeatmapCard
+        competitionType={competitionType}
+        eventCode={eventCode}
+        teamNumber={teamNumber}
+      />
 
       {matchSubs.length > 0 ? (
         <Card>
@@ -769,6 +699,7 @@ function TeamProfileBody({
             <div className="space-y-2">
               {matchSubs.map((sub) => (
                 <MatchHistoryRow
+                  competitionType={competitionType}
                   eventCode={eventCode}
                   key={sub._id}
                   sub={sub}
@@ -794,15 +725,21 @@ export default function TeamProfile() {
   const params = useParams<{ eventCode: string; teamNumber: string }>();
   const { eventCode, teamNumber: teamNumberStr } = params;
   const teamNumber = Number.parseInt(teamNumberStr, 10);
+  const searchParams = useSearchParams();
+  const competitionType = parseAnalyseCompetitionType(
+    searchParams.get("competitionType")
+  );
 
   const matchSubs = useQuery(api.analysis.getTeamMatchStats, {
     eventCode,
     teamNumber,
+    competitionType,
   }) as MatchSub[] | undefined;
 
   const pitData = useQuery(api.analysis.getTeamPitDataAggregated, {
     eventCode,
     teamNumber,
+    competitionType,
   }) as PitSub | null | undefined;
 
   const teamsMap = useQuery(api.teams.getTeamsMapForEvent, { eventCode });
@@ -823,7 +760,12 @@ export default function TeamProfile() {
           <span>/</span>
           <Link
             className="hover:text-foreground"
-            href={`/analyse/${eventCode}` as Route}
+            href={
+              withAnalyseCompetition(
+                `/analyse/${eventCode}`,
+                competitionType
+              ) as Route
+            }
           >
             {eventCode}
           </Link>
@@ -833,7 +775,14 @@ export default function TeamProfile() {
 
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Link href={`/analyse/${eventCode}` as Route}>
+            <Link
+              href={
+                withAnalyseCompetition(
+                  `/analyse/${eventCode}`,
+                  competitionType
+                ) as Route
+              }
+            >
               <Button size="icon" variant="ghost">
                 <ArrowLeft className="size-4" />
               </Button>
@@ -853,7 +802,10 @@ export default function TeamProfile() {
 
           <Link
             href={
-              `/analyse/${eventCode}/comparison?teams=${teamNumber}` as Route
+              withAnalyseCompetition(
+                `/analyse/${eventCode}/comparison?teams=${teamNumber}`,
+                competitionType
+              ) as Route
             }
           >
             <Button size="sm" variant="outline">
@@ -876,9 +828,11 @@ export default function TeamProfile() {
         </div>
       ) : (
         <TeamProfileBody
+          competitionType={competitionType}
           eventCode={eventCode}
           matchSubs={matchSubs ?? []}
           pitData={pitData ?? null}
+          teamNumber={teamNumber}
         />
       )}
     </div>

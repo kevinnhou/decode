@@ -217,3 +217,68 @@ export const frcMatchSubmissionSchema = z.object({
 });
 
 export type FrcMatchSubmissionSchema = z.infer<typeof frcMatchSubmissionSchema>;
+
+// --- FTC Match Scouting ---
+
+export const ftcMatchMetaSchema = z.object({
+  teamNumber: z.number().int().min(1, "Team number is required"),
+  matchNumber: z.number().int().min(1, "Match number is required"),
+  matchStage: z.enum(["practice", "qual", "playoff"]),
+  allianceColour: z.enum(["Red", "Blue"]),
+  teamName: z.string().optional(),
+});
+
+export type FtcMatchMetaSchema = z.infer<typeof ftcMatchMetaSchema>;
+
+export const ftcPeriodDataSchema = z.object({
+  auto: z.object({ made: z.number().min(0), missed: z.number().min(0) }),
+  teleop: z.object({ made: z.number().min(0), missed: z.number().min(0) }),
+});
+
+export type FtcPeriodData = z.infer<typeof ftcPeriodDataSchema>;
+
+export const ftcMatchFormSchema = z.object({
+  periodData: ftcPeriodDataSchema.optional(),
+  ftcFieldEvents: fieldSchema.optional(),
+  notes: z.string().optional(),
+});
+
+export type FtcMatchFormSchema = z.infer<typeof ftcMatchFormSchema>;
+
+export const ftcMatchSubmissionSchema = z.object({
+  meta: ftcMatchMetaSchema,
+  inputMode: z.enum(["form", "field"]),
+  periodData: ftcPeriodDataSchema.optional(),
+  ftcFieldEvents: fieldSchema.optional(),
+  notes: z.string().optional(),
+});
+
+export type FtcMatchSubmissionSchema = z.infer<typeof ftcMatchSubmissionSchema>;
+
+// --- FTC Pit Scouting ---
+
+export const ftcPitFormSchema = z.object({
+  teamNumber: z.number().int().min(1, "Team number is required"),
+  photos: z.array(z.string()).optional(),
+  robotDimensions: z
+    .object({
+      length: z.number().min(0).optional(),
+      width: z.number().min(0).optional(),
+      height: z.number().min(0).optional(),
+    })
+    .optional(),
+  drivetrainType: z.enum(["swerve", "tank", "other"]).optional(),
+  weight: z.number().min(0).optional(),
+  intakeMethods: z
+    .array(z.enum(["floor", "outpost"]))
+    .optional()
+    .default([]),
+  maxClimbLevel: z
+    .union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)])
+    .optional(),
+  canShootDeep: z.boolean().optional().default(false),
+  autoCapabilities: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export type FtcPitFormSchema = z.infer<typeof ftcPitFormSchema>;

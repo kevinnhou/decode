@@ -5,6 +5,7 @@ import type {
   FieldSchema,
   FormSchema,
   FrcMatchSubmissionSchema,
+  FtcMatchSubmissionSchema,
 } from "@/schema/scouting";
 import { INITIAL_PERIOD_DATA } from "./constants";
 
@@ -60,6 +61,53 @@ export function getFrcFormValuesFromDuty(
   teamsMap: Record<string, string> = {}
 ): DefaultValues<FrcMatchSubmissionSchema> {
   const base = getInitialFrcFormValues();
+  if (!base.meta) {
+    return base;
+  }
+
+  if (duty.delegationType === "team" && duty.teamNumber !== undefined) {
+    return {
+      ...base,
+      meta: {
+        ...base.meta,
+        teamNumber: duty.teamNumber,
+        teamName: teamsMap[String(duty.teamNumber)] ?? undefined,
+      },
+    };
+  }
+
+  if (duty.delegationType === "position" && duty.allianceColour !== undefined) {
+    return {
+      ...base,
+      meta: {
+        ...base.meta,
+        allianceColour: duty.allianceColour,
+      },
+    };
+  }
+
+  return base;
+}
+
+export function getInitialFtcFormValues(): DefaultValues<FtcMatchSubmissionSchema> {
+  return {
+    meta: {
+      teamNumber: undefined,
+      matchNumber: undefined,
+      matchStage: "qual",
+      allianceColour: "Red",
+      teamName: undefined,
+    },
+    inputMode: "form",
+    notes: "",
+  };
+}
+
+export function getFtcFormValuesFromDuty(
+  duty: DutyForPrefill,
+  teamsMap: Record<string, string> = {}
+): DefaultValues<FtcMatchSubmissionSchema> {
+  const base = getInitialFtcFormValues();
   if (!base.meta) {
     return base;
   }

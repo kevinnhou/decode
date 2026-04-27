@@ -3,13 +3,21 @@ export interface ScoutingShortcuts {
   feeding: string;
   defense: string;
   matchTimer: string;
+  ftcMade: string;
+  ftcMissed: string;
+  ftcMadeDecrement: string;
+  ftcMissedDecrement: string;
 }
 
 export const SHORTCUT_LABELS: Record<keyof ScoutingShortcuts, string> = {
-  scoring: "Scoring",
-  feeding: "Feeding",
-  defense: "Defence",
+  scoring: "Scoring (FRC)",
+  feeding: "Feeding (FRC)",
+  defense: "Defence (FRC)",
   matchTimer: "Match Timer",
+  ftcMade: "Made + (FTC)",
+  ftcMissed: "Missed + (FTC)",
+  ftcMadeDecrement: "Made − (FTC)",
+  ftcMissedDecrement: "Missed − (FTC)",
 };
 
 export const DEFAULT_SHORTCUTS: ScoutingShortcuts = {
@@ -17,6 +25,10 @@ export const DEFAULT_SHORTCUTS: ScoutingShortcuts = {
   feeding: "f",
   defense: "d",
   matchTimer: " ",
+  ftcMade: "m",
+  ftcMissed: "x",
+  ftcMadeDecrement: "n",
+  ftcMissedDecrement: "z",
 };
 
 const SHORTCUTS_KEY = "scoutingShortcuts";

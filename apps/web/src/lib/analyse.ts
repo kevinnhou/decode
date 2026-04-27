@@ -67,6 +67,7 @@ export type TeamAggregate = {
   avgScoringActivity: number;
   avgDefenseActivity: number;
   primaryInputMode: "form" | "field";
+  fieldSpatialMatchCount?: number;
 };
 
 export type PitSubBase = {
@@ -77,8 +78,36 @@ export type PitSubBase = {
   intakeMethods?: string[];
   canPassTrench?: boolean;
   canCrossBump?: boolean;
+  canShootDeep?: boolean;
   autoCapabilities?: string;
 };
+
+export type AnalyseCompetitionType = "FRC" | "FTC";
+
+export const FTC_CHART_PERIODS = ["AUTO", "TELEOP"] as const;
+
+export const FTC_PERIOD_LABELS_SHORT: Record<string, string> = {
+  AUTO: "Auto",
+  TELEOP: "Teleop",
+};
+
+export function parseAnalyseCompetitionType(
+  raw: string | null | undefined
+): AnalyseCompetitionType {
+  return raw === "FTC" ? "FTC" : "FRC";
+}
+
+export function withAnalyseCompetition(
+  pathname: string,
+  competitionType: AnalyseCompetitionType
+): string {
+  if (competitionType !== "FTC") {
+    return pathname;
+  }
+  return pathname.includes("?")
+    ? `${pathname}&competitionType=FTC`
+    : `${pathname}?competitionType=FTC`;
+}
 
 export function parseTeamsParam(raw: string | null): number[] {
   if (!raw) {

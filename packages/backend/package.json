@@ -10,6 +10,7 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
+    "@decode/analytics": "workspace:*",
     "convex": "catalog:",
     "better-auth": "catalog:",
     "@convex-dev/better-auth": "catalog:"

@@ -37,12 +37,17 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
+  type AnalyseCompetitionType,
   buildChartConfig,
   CHART_PERIODS,
+  FTC_CHART_PERIODS,
+  FTC_PERIOD_LABELS_SHORT,
   PERIOD_LABELS_SHORT,
   type PitSubBase,
+  parseAnalyseCompetitionType,
   parseTeamsParam,
   TEAM_COLORS,
+  withAnalyseCompetition,
 } from "@/lib/analyse";
 
 type TeamComparisonData = {
@@ -51,11 +56,26 @@ type TeamComparisonData = {
   avgScoringActivity: number;
   avgDefenseActivity: number;
   primaryInputMode: "form" | "field";
+  fieldSpatialMatchCount?: number;
   avgPerPeriodScoring: Record<string, number>;
   pitSubmission: PitSubBase | null;
 };
 
-function buildPeriodChartData(teams: TeamComparisonData[]) {
+function buildPeriodChartData(
+  teams: TeamComparisonData[],
+  competitionType: AnalyseCompetitionType
+) {
+  if (competitionType === "FTC") {
+    return FTC_CHART_PERIODS.map((period) => {
+      const entry: Record<string, string | number> = {
+        period: FTC_PERIOD_LABELS_SHORT[period] ?? period,
+      };
+      for (const team of teams) {
+        entry[String(team.teamNumber)] = team.avgPerPeriodScoring[period] ?? 0;
+      }
+      return entry;
+    });
+  }
   return CHART_PERIODS.map((period) => {
     const entry: Record<string, string | number> = {
       period: PERIOD_LABELS_SHORT[period] ?? period,
@@ -91,11 +111,13 @@ function TeamSelector({
   onAdd,
   onRemove,
   eventCode,
+  competitionType,
 }: {
   teams: number[];
   onAdd: (n: number) => void;
   onRemove: (n: number) => void;
   eventCode: string;
+  competitionType: AnalyseCompetitionType;
 }) {
   const [input, setInput] = useState("");
 
@@ -123,7 +145,12 @@ function TeamSelector({
             />
             <Link
               className="font-mono font-semibold hover:underline"
-              href={`/analyse/${eventCode}/teams/${n}` as Route}
+              href={
+                withAnalyseCompetition(
+                  `/analyse/${eventCode}/teams/${n}`,
+                  competitionType
+                ) as Route
+              }
             >
               {n}
             </Link>
@@ -160,7 +187,14 @@ function TeamSelector({
             </Button>
           </form>
         ) : null}
-        <Link href={`/analyse/${eventCode}` as Route}>
+        <Link
+          href={
+            withAnalyseCompetition(
+              `/analyse/${eventCode}`,
+              competitionType
+            ) as Route
+          }
+        >
           <Button className="h-9" size="sm" variant="outline">
             Pick from event
           </Button>
@@ -170,8 +204,20 @@ function TeamSelector({
   );
 }
 
-function MetricsComparisonTable({ teams }: { teams: TeamComparisonData[] }) {
-  const unit = teams[0]?.primaryInputMode === "form" ? "s" : "ev";
+function MetricsComparisonTable({
+  teams,
+  competitionType,
+}: {
+  teams: TeamComparisonData[];
+  competitionType: AnalyseCompetitionType;
+}) {
+  const unit =
+    competitionType === "FTC"
+      ? "makes/match"
+      : teams[0]?.primaryInputMode === "form"
+        ? "s"
+        : "ev";
+  const defenseUnit = competitionType === "FTC" ? "w/ tag/match" : unit;
 
   const matchBest = getBestTeamIndices(teams, (t) => t.matchCount);
   const scoringBest = getBestTeamIndices(teams, (t) => t.avgScoringActivity);
@@ -249,7 +295,7 @@ function MetricsComparisonTable({ teams }: { teams: TeamComparisonData[] }) {
               >
                 {t.avgDefenseActivity}
                 <span className="ml-1 font-normal text-muted-foreground text-xs">
-                  {unit}
+                  {defenseUnit}
                 </span>
               </TableCell>
             ))}
@@ -298,7 +344,13 @@ function PitRow({
   );
 }
 
-function PitComparisonTable({ teams }: { teams: TeamComparisonData[] }) {
+function PitComparisonTable({
+  teams,
+  competitionType,
+}: {
+  teams: TeamComparisonData[];
+  competitionType: AnalyseCompetitionType;
+}) {
   const pits = teams.map((t) => ({
     teamNumber: t.teamNumber,
     pit: t.pitSubmission,
@@ -342,24 +394,35 @@ function PitComparisonTable({ teams }: { teams: TeamComparisonData[] }) {
             teams={pits}
             type="number"
           />
-          <PitRow
-            field="hopperCapacity"
-            label="Hopper Cap."
-            teams={pits}
-            type="number"
-          />
-          <PitRow
-            field="canPassTrench"
-            label="Can Pass Trench"
-            teams={pits}
-            type="bool"
-          />
-          <PitRow
-            field="canCrossBump"
-            label="Can Cross Bump"
-            teams={pits}
-            type="bool"
-          />
+          {competitionType === "FRC" ? (
+            <>
+              <PitRow
+                field="hopperCapacity"
+                label="Hopper Cap."
+                teams={pits}
+                type="number"
+              />
+              <PitRow
+                field="canPassTrench"
+                label="Can Pass Trench"
+                teams={pits}
+                type="bool"
+              />
+              <PitRow
+                field="canCrossBump"
+                label="Can Cross Bump"
+                teams={pits}
+                type="bool"
+              />
+            </>
+          ) : (
+            <PitRow
+              field="canShootDeep"
+              label="Can Shoot Deep"
+              teams={pits}
+              type="bool"
+            />
+          )}
           <TableRow>
             <TableCell className="py-2.5 text-muted-foreground text-sm">
               Intake Methods
@@ -396,6 +459,9 @@ export default function ComparisonBoard() {
   const params = useParams<{ eventCode: string }>();
   const { eventCode } = params;
   const searchParams = useSearchParams();
+  const competitionType = parseAnalyseCompetitionType(
+    searchParams.get("competitionType")
+  );
 
   const [teamNumbers, setTeamNumbers] = useState<number[]>(() =>
     parseTeamsParam(searchParams.get("teams"))
@@ -413,13 +479,15 @@ export default function ComparisonBoard() {
 
   const comparisonData = useQuery(
     api.analysis.getComparisonData,
-    teamNumbers.length > 0 ? { eventCode, teamNumbers } : "skip"
+    teamNumbers.length > 0
+      ? { eventCode, teamNumbers, competitionType }
+      : "skip"
   ) as TeamComparisonData[] | undefined;
 
   const isLoading = teamNumbers.length > 0 && comparisonData === undefined;
   const teams = comparisonData ?? [];
   const chartConfig = buildChartConfig(teamNumbers);
-  const periodData = buildPeriodChartData(teams);
+  const periodData = buildPeriodChartData(teams, competitionType);
   const hasAnyData = teams.some((t) => t.matchCount > 0);
   const hasPeriodData = teams.some((t) =>
     Object.values(t.avgPerPeriodScoring).some((v) => v > 0)
@@ -435,7 +503,12 @@ export default function ComparisonBoard() {
           <span>/</span>
           <Link
             className="hover:text-foreground"
-            href={`/analyse/${eventCode}` as Route}
+            href={
+              withAnalyseCompetition(
+                `/analyse/${eventCode}`,
+                competitionType
+              ) as Route
+            }
           >
             {eventCode}
           </Link>
@@ -445,7 +518,14 @@ export default function ComparisonBoard() {
 
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Link href={`/analyse/${eventCode}` as Route}>
+            <Link
+              href={
+                withAnalyseCompetition(
+                  `/analyse/${eventCode}`,
+                  competitionType
+                ) as Route
+              }
+            >
               <Button size="icon" variant="ghost">
                 <ArrowLeft className="size-4" />
               </Button>
@@ -460,6 +540,7 @@ export default function ComparisonBoard() {
         </div>
 
         <TeamSelector
+          competitionType={competitionType}
           eventCode={eventCode}
           onAdd={addTeam}
           onRemove={removeTeam}
@@ -492,7 +573,10 @@ export default function ComparisonBoard() {
                 Match Performance
               </h2>
             </div>
-            <MetricsComparisonTable teams={teams} />
+            <MetricsComparisonTable
+              competitionType={competitionType}
+              teams={teams}
+            />
           </section>
 
           {hasPeriodData ? (
@@ -541,7 +625,10 @@ export default function ComparisonBoard() {
             <h2 className="mb-3 font-medium text-muted-foreground text-sm">
               Pit Capabilities
             </h2>
-            <PitComparisonTable teams={teams} />
+            <PitComparisonTable
+              competitionType={competitionType}
+              teams={teams}
+            />
           </section>
         </div>
       ) : (

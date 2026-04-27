@@ -17,22 +17,33 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import {
+  type AnalyseCompetitionType,
+  withAnalyseCompetition,
+} from "@/lib/analyse";
 
 function EventCard({
   eventCode,
   eventName,
   matchCount,
   pitCount,
+  competitionType,
 }: {
   eventCode: string;
   eventName?: string;
   matchCount: number;
   pitCount: number;
+  competitionType: AnalyseCompetitionType;
 }) {
   return (
     <Link
       className="group flex flex-col gap-3 rounded-xl border bg-card p-5 transition-colors hover:bg-muted/50"
-      href={`/analyse/${eventCode}` as Route}
+      href={
+        withAnalyseCompetition(
+          `/analyse/${eventCode}`,
+          competitionType
+        ) as Route
+      }
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-1">
@@ -42,7 +53,7 @@ function EventCard({
           ) : null}
         </div>
         <Badge className="shrink-0" variant="outline">
-          FRC
+          {competitionType}
         </Badge>
       </div>
       <div className="flex items-center gap-4 text-muted-foreground text-xs">
@@ -82,21 +93,26 @@ export default function Analyse() {
   const [teamSearch, setTeamSearch] = useState("");
   const [eventFilter, setEventFilter] = useState("");
   const [goEventCode, setGoEventCode] = useState("");
+  const [searchCompetitionType, setSearchCompetitionType] =
+    useState<AnalyseCompetitionType>("FRC");
   const router = useRouter();
 
   function handleTeamSearch(e: React.FormEvent) {
     e.preventDefault();
     const num = Number.parseInt(teamSearch.trim(), 10);
     if (!Number.isNaN(num) && num > 0 && goEventCode.trim()) {
-      router.push(
-        `/analyse/${goEventCode.toUpperCase().trim()}/teams/${num}` as Route
-      );
+      const path = `/analyse/${goEventCode.toUpperCase().trim()}/teams/${num}`;
+      router.push(withAnalyseCompetition(path, searchCompetitionType) as Route);
     }
   }
 
   const filteredEvents =
     events?.filter(
-      (ev: { eventCode: string; eventName?: string }) =>
+      (ev: {
+        eventCode: string;
+        eventName?: string;
+        competitionType?: AnalyseCompetitionType;
+      }) =>
         ev.eventCode.toLowerCase().includes(eventFilter.toLowerCase()) ||
         ev.eventName?.toLowerCase().includes(eventFilter.toLowerCase())
     ) ?? [];
@@ -122,13 +138,31 @@ export default function Analyse() {
           </div>
         </div>
 
-        <form className="mb-8 flex gap-2" onSubmit={handleTeamSearch}>
+        <form
+          className="mb-8 flex flex-wrap items-end gap-2"
+          onSubmit={handleTeamSearch}
+        >
           <Input
             className="w-36"
             onChange={(e) => setGoEventCode(e.target.value)}
             placeholder="Event code"
             value={goEventCode}
           />
+          <label className="flex flex-col gap-1 text-muted-foreground text-xs">
+            <span>Programme</span>
+            <select
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+              onChange={(e) =>
+                setSearchCompetitionType(
+                  e.target.value === "FTC" ? "FTC" : "FRC"
+                )
+              }
+              value={searchCompetitionType}
+            >
+              <option value="FRC">FRC</option>
+              <option value="FTC">FTC</option>
+            </select>
+          </label>
           <Input
             className="w-32"
             min={1}
@@ -163,7 +197,7 @@ export default function Analyse() {
             <p className="text-muted-foreground text-sm">
               {eventFilter
                 ? "No events match your search. Try a different filter."
-                : "Submit FRC match or pit scouting data to see events here."}
+                : "Submit match or pit scouting data to see events here."}
             </p>
           </div>
         </div>
@@ -173,13 +207,15 @@ export default function Analyse() {
             (ev: {
               eventCode: string;
               eventName?: string;
+              competitionType: AnalyseCompetitionType;
               matchCount: number;
               pitCount: number;
             }) => (
               <EventCard
+                competitionType={ev.competitionType}
                 eventCode={ev.eventCode}
                 eventName={ev.eventName}
-                key={ev.eventCode}
+                key={`${ev.eventCode}-${ev.competitionType}`}
                 matchCount={ev.matchCount}
                 pitCount={ev.pitCount}
               />

@@ -12,6 +12,7 @@ import {
 } from "@decode/ui/components/sidebar";
 import { cn } from "@decode/ui/lib/utils";
 import { usePathname } from "next/navigation";
+import { SidebarEventCode } from "./event-code";
 import { MatchHeader } from "./match-header";
 import { PitSections } from "./pit-sections";
 import { ScoutType } from "./scout-type";
@@ -35,6 +36,10 @@ const SIDEBAR_HEADER_CONFIGS: SidebarHeaderConfig[] = [
   },
   {
     pattern: /\/scout\/frc\/pit$/,
+    component: <PitSections />,
+  },
+  {
+    pattern: /\/scout\/ftc\/pit$/,
     component: <PitSections />,
   },
 ];
@@ -65,6 +70,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <DynamicSidebarHeader pathname={pathname} />
       </SidebarHeader>
       <SidebarContent>
+        <SidebarEventCode />
         <SidebarContentSlot />
       </SidebarContent>
       <SidebarFooter>

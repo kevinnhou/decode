@@ -5,61 +5,67 @@ import { mutation, query } from "./_generated/server";
 import { getAuthUser, requireRole, requireUserProfile } from "./auth";
 import { allianceColourValidator, delegationTypeValidator } from "./schema";
 
-async function assertNoDuplicateTeam(
-  ctx: MutationCtx,
-  organisationId: Id<"organisations">,
-  eventCode: string,
-  teamNumber: number
-) {
-  const existing = await ctx.db
-    .query("scoutingDuties")
-    .withIndex("by_org_and_event", (q) =>
-      q.eq("organisationId", organisationId).eq("eventCode", eventCode)
-    )
-    .collect();
-
-  const duplicate = existing.find(
-    (d) =>
-      d.deletedAt === undefined &&
-      d.delegationType === "team" &&
-      d.teamNumber === teamNumber
-  );
-  if (duplicate) {
-    throw new ConvexError(
-      `Team ${teamNumber} is already assigned to another scout`
-    );
-  }
-}
-
-async function assertNoDuplicatePosition(
+async function assertScoutingConflictDuty(
   ctx: MutationCtx,
   params: {
     organisationId: Id<"organisations">;
     eventCode: string;
-    allianceColour: "Red" | "Blue";
-    alliancePosition: number;
+    scoutUserId: string;
+    delegationType: "team" | "position";
+    teamNumber?: number;
+    allianceColour?: "Red" | "Blue";
+    alliancePosition?: number;
   }
 ) {
-  const { organisationId, eventCode, allianceColour, alliancePosition } =
-    params;
+  const {
+    organisationId,
+    eventCode,
+    scoutUserId,
+    delegationType,
+    teamNumber,
+    allianceColour,
+    alliancePosition,
+  } = params;
+
   const existing = await ctx.db
     .query("scoutingDuties")
-    .withIndex("by_org_and_event", (q) =>
-      q.eq("organisationId", organisationId).eq("eventCode", eventCode)
+    .withIndex("by_org_event_scout", (q) =>
+      q
+        .eq("organisationId", organisationId)
+        .eq("eventCode", eventCode)
+        .eq("scout", scoutUserId)
     )
     .collect();
 
-  const duplicate = existing.find(
-    (d) =>
-      d.deletedAt === undefined &&
-      d.delegationType === "position" &&
-      d.allianceColour === allianceColour &&
-      d.alliancePosition === alliancePosition
-  );
-  if (duplicate) {
-    throw new ConvexError(
-      `${allianceColour} ${alliancePosition} is already assigned to another scout`
+  const active = existing.filter((d) => d.deletedAt === undefined);
+
+  if (delegationType === "team" && teamNumber !== undefined) {
+    const clash = active.find(
+      (d) => d.delegationType === "team" && d.teamNumber === teamNumber
     );
+    if (clash) {
+      throw new ConvexError(
+        `This scout is already assigned to team ${teamNumber} for this event`
+      );
+    }
+  }
+
+  if (
+    delegationType === "position" &&
+    allianceColour !== undefined &&
+    alliancePosition !== undefined
+  ) {
+    const clash = active.find(
+      (d) =>
+        d.delegationType === "position" &&
+        d.allianceColour === allianceColour &&
+        d.alliancePosition === alliancePosition
+    );
+    if (clash) {
+      throw new ConvexError(
+        `${allianceColour} ${alliancePosition} is already assigned to this scout for this event`
+      );
+    }
   }
 }
 
@@ -237,7 +243,9 @@ const createDutyArgs = {
 
 /**
  * Creates a scouting duty. Caller must be leadScout or admin.
- * Validates: scout in same org, no duplicate team/position per event.
+ * Validates: scout in same org; the same scout cannot receive duplicate duties
+ * for the same team number or alliance slot in one event (multiple scouts may
+ * share a team or position).
  *
  * @param ctx - The Convex mutation context
  * @param args - Duty creation args
@@ -260,27 +268,15 @@ export const createDuty = mutation({
     await assertScoutInOrg(ctx, args.scout, profile.organisationId);
     validateCreateDutyArgs(args);
 
-    if (args.delegationType === "team" && args.teamNumber !== undefined) {
-      await assertNoDuplicateTeam(
-        ctx,
-        args.organisationId,
-        args.eventCode.trim(),
-        args.teamNumber
-      );
-    }
-
-    if (
-      args.delegationType === "position" &&
-      args.allianceColour !== undefined &&
-      args.alliancePosition !== undefined
-    ) {
-      await assertNoDuplicatePosition(ctx, {
-        organisationId: args.organisationId,
-        eventCode: args.eventCode.trim(),
-        allianceColour: args.allianceColour,
-        alliancePosition: args.alliancePosition,
-      });
-    }
+    await assertScoutingConflictDuty(ctx, {
+      organisationId: args.organisationId,
+      eventCode: args.eventCode.trim(),
+      scoutUserId: args.scout,
+      delegationType: args.delegationType,
+      teamNumber: args.teamNumber,
+      allianceColour: args.allianceColour,
+      alliancePosition: args.alliancePosition,
+    });
 
     const now = Date.now();
 

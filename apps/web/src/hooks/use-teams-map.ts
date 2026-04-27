@@ -3,6 +3,7 @@
 import { api } from "@decode/backend/convex/_generated/api";
 import { useQuery } from "convex/react";
 import { useEffect } from "react";
+import { useConfigRevision } from "@/hooks/use-config-revision";
 import { getConfig, getTeamsMap, setTeamsMap } from "@/lib/config";
 
 /**
@@ -14,6 +15,7 @@ import { getConfig, getTeamsMap, setTeamsMap } from "@/lib/config";
  * @returns The team map for the currently configured event
  */
 export function useTeamsMap(): Record<string, string> {
+  useConfigRevision();
   const eventCode = getConfig()?.eventCode ?? "";
 
   const result = useQuery(
