@@ -24,7 +24,7 @@ import { toast } from "@decode/ui/components/sonner";
 import { Textarea } from "@decode/ui/components/textarea";
 import { useForm } from "@decode/ui/lib/react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { memo, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useInput } from "@/hooks/use-input";
 import { useMyDuties } from "@/hooks/use-my-duties";
 import { useShortcuts } from "@/hooks/use-shortcuts";
@@ -37,7 +37,12 @@ import {
 } from "@/lib/form/constants";
 import { formatShortcutKey } from "@/lib/form/shortcuts";
 import type { PageState } from "@/lib/form/types";
-import { aggregateFieldEvents, formatNumberFieldProps } from "@/lib/form/utils";
+import {
+  aggregateFieldEvents,
+  formatNumberFieldProps,
+  getFtcFormValuesFromDuty,
+  getInitialFtcFormValues,
+} from "@/lib/form/utils";
 import type {
   FieldSchema,
   FtcMatchSubmissionSchema,
@@ -46,6 +51,7 @@ import type {
 import { ftcMatchSubmissionSchema } from "@/schema/scouting";
 import { EventsList } from "~/form/events-list";
 import { FieldInput } from "~/form/field-input";
+import { MatchPeriodBar } from "~/form/match-period-bar";
 import { MatchTimerFTC } from "~/form/match-timer";
 import { TeamCombobox } from "~/form/team-combobox";
 import { AssignmentSidebar } from "~/sidebar/assignment-sidebar";
@@ -63,40 +69,6 @@ const INITIAL_FTC_PERIOD_DATA: {
   auto: { made: 0, missed: 0 },
   teleop: { made: 0, missed: 0 },
 };
-
-// biome-ignore lint/nursery/noShadow: PASS
-const PeriodBar = memo(function PeriodBar({
-  elapsedInPeriod,
-  periodDuration,
-}: {
-  elapsedInPeriod: number;
-  periodDuration: number;
-}) {
-  const pct =
-    periodDuration > 0
-      ? Math.max(0, (1 - elapsedInPeriod / periodDuration) * 100)
-      : 0;
-  return (
-    <div
-      className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-linear"
-      style={{ width: `${pct}%` }}
-    />
-  );
-});
-
-function getInitialFtcFormValues(): Partial<FtcMatchSubmissionSchema> {
-  return {
-    meta: {
-      teamNumber: undefined as unknown as number,
-      matchNumber: undefined as unknown as number,
-      matchStage: "qual",
-      allianceColour: "Red",
-      teamName: undefined,
-    },
-    inputMode: "form",
-    notes: "",
-  };
-}
 
 export default function MatchScouting() {
   const { mode: inputMode } = useInput();
@@ -139,31 +111,7 @@ export default function MatchScouting() {
       setDisplayedDutyIndex((i) => (i + 1) % duties.length);
     } else {
       setActiveDuty(displayedDuty);
-      const base = getInitialFtcFormValues();
-      if (
-        displayedDuty.delegationType === "team" &&
-        displayedDuty.teamNumber !== undefined
-      ) {
-        form.reset({
-          ...base,
-          meta: {
-            ...(base.meta as FtcMatchSubmissionSchema["meta"]),
-            teamNumber: displayedDuty.teamNumber,
-            teamName: teamsMap[String(displayedDuty.teamNumber)] ?? undefined,
-          },
-        });
-      } else if (
-        displayedDuty.delegationType === "position" &&
-        displayedDuty.allianceColour !== undefined
-      ) {
-        form.reset({
-          ...base,
-          meta: {
-            ...(base.meta as FtcMatchSubmissionSchema["meta"]),
-            allianceColour: displayedDuty.allianceColour,
-          },
-        });
-      }
+      form.reset(getFtcFormValuesFromDuty(displayedDuty, teamsMap));
     }
   }, [duties, activeDuty, displayedDutyIndex, form, teamsMap]);
 
@@ -751,7 +699,7 @@ function PeriodProgress({
         {progress.period} · {formatTime(progress.timeRemainingInPeriod)} left
       </p>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-        <PeriodBar
+        <MatchPeriodBar
           elapsedInPeriod={progress.elapsedInPeriod}
           periodDuration={progress.periodDuration}
         />

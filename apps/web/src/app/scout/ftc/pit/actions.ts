@@ -37,7 +37,7 @@ type SubmitPitArgs = {
   drivetrainType?: "swerve" | "tank" | "other";
   photos?: string[];
   notes?: string;
-  intakeMethods?: ("floor" | "depot" | "outpost")[];
+  intakeMethods?: ("floor" | "outpost")[];
   maxClimbLevel?: 0 | 1 | 2 | 3;
   canShootDeep?: boolean;
   autoCapabilities?: string;

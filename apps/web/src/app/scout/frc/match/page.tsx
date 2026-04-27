@@ -25,7 +25,7 @@ import { toast } from "@decode/ui/components/sonner";
 import { useForm } from "@decode/ui/lib/react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "convex/react";
-import { memo, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useInput } from "@/hooks/use-input";
 import { useMyDuties } from "@/hooks/use-my-duties";
 import { useShortcuts } from "@/hooks/use-shortcuts";
@@ -58,6 +58,7 @@ import type {
 import { frcMatchSubmissionSchema } from "@/schema/scouting";
 import { FrcEventsList } from "~/form/events-list";
 import { FrcFieldInput } from "~/form/field-input";
+import { MatchPeriodBar } from "~/form/match-period-bar";
 import { MatchTimerFRC } from "~/form/match-timer";
 import { PeriodSlide } from "~/form/period-slide";
 import { SummaryView } from "~/form/summary-view";
@@ -69,26 +70,6 @@ import {
   setSidebarFooterContent,
 } from "~/sidebar/slot";
 import { submitMatch } from "./actions";
-
-// biome-ignore lint/nursery/noShadow: PASS
-const PeriodBar = memo(function PeriodBar({
-  elapsedInPeriod,
-  periodDuration,
-}: {
-  elapsedInPeriod: number;
-  periodDuration: number;
-}) {
-  const pct =
-    periodDuration > 0
-      ? Math.max(0, (1 - elapsedInPeriod / periodDuration) * 100)
-      : 0;
-  return (
-    <div
-      className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-linear"
-      style={{ width: `${pct}%` }}
-    />
-  );
-});
 
 export default function MatchScouting() {
   const { mode: inputMode } = useInput();
@@ -706,7 +687,7 @@ export default function MatchScouting() {
                   {timer.formatTime(progress.timeRemainingInPeriod)} left
                 </p>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                  <PeriodBar
+                  <MatchPeriodBar
                     elapsedInPeriod={progress.elapsedInPeriod}
                     periodDuration={progress.periodDuration}
                   />
@@ -739,7 +720,7 @@ export default function MatchScouting() {
                 {timer.formatTime(progress.timeRemainingInPeriod)} left
               </p>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                <PeriodBar
+                <MatchPeriodBar
                   elapsedInPeriod={progress.elapsedInPeriod}
                   periodDuration={progress.periodDuration}
                 />
@@ -772,7 +753,7 @@ export default function MatchScouting() {
               {timer.formatTime(progress.timeRemainingInPeriod)} left
             </p>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-              <PeriodBar
+              <MatchPeriodBar
                 elapsedInPeriod={progress.elapsedInPeriod}
                 periodDuration={progress.periodDuration}
               />

@@ -9,9 +9,8 @@ import {
   FTC_INITIAL_TIME_SECONDS,
   type FtcPeriod,
   INITIAL_TIME_SECONDS,
+  type TimerState,
 } from "@/lib/form/constants";
-
-type TimerState = "idle" | "running" | "paused" | "finished";
 
 const FRC_PERIODS: FrcPeriod[] = [
   "AUTO",

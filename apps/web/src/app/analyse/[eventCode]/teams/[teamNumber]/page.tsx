@@ -38,16 +38,19 @@ import {
 import type { Route } from "next";
 import NextImage from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
+  type AnalyseCompetitionType,
   CHART_PERIODS,
   CLIMB_LABELS,
   PERIOD_LABELS,
   PERIOD_TO_PD_KEY,
   type PitSubBase,
+  parseAnalyseCompetitionType,
+  withAnalyseCompetition,
 } from "@/lib/analyse";
 
 const periodChartConfig: ChartConfig = {
@@ -65,6 +68,7 @@ type MatchSub = {
   climbLevel?: number;
   climbDuration?: number;
   inputMode: string;
+  competitionType?: string;
   periodData?: Record<
     string,
     { scoring: number; feeding: number; defense: number }
@@ -75,6 +79,13 @@ type MatchSub = {
     duration: number;
     period: string;
   }>;
+  ftcPeriodData?: {
+    auto: { made: number; missed: number };
+    teleop: { made: number; missed: number };
+  };
+  autonomousMade?: number;
+  teleopMade?: number;
+  fieldEvents?: Array<{ event: string; count: number }>;
   notes?: string;
   scoutName: string;
 };
@@ -82,6 +93,7 @@ type MatchSub = {
 type PitSub = PitSubBase & {
   robotDimensions?: { length: number; width: number; height: number };
   shootingSpeed?: number;
+  canShootDeep?: boolean;
   notes?: string;
   photoUrls?: string[];
   submissionCount?: number;
@@ -150,6 +162,25 @@ function scoringForMatch(sub: MatchSub): number {
     ).length;
   }
   return 0;
+}
+
+function ftcMakesForMatch(sub: MatchSub): number {
+  if (sub.ftcPeriodData) {
+    return sub.ftcPeriodData.auto.made + sub.ftcPeriodData.teleop.made;
+  }
+  let auto = sub.autonomousMade ?? 0;
+  let teleop = sub.teleopMade ?? 0;
+  if (auto === 0 && teleop === 0 && sub.fieldEvents) {
+    for (const e of sub.fieldEvents) {
+      if (e.event === "autonomous_made") {
+        auto += e.count;
+      }
+      if (e.event === "teleop_made") {
+        teleop += e.count;
+      }
+    }
+  }
+  return auto + teleop;
 }
 
 function periodTotalsFromFormSub(
@@ -359,19 +390,27 @@ function PhotoPreview({
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Pit card has multiple conditional sections
-function PitCard({ pit }: { pit: PitSub }) {
+function PitCard({
+  pit,
+  competitionType,
+}: {
+  pit: PitSub;
+  competitionType: AnalyseCompetitionType;
+}) {
   const intakeMethods = pit.intakeMethods ?? [];
   const metrics = [
     pit.drivetrainType && { label: "Drivetrain", value: pit.drivetrainType },
     pit.weight !== undefined && { label: "Weight", value: `${pit.weight} kg` },
-    pit.hopperCapacity !== undefined && {
-      label: "Hopper",
-      value: String(pit.hopperCapacity),
-    },
-    pit.shootingSpeed !== undefined && {
-      label: "Shooting",
-      value: `${pit.shootingSpeed}/s`,
-    },
+    competitionType === "FRC" &&
+      pit.hopperCapacity !== undefined && {
+        label: "Hopper",
+        value: String(pit.hopperCapacity),
+      },
+    competitionType === "FRC" &&
+      pit.shootingSpeed !== undefined && {
+        label: "Shooting",
+        value: `${pit.shootingSpeed}/s`,
+      },
     pit.maxClimbLevel !== undefined && {
       label: "Max climb",
       value: climbBadgeVariant(pit.maxClimbLevel),
@@ -384,8 +423,9 @@ function PitCard({ pit }: { pit: PitSub }) {
 
   const hasCapabilities =
     intakeMethods.length > 0 ||
-    pit.canPassTrench !== undefined ||
-    pit.canCrossBump !== undefined;
+    (competitionType === "FRC" &&
+      (pit.canPassTrench !== undefined || pit.canCrossBump !== undefined)) ||
+    competitionType === "FTC";
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
@@ -457,22 +497,35 @@ function PitCard({ pit }: { pit: PitSub }) {
                   ))}
                 </span>
               )}
-              <span className="flex items-center gap-1 text-sm">
-                {pit.canPassTrench ? (
-                  <CheckCircle2 className="size-3.5 text-green-500" />
-                ) : (
-                  <XCircle className="size-3.5 text-muted-foreground/50" />
-                )}
-                Trench
-              </span>
-              <span className="flex items-center gap-1 text-sm">
-                {pit.canCrossBump ? (
-                  <CheckCircle2 className="size-3.5 text-green-500" />
-                ) : (
-                  <XCircle className="size-3.5 text-muted-foreground/50" />
-                )}
-                Bump
-              </span>
+              {competitionType === "FRC" ? (
+                <>
+                  <span className="flex items-center gap-1 text-sm">
+                    {pit.canPassTrench ? (
+                      <CheckCircle2 className="size-3.5 text-green-500" />
+                    ) : (
+                      <XCircle className="size-3.5 text-muted-foreground/50" />
+                    )}
+                    Trench
+                  </span>
+                  <span className="flex items-center gap-1 text-sm">
+                    {pit.canCrossBump ? (
+                      <CheckCircle2 className="size-3.5 text-green-500" />
+                    ) : (
+                      <XCircle className="size-3.5 text-muted-foreground/50" />
+                    )}
+                    Bump
+                  </span>
+                </>
+              ) : (
+                <span className="flex items-center gap-1 text-sm">
+                  {pit.canShootDeep ? (
+                    <CheckCircle2 className="size-3.5 text-green-500" />
+                  ) : (
+                    <XCircle className="size-3.5 text-muted-foreground/50" />
+                  )}
+                  Shoot deep
+                </span>
+              )}
             </div>
           </div>
         ) : null}
@@ -481,8 +534,58 @@ function PitCard({ pit }: { pit: PitSub }) {
   );
 }
 
-function PerPeriodChart({ matchSubs }: { matchSubs: MatchSub[] }) {
-  const data = buildPeriodChartData(matchSubs);
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: period aggregation branches on stored vs legacy shape
+function buildFtcPeriodChartData(matchSubs: MatchSub[]) {
+  const n = matchSubs.length;
+  if (n === 0) {
+    return [];
+  }
+  let autoSum = 0;
+  let teleopSum = 0;
+  for (const sub of matchSubs) {
+    if (sub.ftcPeriodData) {
+      autoSum += sub.ftcPeriodData.auto.made;
+      teleopSum += sub.ftcPeriodData.teleop.made;
+    } else {
+      let auto = sub.autonomousMade ?? 0;
+      let teleop = sub.teleopMade ?? 0;
+      if (auto === 0 && teleop === 0 && sub.fieldEvents) {
+        for (const e of sub.fieldEvents) {
+          if (e.event === "autonomous_made") {
+            auto += e.count;
+          }
+          if (e.event === "teleop_made") {
+            teleop += e.count;
+          }
+        }
+      }
+      autoSum += auto;
+      teleopSum += teleop;
+    }
+  }
+  return [
+    {
+      period: "Auto",
+      scoring: Math.round((autoSum / n) * 10) / 10,
+    },
+    {
+      period: "Teleop",
+      scoring: Math.round((teleopSum / n) * 10) / 10,
+    },
+  ];
+}
+
+function PerPeriodChart({
+  matchSubs,
+  competitionType,
+}: {
+  matchSubs: MatchSub[];
+  competitionType: AnalyseCompetitionType;
+}) {
+  const data =
+    competitionType === "FTC"
+      ? buildFtcPeriodChartData(matchSubs)
+      : buildPeriodChartData(matchSubs);
   const hasData = data.some((d) => d.scoring > 0);
 
   if (!hasData) {
@@ -523,16 +626,28 @@ function PerPeriodChart({ matchSubs }: { matchSubs: MatchSub[] }) {
 function MatchHistoryRow({
   sub,
   eventCode,
+  competitionType,
 }: {
   sub: MatchSub;
   eventCode: string;
+  competitionType: AnalyseCompetitionType;
 }) {
+  const score =
+    competitionType === "FTC" ? ftcMakesForMatch(sub) : scoringForMatch(sub);
+  const scoreUnit =
+    competitionType === "FTC" ? "makes" : sub.inputMode === "form" ? "s" : "ev";
+
   return (
     <div className="flex items-center justify-between rounded-lg border px-4 py-2.5">
       <div className="flex items-center gap-3">
         <Link
           className="font-mono font-semibold text-sm hover:underline"
-          href={`/analyse/${eventCode}/match/${sub.matchNumber}` as Route}
+          href={
+            withAnalyseCompetition(
+              `/analyse/${eventCode}/match/${sub.matchNumber}`,
+              competitionType
+            ) as Route
+          }
         >
           Q{sub.matchNumber}
         </Link>
@@ -549,12 +664,12 @@ function MatchHistoryRow({
       </div>
       <div className="flex items-center gap-3">
         <span className="font-mono text-xs">
-          {scoringForMatch(sub)}
+          {score}
           <span className="ml-1 text-muted-foreground text-xs">
-            {sub.inputMode === "form" ? "s" : "ev"}
+            {scoreUnit}
           </span>
         </span>
-        {climbBadgeVariant(sub.climbLevel)}
+        {competitionType === "FRC" ? climbBadgeVariant(sub.climbLevel) : null}
       </div>
     </div>
   );
@@ -632,18 +747,29 @@ function NotesSection({
 
 function useTeamMetrics(
   matchSubs: MatchSub[] | undefined,
-  shootingSpeed?: number
+  shootingSpeed: number | undefined,
+  competitionType: AnalyseCompetitionType
 ) {
   const matchCount = matchSubs?.length ?? 0;
   const avgScoring =
     matchCount > 0 && matchSubs
       ? Math.round(
-          (matchSubs.reduce((s, m) => s + scoringForMatch(m), 0) / matchCount) *
+          (matchSubs.reduce(
+            (s, m) =>
+              s +
+              (competitionType === "FTC"
+                ? ftcMakesForMatch(m)
+                : scoringForMatch(m)),
+            0
+          ) /
+            matchCount) *
             10
         ) / 10
       : 0;
   const scoringPointValues =
-    matchSubs?.map((m) => scoringPointsForMatch(m, shootingSpeed)) ?? [];
+    competitionType === "FRC"
+      ? (matchSubs?.map((m) => scoringPointsForMatch(m, shootingSpeed)) ?? [])
+      : [];
   const validScores = scoringPointValues.filter(
     (v): v is number => typeof v === "number"
   );
@@ -660,17 +786,25 @@ function TeamProfileBody({
   matchSubs,
   pitData,
   eventCode,
+  competitionType,
 }: {
   matchSubs: MatchSub[];
   pitData: PitSub | null;
   eventCode: string;
+  competitionType: AnalyseCompetitionType;
 }) {
   const shootingSpeed = pitData?.shootingSpeed;
   const { matchCount, avgScoring, avgScoringPoints } = useTeamMetrics(
     matchSubs,
-    shootingSpeed
+    shootingSpeed,
+    competitionType
   );
-  const scoringUnit = matchSubs[0]?.inputMode === "form" ? "s/match" : "match";
+  const scoringUnit =
+    competitionType === "FTC"
+      ? "makes/match"
+      : matchSubs[0]?.inputMode === "form"
+        ? "s/match"
+        : "match";
   const shootingSpeedDisplay =
     shootingSpeed === undefined ? "—" : String(shootingSpeed);
   const scoringPointsDisplay =
@@ -692,26 +826,38 @@ function TeamProfileBody({
                   value={matchCount}
                 />
               </div>
-              <div className="border-b px-4 last:border-b-0">
-                <MetricCard
-                  icon={Gauge}
-                  label="Shooting Speed"
-                  {...(typeof shootingSpeed === "number" ? { sub: "/s" } : {})}
-                  value={shootingSpeedDisplay}
-                />
-              </div>
-              <div className="border-b px-4 last:border-b-0">
-                <MetricCard
-                  icon={TrendingUp}
-                  label="Avg Points"
-                  {...(avgScoringPoints !== null ? { sub: "pts/match" } : {})}
-                  value={scoringPointsDisplay}
-                />
-              </div>
+              {competitionType === "FRC" ? (
+                <>
+                  <div className="border-b px-4 last:border-b-0">
+                    <MetricCard
+                      icon={Gauge}
+                      label="Shooting Speed"
+                      {...(typeof shootingSpeed === "number"
+                        ? { sub: "/s" }
+                        : {})}
+                      value={shootingSpeedDisplay}
+                    />
+                  </div>
+                  <div className="border-b px-4 last:border-b-0">
+                    <MetricCard
+                      icon={TrendingUp}
+                      label="Avg Points"
+                      {...(avgScoringPoints !== null
+                        ? { sub: "pts/match" }
+                        : {})}
+                      value={scoringPointsDisplay}
+                    />
+                  </div>
+                </>
+              ) : null}
               <div className="px-4">
                 <MetricCard
                   icon={Target}
-                  label="Avg Scoring Activity"
+                  label={
+                    competitionType === "FTC"
+                      ? "Avg Makes per Match"
+                      : "Avg Scoring Activity"
+                  }
                   sub={scoringUnit}
                   value={avgScoring}
                 />
@@ -722,7 +868,7 @@ function TeamProfileBody({
 
         <div className="min-w-0 flex-1">
           {pitData ? (
-            <PitCard pit={pitData} />
+            <PitCard competitionType={competitionType} pit={pitData} />
           ) : (
             <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
               <div className="border-b px-4 py-3">
@@ -755,7 +901,10 @@ function TeamProfileBody({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <PerPeriodChart matchSubs={matchSubs} />
+            <PerPeriodChart
+              competitionType={competitionType}
+              matchSubs={matchSubs}
+            />
           </CardContent>
         </Card>
       ) : null}
@@ -769,6 +918,7 @@ function TeamProfileBody({
             <div className="space-y-2">
               {matchSubs.map((sub) => (
                 <MatchHistoryRow
+                  competitionType={competitionType}
                   eventCode={eventCode}
                   key={sub._id}
                   sub={sub}
@@ -794,15 +944,21 @@ export default function TeamProfile() {
   const params = useParams<{ eventCode: string; teamNumber: string }>();
   const { eventCode, teamNumber: teamNumberStr } = params;
   const teamNumber = Number.parseInt(teamNumberStr, 10);
+  const searchParams = useSearchParams();
+  const competitionType = parseAnalyseCompetitionType(
+    searchParams.get("competitionType")
+  );
 
   const matchSubs = useQuery(api.analysis.getTeamMatchStats, {
     eventCode,
     teamNumber,
+    competitionType,
   }) as MatchSub[] | undefined;
 
   const pitData = useQuery(api.analysis.getTeamPitDataAggregated, {
     eventCode,
     teamNumber,
+    competitionType,
   }) as PitSub | null | undefined;
 
   const teamsMap = useQuery(api.teams.getTeamsMapForEvent, { eventCode });
@@ -823,7 +979,12 @@ export default function TeamProfile() {
           <span>/</span>
           <Link
             className="hover:text-foreground"
-            href={`/analyse/${eventCode}` as Route}
+            href={
+              withAnalyseCompetition(
+                `/analyse/${eventCode}`,
+                competitionType
+              ) as Route
+            }
           >
             {eventCode}
           </Link>
@@ -833,7 +994,14 @@ export default function TeamProfile() {
 
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Link href={`/analyse/${eventCode}` as Route}>
+            <Link
+              href={
+                withAnalyseCompetition(
+                  `/analyse/${eventCode}`,
+                  competitionType
+                ) as Route
+              }
+            >
               <Button size="icon" variant="ghost">
                 <ArrowLeft className="size-4" />
               </Button>
@@ -853,7 +1021,10 @@ export default function TeamProfile() {
 
           <Link
             href={
-              `/analyse/${eventCode}/comparison?teams=${teamNumber}` as Route
+              withAnalyseCompetition(
+                `/analyse/${eventCode}/comparison?teams=${teamNumber}`,
+                competitionType
+              ) as Route
             }
           >
             <Button size="sm" variant="outline">
@@ -876,6 +1047,7 @@ export default function TeamProfile() {
         </div>
       ) : (
         <TeamProfileBody
+          competitionType={competitionType}
           eventCode={eventCode}
           matchSubs={matchSubs ?? []}
           pitData={pitData ?? null}

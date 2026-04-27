@@ -15,8 +15,13 @@ import { useQuery } from "convex/react";
 import { ArrowLeft, ClipboardList } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { formatDuration } from "@/lib/analyse";
+import { useParams, useSearchParams } from "next/navigation";
+import {
+  type AnalyseCompetitionType,
+  formatDuration,
+  parseAnalyseCompetitionType,
+  withAnalyseCompetition,
+} from "@/lib/analyse";
 
 type PeriodData = {
   auto: { scoring: number; feeding: number; defense: number };
@@ -40,6 +45,13 @@ type FrcFieldEvent = {
   climbLevel?: number;
 };
 
+type FtcFieldEvent = {
+  event: string;
+  count: number;
+  coordinates: { x: number; y: number };
+  timestamp: string;
+};
+
 type MatchSub = {
   _id: string;
   teamNumber: number;
@@ -50,6 +62,11 @@ type MatchSub = {
   climbDuration?: number;
   periodData?: PeriodData;
   frcFieldEvents?: FrcFieldEvent[];
+  ftcPeriodData?: {
+    auto: { made: number; missed: number };
+    teleop: { made: number; missed: number };
+  };
+  fieldEvents?: FtcFieldEvent[];
   autoPath?: { coordinates: { x: number; y: number }; timestamp: string }[];
   notes?: string;
   scoutName: string;
@@ -128,6 +145,75 @@ function PeriodDataTable({ pd }: { pd: PeriodData }) {
   );
 }
 
+function FtcPeriodDataTable({
+  pd,
+}: {
+  pd: {
+    auto: { made: number; missed: number };
+    teleop: { made: number; missed: number };
+  };
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b text-left text-muted-foreground text-xs">
+            <th className="pr-4 pb-2 font-normal">Period</th>
+            <th className="pr-4 pb-2 text-right font-normal">Made</th>
+            <th className="pb-2 text-right font-normal">Missed</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr className="border-b">
+            <td className="py-1.5 pr-4 text-xs">Auto</td>
+            <td className="py-1.5 pr-4 text-right font-mono text-xs">
+              {pd.auto.made}
+            </td>
+            <td className="py-1.5 text-right font-mono text-xs">
+              {pd.auto.missed}
+            </td>
+          </tr>
+          <tr className="border-b">
+            <td className="py-1.5 pr-4 text-xs">Teleop</td>
+            <td className="py-1.5 pr-4 text-right font-mono text-xs">
+              {pd.teleop.made}
+            </td>
+            <td className="py-1.5 text-right font-mono text-xs">
+              {pd.teleop.missed}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function FtcFieldEventsList({ events }: { events: FtcFieldEvent[] }) {
+  if (events.length === 0) {
+    return (
+      <p className="text-muted-foreground text-sm">No field events recorded.</p>
+    );
+  }
+  return (
+    <div className="space-y-1.5">
+      {events.map((ev, i) => (
+        <div
+          className="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-xs"
+          key={`${ev.event}-${ev.timestamp}-${i}`}
+        >
+          <Badge className="text-xs capitalize" variant="outline">
+            {ev.event.replace(/_/g, " ")}
+          </Badge>
+          <span className="font-mono text-muted-foreground">
+            {ev.timestamp}
+          </span>
+          <span className="ml-auto font-mono">×{ev.count}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function FieldEventsList({ events }: { events: FrcFieldEvent[] }) {
   if (events.length === 0) {
     return (
@@ -170,17 +256,26 @@ function FieldEventsList({ events }: { events: FrcFieldEvent[] }) {
 function SubmissionCard({
   sub,
   eventCode,
+  competitionType,
 }: {
   sub: MatchSub;
   eventCode: string;
+  competitionType: AnalyseCompetitionType;
 }) {
+  const isFtc = competitionType === "FTC";
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
           <Link
             className="font-mono font-semibold hover:underline"
-            href={`/analyse/${eventCode}/teams/${sub.teamNumber}` as Route}
+            href={
+              withAnalyseCompetition(
+                `/analyse/${eventCode}/teams/${sub.teamNumber}`,
+                competitionType
+              ) as Route
+            }
           >
             Team {sub.teamNumber}
           </Link>
@@ -197,7 +292,7 @@ function SubmissionCard({
           <Badge className="text-xs capitalize" variant="outline">
             {sub.inputMode}
           </Badge>
-          {sub.climbLevel !== undefined && sub.climbLevel > 0 ? (
+          {!isFtc && sub.climbLevel !== undefined && sub.climbLevel > 0 ? (
             <Badge className="text-xs" variant="secondary">
               Climb L{sub.climbLevel}
               {sub.climbDuration !== undefined
@@ -211,14 +306,23 @@ function SubmissionCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {sub.inputMode === "form" && sub.periodData ? (
+        {isFtc ? (
+          sub.ftcPeriodData !== undefined && sub.ftcPeriodData !== null ? (
+            <div>
+              <p className="mb-2 text-muted-foreground text-xs">Period makes</p>
+              <FtcPeriodDataTable pd={sub.ftcPeriodData} />
+            </div>
+          ) : null
+        ) : null}
+
+        {!isFtc && sub.inputMode === "form" && sub.periodData ? (
           <div>
             <p className="mb-2 text-muted-foreground text-xs">Period Data</p>
             <PeriodDataTable pd={sub.periodData} />
           </div>
         ) : null}
 
-        {sub.inputMode === "field" && sub.frcFieldEvents ? (
+        {!isFtc && sub.inputMode === "field" && sub.frcFieldEvents ? (
           <div>
             <p className="mb-2 text-muted-foreground text-xs">
               Field Events ({sub.frcFieldEvents.length})
@@ -227,7 +331,20 @@ function SubmissionCard({
           </div>
         ) : null}
 
-        {(sub.autoPath?.length ?? 0) > 0 ? (
+        {isFtc ? (
+          sub.inputMode === "field" &&
+          sub.fieldEvents !== undefined &&
+          sub.fieldEvents.length > 0 ? (
+            <div>
+              <p className="mb-2 text-muted-foreground text-xs">
+                Field Events ({sub.fieldEvents.length})
+              </p>
+              <FtcFieldEventsList events={sub.fieldEvents} />
+            </div>
+          ) : null
+        ) : null}
+
+        {!isFtc && (sub.autoPath?.length ?? 0) > 0 ? (
           <div>
             <p className="mb-1 text-muted-foreground text-xs">
               Auto Path — {sub.autoPath?.length ?? 0} point
@@ -252,10 +369,15 @@ export default function MatchViewer() {
   const params = useParams<{ eventCode: string; matchNumber: string }>();
   const { eventCode, matchNumber: matchNumberStr } = params;
   const matchNumber = Number.parseInt(matchNumberStr, 10);
+  const searchParams = useSearchParams();
+  const competitionType = parseAnalyseCompetitionType(
+    searchParams.get("competitionType")
+  );
 
   const submissions = useQuery(api.analysis.getMatchSubmissionsForMatch, {
     eventCode,
     matchNumber,
+    competitionType,
   }) as MatchSub[] | undefined;
 
   const isLoading = submissions === undefined;
@@ -270,7 +392,12 @@ export default function MatchViewer() {
           <span>/</span>
           <Link
             className="hover:text-foreground"
-            href={`/analyse/${eventCode}` as Route}
+            href={
+              withAnalyseCompetition(
+                `/analyse/${eventCode}`,
+                competitionType
+              ) as Route
+            }
           >
             {eventCode}
           </Link>
@@ -279,7 +406,14 @@ export default function MatchViewer() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link href={`/analyse/${eventCode}` as Route}>
+          <Link
+            href={
+              withAnalyseCompetition(
+                `/analyse/${eventCode}`,
+                competitionType
+              ) as Route
+            }
+          >
             <Button size="icon" variant="ghost">
               <ArrowLeft className="size-4" />
             </Button>
@@ -313,7 +447,12 @@ export default function MatchViewer() {
       ) : (
         <div className="space-y-4">
           {submissions.map((sub) => (
-            <SubmissionCard eventCode={eventCode} key={sub._id} sub={sub} />
+            <SubmissionCard
+              competitionType={competitionType}
+              eventCode={eventCode}
+              key={sub._id}
+              sub={sub}
+            />
           ))}
         </div>
       )}

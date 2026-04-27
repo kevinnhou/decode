@@ -22,22 +22,37 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import type { SortDir, SortField, TeamAggregate } from "@/lib/analyse";
+import {
+  type AnalyseCompetitionType,
+  parseAnalyseCompetitionType,
+  type SortDir,
+  type SortField,
+  type TeamAggregate,
+  withAnalyseCompetition,
+} from "@/lib/analyse";
 
 function TeamRow({
   team,
   eventCode,
+  competitionType,
   isSelected,
   onToggle,
 }: {
   team: TeamAggregate;
   eventCode: string;
+  competitionType: AnalyseCompetitionType;
   isSelected: boolean;
   onToggle: (n: number) => void;
 }) {
-  const unit = team.primaryInputMode === "form" ? "s" : "ev";
+  const unit =
+    competitionType === "FTC"
+      ? "makes/match"
+      : team.primaryInputMode === "form"
+        ? "s"
+        : "ev";
+  const defenseUnit = competitionType === "FTC" ? "w/ tag/match" : unit;
   const hasMatchData = team.matchCount > 0;
   return (
     <TableRow className={isSelected ? "bg-muted/40" : ""}>
@@ -47,7 +62,12 @@ function TeamRow({
       <TableCell>
         <Link
           className="font-mono font-semibold text-sm hover:underline"
-          href={`/analyse/${eventCode}/teams/${team.teamNumber}` as Route}
+          href={
+            withAnalyseCompetition(
+              `/analyse/${eventCode}/teams/${team.teamNumber}`,
+              competitionType
+            ) as Route
+          }
         >
           {team.teamNumber}
         </Link>
@@ -81,7 +101,9 @@ function TeamRow({
         {hasMatchData ? (
           <>
             {team.avgDefenseActivity}
-            <span className="ml-1 text-muted-foreground text-xs">{unit}</span>
+            <span className="ml-1 text-muted-foreground text-xs">
+              {defenseUnit}
+            </span>
           </>
         ) : (
           <span className="text-muted-foreground">—</span>
@@ -108,6 +130,10 @@ export default function EventDashboard() {
   const params = useParams<{ eventCode: string }>();
   const eventCode = params.eventCode;
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const competitionType = parseAnalyseCompetitionType(
+    searchParams.get("competitionType")
+  );
 
   const [sortField, setSortField] = useState<SortField>("rank");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -115,9 +141,11 @@ export default function EventDashboard() {
 
   const aggregates = useQuery(api.analysis.getEventAggregates, {
     eventCode,
+    competitionType,
   });
   const submissionCounts = useQuery(api.analysis.getEventSubmissionCounts, {
     eventCode,
+    competitionType,
   });
 
   function toggleSort(field: SortField) {
@@ -146,7 +174,12 @@ export default function EventDashboard() {
       return;
     }
     const teamParam = Array.from(selectedTeams).join(",");
-    router.push(`/analyse/${eventCode}/comparison?teams=${teamParam}` as Route);
+    router.push(
+      withAnalyseCompetition(
+        `/analyse/${eventCode}/comparison?teams=${teamParam}`,
+        competitionType
+      ) as Route
+    );
   }
 
   const sorted = [...(aggregates ?? [])].sort(
@@ -236,7 +269,14 @@ export default function EventDashboard() {
               </Button>
             ) : null}
 
-            <Link href={`/analyse/${eventCode}/comparison` as Route}>
+            <Link
+              href={
+                withAnalyseCompetition(
+                  `/analyse/${eventCode}/comparison`,
+                  competitionType
+                ) as Route
+              }
+            >
               <Button size="sm" variant="outline">
                 <GitCompareArrows className="mr-1.5 size-4" />
                 Compare
@@ -259,7 +299,8 @@ export default function EventDashboard() {
           <div className="flex flex-col gap-1">
             <p className="font-medium text-sm">No data yet</p>
             <p className="text-muted-foreground text-sm">
-              Submit FRC match or pit scouting data for this event to see teams.
+              Submit {competitionType} match or pit scouting data for this event
+              to see teams.
             </p>
           </div>
         </div>
@@ -290,6 +331,7 @@ export default function EventDashboard() {
             <TableBody>
               {sorted.map((team: TeamAggregate) => (
                 <TeamRow
+                  competitionType={competitionType}
                   eventCode={eventCode}
                   isSelected={selectedTeams.has(team.teamNumber)}
                   key={team.teamNumber}
