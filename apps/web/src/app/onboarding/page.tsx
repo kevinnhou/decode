@@ -12,6 +12,11 @@ import {
   FormMessage,
 } from "@decode/ui/components/form";
 import { Input } from "@decode/ui/components/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@decode/ui/components/input-otp";
 import { Logo } from "@decode/ui/components/logo";
 import { toast } from "@decode/ui/components/sonner";
 import { useForm } from "@decode/ui/lib/react-hook-form";
@@ -137,15 +142,28 @@ export default function OnboardingPage() {
                       <FormItem>
                         <FormLabel>Invite Code</FormLabel>
                         <FormControl>
-                          <Input
-                            className="font-mono uppercase tracking-widest"
+                          <InputOTP
+                            containerClassName="w-full justify-center sm:justify-start"
                             maxLength={8}
-                            placeholder="ABCD1234"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(e.target.value.toUpperCase())
+                            name={field.name}
+                            onBlur={field.onBlur}
+                            onChange={(value: string) =>
+                              field.onChange(value.toUpperCase())
                             }
-                          />
+                            ref={field.ref}
+                            value={field.value ?? ""}
+                          >
+                            <InputOTPGroup className="font-mono">
+                              <InputOTPSlot index={0} />
+                              <InputOTPSlot index={1} />
+                              <InputOTPSlot index={2} />
+                              <InputOTPSlot index={3} />
+                              <InputOTPSlot index={4} />
+                              <InputOTPSlot index={5} />
+                              <InputOTPSlot index={6} />
+                              <InputOTPSlot index={7} />
+                            </InputOTPGroup>
+                          </InputOTP>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
