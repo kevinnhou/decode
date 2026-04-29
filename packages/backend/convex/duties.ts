@@ -6,67 +6,35 @@ import { getAuthUser, requireRole, requireUserProfile } from "./auth";
 import { allianceColourValidator, delegationTypeValidator } from "./schema";
 import { normaliseCode } from "./utils/normaliseCode";
 
-async function assertScoutingConflictDuty(
+async function assertScoutHasNoAssignmentForEvent(
   ctx: MutationCtx,
   params: {
     organisationId: Id<"organisations">;
     eventCode: string;
     scoutUserId: string;
-    delegationType: "team" | "position";
-    teamNumber?: number;
-    allianceColour?: "Red" | "Blue";
-    alliancePosition?: number;
+    excludeDutyId?: Id<"scoutingDuties">;
   }
 ) {
-  const {
-    organisationId,
-    eventCode,
-    scoutUserId,
-    delegationType,
-    teamNumber,
-    allianceColour,
-    alliancePosition,
-  } = params;
-
   const existing = await ctx.db
     .query("scoutingDuties")
     .withIndex("by_org_event_scout", (q) =>
       q
-        .eq("organisationId", organisationId)
-        .eq("eventCode", eventCode)
-        .eq("scout", scoutUserId)
+        .eq("organisationId", params.organisationId)
+        .eq("eventCode", params.eventCode)
+        .eq("scout", params.scoutUserId)
     )
     .collect();
 
-  const active = existing.filter((d) => d.deletedAt === undefined);
+  const active = existing.filter(
+    (d) =>
+      d.deletedAt === undefined &&
+      (params.excludeDutyId === undefined || d._id !== params.excludeDutyId)
+  );
 
-  if (delegationType === "team" && teamNumber !== undefined) {
-    const clash = active.find(
-      (d) => d.delegationType === "team" && d.teamNumber === teamNumber
+  if (active.length > 0) {
+    throw new ConvexError(
+      "This scout already has an assignment for this event. Remove it before assigning another."
     );
-    if (clash) {
-      throw new ConvexError(
-        `This scout is already assigned to team ${teamNumber} for this event`
-      );
-    }
-  }
-
-  if (
-    delegationType === "position" &&
-    allianceColour !== undefined &&
-    alliancePosition !== undefined
-  ) {
-    const clash = active.find(
-      (d) =>
-        d.delegationType === "position" &&
-        d.allianceColour === allianceColour &&
-        d.alliancePosition === alliancePosition
-    );
-    if (clash) {
-      throw new ConvexError(
-        `${allianceColour} ${alliancePosition} is already assigned to this scout for this event`
-      );
-    }
   }
 }
 
@@ -244,9 +212,8 @@ const createDutyArgs = {
 
 /**
  * Creates a scouting duty. Caller must be leadScout or admin.
- * Validates: scout in same org; the same scout cannot receive duplicate duties
- * for the same team number or alliance slot in one event (multiple scouts may
- * share a team or position).
+ * Each scout may have at most one non-deleted assignment per event (they can
+ * pause or resume that assignment via `updateDuty`).
  *
  * @param ctx - The Convex mutation context
  * @param args - Duty creation args
@@ -270,14 +237,10 @@ export const createDuty = mutation({
     await assertScoutInOrg(ctx, args.scout, profile.organisationId);
     validateCreateDutyArgs(args);
 
-    await assertScoutingConflictDuty(ctx, {
+    await assertScoutHasNoAssignmentForEvent(ctx, {
       organisationId: args.organisationId,
       eventCode,
       scoutUserId: args.scout,
-      delegationType: args.delegationType,
-      teamNumber: args.teamNumber,
-      allianceColour: args.allianceColour,
-      alliancePosition: args.alliancePosition,
     });
 
     const now = Date.now();
@@ -352,6 +315,14 @@ export const updateDuty = mutation({
         profile.organisationId.toString()
       ) {
         throw new ConvexError("Scout must be in the same organisation");
+      }
+      if (scoutId !== duty.scout) {
+        await assertScoutHasNoAssignmentForEvent(ctx, {
+          organisationId: duty.organisationId,
+          eventCode: duty.eventCode,
+          scoutUserId: scoutId,
+          excludeDutyId: args.dutyId,
+        });
       }
       updates.scout = args.scout;
     }

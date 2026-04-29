@@ -70,6 +70,15 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
+function scoutHasAssignmentForEvent(
+  allDuties: Duty[],
+  scoutUserId: string
+): boolean {
+  return allDuties.some(
+    (d) => d.scout === scoutUserId && d.deletedAt === undefined
+  );
+}
+
 type AssignmentChipProps = {
   duty: Duty;
   onToggleActive: (duty: Duty) => void;
@@ -180,8 +189,13 @@ function ScoutRow({
         </div>
       </div>
       <QuickAssignPopover
-        disabled={assignDisabled}
-        disabledReason={assignDisabledReason}
+        disabled={Boolean(assignDisabled || duties.length > 0)}
+        disabledReason={
+          // biome-ignore lint/nursery/noLeakedRender: PASS
+          duties.length > 0
+            ? "This scout already has an assignment for this event"
+            : assignDisabledReason
+        }
         onAssignPosition={onAssignPosition}
         onAssignTeam={onAssignTeam}
         scout={scout}
@@ -320,7 +334,13 @@ function PositionSlotDialog({
       : [];
 
   const assignedIds = new Set(dutiesOnSlot.map((d) => d.scout));
-  const availableScouts = scouts.filter((s) => !assignedIds.has(s.userId));
+  const availableScouts = scouts.filter(
+    (s) =>
+      !(
+        assignedIds.has(s.userId) ||
+        scoutHasAssignmentForEvent(duties, s.userId)
+      )
+  );
 
   function toggleSelected(scoutId: string) {
     setSelectedToAdd((prev) => {
@@ -444,7 +464,8 @@ function PositionSlotDialog({
             </Label>
             {availableScouts.length === 0 ? (
               <p className="text-muted-foreground text-sm">
-                Everyone in your organisation is already on this slot.
+                Everyone who can be added already has an assignment for this
+                event or is already on this slot.
               </p>
             ) : (
               <ul className="max-h-[min(50vh,20rem)] space-y-2 overflow-y-auto pr-1">
