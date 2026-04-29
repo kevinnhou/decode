@@ -19,7 +19,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "convex/react";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 
 type Mode = "join" | "create";
@@ -42,6 +42,18 @@ type CreateValues = z.infer<typeof createSchema>;
 export default function OnboardingPage() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("join");
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("needOrganisation") !== "1") {
+      return;
+    }
+    toast.error("You need to join an organisation first.");
+    router.replace("/onboarding");
+  }, [router]);
 
   const joinOrg = useMutation(api.auth.joinOrganisation);
   const createOrg = useMutation(api.auth.createOrganisation);
@@ -131,9 +143,6 @@ export default function OnboardingPage() {
                             {...field}
                           />
                         </FormControl>
-                        <FormDescription className="text-xs">
-                          Available from your team admin.
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}

@@ -1,6 +1,7 @@
+import { api } from "@decode/backend/convex/_generated/api";
 import type { Metadata, Route } from "next";
 import { redirect } from "next/navigation";
-import { isAuthenticated } from "@/lib/convex";
+import { fetchAuthQuery, isAuthenticated } from "@/lib/convex";
 import { generateMetadata as genMeta } from "@/lib/metadata";
 
 export const metadata: Metadata = genMeta({
@@ -20,6 +21,16 @@ export default async function ProfileLayout({
 }) {
   if (!(await isAuthenticated())) {
     redirect("/login" as Route);
+  }
+
+  const profile = await fetchAuthQuery(api.auth.getCurrentUserProfile);
+  if (!profile) {
+    redirect("/onboarding?needOrganisation=1" as Route);
+  }
+
+  const organisation = await fetchAuthQuery(api.auth.getOrganisation);
+  if (!organisation) {
+    redirect("/onboarding?needOrganisation=1" as Route);
   }
 
   return <>{children}</>;

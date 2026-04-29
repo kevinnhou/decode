@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireRole, requireUserProfile } from "./auth";
+import { requireRole, resolveUserProfile } from "./auth";
 
 /**
  * Saves (upserts) a team number → name map for the given event, scoped to the
@@ -55,8 +55,8 @@ export const saveTeamsMap = mutation({
  *
  * @param ctx - The Convex query context
  * @param args.eventCode - The event code to look up
- * @returns The teamMaps document, or null if none exists
- * @throws ConvexError if the caller is not authenticated or has no profile
+ * @returns The teamMaps document, or null if none exists, or null if not
+ * signed in or no profile yet (e.g. still onboarding)
  */
 export const getTeamsMapForEvent = query({
   args: {
@@ -75,7 +75,10 @@ export const getTeamsMapForEvent = query({
     v.null()
   ),
   async handler(ctx, args) {
-    const { profile } = await requireUserProfile(ctx);
+    const profile = await resolveUserProfile(ctx);
+    if (!profile) {
+      return null;
+    }
 
     if (!args.eventCode.trim()) {
       return null;
