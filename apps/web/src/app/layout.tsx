@@ -60,8 +60,8 @@ export default async function RootLayout({
         />
       </head>
       <body className="select-none overflow-hidden">
-        <SerwistProvider swUrl="/serwist/sw.js">
-          <Providers convexToken={convexToken}>
+        <Providers convexToken={convexToken}>
+          <SerwistProvider swUrl="/serwist/sw.js">
             <RootTransition>
               <SidebarProvider className="flex h-full flex-col">
                 <Header />
@@ -73,8 +73,8 @@ export default async function RootLayout({
                 </div>
               </SidebarProvider>
             </RootTransition>
-          </Providers>
-        </SerwistProvider>
+          </SerwistProvider>
+        </Providers>
       </body>
     </html>
   );

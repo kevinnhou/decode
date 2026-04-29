@@ -5,10 +5,6 @@ import { defaultCache } from "@serwist/turbopack/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import { Serwist } from "serwist";
 
-// This declares the value of `injectionPoint` to TypeScript.
-// `injectionPoint` is the string that will be replaced by the
-// actual precache manifest. By default, this string is set to
-// `"self.__SW_MANIFEST"`.
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
     __SW_MANIFEST: (PrecacheEntry | string)[] | undefined;
@@ -16,6 +12,25 @@ declare global {
 }
 
 declare const self: ServiceWorkerGlobalScope;
+
+const FLUSH_SUBMISSIONS_TAG = "flush-submissions";
+
+self.addEventListener("sync", (event: SyncEvent) => {
+  if (event.tag !== FLUSH_SUBMISSIONS_TAG) {
+    return;
+  }
+  event.waitUntil(
+    self.clients.matchAll({ type: "window" }).then((clients) =>
+      Promise.all(
+        clients.map((client) =>
+          client.postMessage({ type: "FLUSH_QUEUE" } satisfies {
+            type: string;
+          })
+        )
+      )
+    )
+  );
+});
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,

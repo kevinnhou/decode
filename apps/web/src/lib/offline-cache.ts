@@ -8,8 +8,9 @@
  */
 
 const DB_NAME = "decode-offline-cache";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = "eventData";
+const PENDING_SUBMISSIONS_STORE = "pendingSubmissions";
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -17,9 +18,22 @@ function openDb(): Promise<IDBDatabase> {
     req.onerror = () => reject(req.error);
     req.onsuccess = () => resolve(req.result);
     req.onupgradeneeded = () => {
-      req.result.createObjectStore(STORE_NAME, { keyPath: "eventCode" });
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "eventCode" });
+      }
+      if (!db.objectStoreNames.contains(PENDING_SUBMISSIONS_STORE)) {
+        db.createObjectStore(PENDING_SUBMISSIONS_STORE, {
+          autoIncrement: true,
+          keyPath: "id",
+        });
+      }
     };
   });
+}
+
+export function openOfflineCacheDb(): Promise<IDBDatabase> {
+  return openDb();
 }
 
 export type CachedEventData = {
