@@ -15,6 +15,7 @@ import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { requireUserProfile } from "./auth";
 import { competitionTypeValidator } from "./schema";
+import { normaliseCode } from "./utils/normaliseCode";
 
 /**
  * Returns events (FRC and/or FTC) that have match or pit submissions for the current org.
@@ -63,9 +64,10 @@ export const getEventsWithSubmissions = query({
       if (ct !== "FRC" && ct !== "FTC") {
         continue;
       }
-      const key = eventKey(sub.eventCode, ct);
+      const canonicalCode = normaliseCode(sub.eventCode);
+      const key = eventKey(canonicalCode, ct);
       const existing = eventMap.get(key) ?? {
-        eventCode: sub.eventCode,
+        eventCode: canonicalCode,
         eventName: sub.eventName,
         competitionType: ct,
         matchCount: 0,
@@ -85,9 +87,10 @@ export const getEventsWithSubmissions = query({
       if (ct !== "FRC" && ct !== "FTC") {
         continue;
       }
-      const key = eventKey(sub.eventCode, ct);
+      const canonicalCode = normaliseCode(sub.eventCode);
+      const key = eventKey(canonicalCode, ct);
       const existing = eventMap.get(key) ?? {
-        eventCode: sub.eventCode,
+        eventCode: canonicalCode,
         eventName: sub.eventName,
         competitionType: ct,
         matchCount: 0,
@@ -131,7 +134,7 @@ export const getEventTeams = query({
       .withIndex("by_org_and_event", (q) =>
         q
           .eq("organisationId", profile.organisationId)
-          .eq("eventCode", args.eventCode)
+          .eq("eventCode", normaliseCode(args.eventCode))
       )
       .collect();
 
@@ -178,7 +181,7 @@ export const getTeamMatchStats = query({
       .withIndex("by_org_event_team", (q) =>
         q
           .eq("organisationId", profile.organisationId)
-          .eq("eventCode", args.eventCode)
+          .eq("eventCode", normaliseCode(args.eventCode))
           .eq("teamNumber", args.teamNumber)
       )
       .collect();
@@ -213,7 +216,7 @@ export const getTeamPitData = query({
       .withIndex("by_org_event_team", (q) =>
         q
           .eq("organisationId", profile.organisationId)
-          .eq("eventCode", args.eventCode)
+          .eq("eventCode", normaliseCode(args.eventCode))
           .eq("teamNumber", args.teamNumber)
       )
       .collect();
@@ -351,7 +354,7 @@ export const getTeamPitDataAggregated = query({
       .withIndex("by_org_event_team", (q) =>
         q
           .eq("organisationId", profile.organisationId)
-          .eq("eventCode", args.eventCode)
+          .eq("eventCode", normaliseCode(args.eventCode))
           .eq("teamNumber", args.teamNumber)
       )
       .collect();
@@ -460,7 +463,7 @@ export const getEventSubmissionCounts = query({
         .withIndex("by_org_and_event", (q) =>
           q
             .eq("organisationId", profile.organisationId)
-            .eq("eventCode", args.eventCode)
+            .eq("eventCode", normaliseCode(args.eventCode))
         )
         .collect(),
       ctx.db
@@ -468,7 +471,7 @@ export const getEventSubmissionCounts = query({
         .withIndex("by_org_and_event", (q) =>
           q
             .eq("organisationId", profile.organisationId)
-            .eq("eventCode", args.eventCode)
+            .eq("eventCode", normaliseCode(args.eventCode))
         )
         .collect(),
     ]);
@@ -522,7 +525,7 @@ export const getEventAggregates = query({
         .withIndex("by_org_and_event", (q) =>
           q
             .eq("organisationId", profile.organisationId)
-            .eq("eventCode", args.eventCode)
+            .eq("eventCode", normaliseCode(args.eventCode))
         )
         .collect(),
       ctx.db
@@ -530,7 +533,7 @@ export const getEventAggregates = query({
         .withIndex("by_org_and_event", (q) =>
           q
             .eq("organisationId", profile.organisationId)
-            .eq("eventCode", args.eventCode)
+            .eq("eventCode", normaliseCode(args.eventCode))
         )
         .collect(),
     ]);
@@ -653,7 +656,9 @@ export const getMatchSubmissionsForMatch = query({
     const submissions = await ctx.db
       .query("matchSubmissions")
       .withIndex("by_event_match", (q) =>
-        q.eq("eventCode", args.eventCode).eq("matchNumber", args.matchNumber)
+        q
+          .eq("eventCode", normaliseCode(args.eventCode))
+          .eq("matchNumber", args.matchNumber)
       )
       .collect();
 
@@ -701,7 +706,7 @@ export const getTeamFieldHeatmap = query({
       .withIndex("by_org_event_team", (q) =>
         q
           .eq("organisationId", profile.organisationId)
-          .eq("eventCode", args.eventCode)
+          .eq("eventCode", normaliseCode(args.eventCode))
           .eq("teamNumber", args.teamNumber)
       )
       .collect();
@@ -766,7 +771,7 @@ export const getComparisonData = query({
         .withIndex("by_org_event_team", (q) =>
           q
             .eq("organisationId", profile.organisationId)
-            .eq("eventCode", args.eventCode)
+            .eq("eventCode", normaliseCode(args.eventCode))
             .eq("teamNumber", teamNumber)
         )
         .collect();
@@ -780,7 +785,7 @@ export const getComparisonData = query({
         .withIndex("by_org_event_team", (q) =>
           q
             .eq("organisationId", profile.organisationId)
-            .eq("eventCode", args.eventCode)
+            .eq("eventCode", normaliseCode(args.eventCode))
             .eq("teamNumber", teamNumber)
         )
         .collect();

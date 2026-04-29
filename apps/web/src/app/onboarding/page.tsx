@@ -28,7 +28,8 @@ const joinSchema = z.object({
   inviteCode: z
     .string()
     .min(1, "Invite code is required")
-    .max(8, "Invite code is 8 characters"),
+    .max(8, "Invite code is 8 characters")
+    .transform((s) => s.trim().toUpperCase()),
 });
 
 const createSchema = z.object({
@@ -70,7 +71,7 @@ export default function OnboardingPage() {
 
   async function onJoin(values: JoinValues) {
     try {
-      const result = await joinOrg({ inviteCode: values.inviteCode.trim() });
+      const result = await joinOrg({ inviteCode: values.inviteCode });
       toast.success(`Joined ${result.orgName}`);
       router.push("/scout");
       router.refresh();
@@ -141,6 +142,9 @@ export default function OnboardingPage() {
                             maxLength={8}
                             placeholder="ABCD1234"
                             {...field}
+                            onChange={(e) =>
+                              field.onChange(e.target.value.toUpperCase())
+                            }
                           />
                         </FormControl>
                         <FormMessage />

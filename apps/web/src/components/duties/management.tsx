@@ -629,7 +629,10 @@ export function DutiesManagement() {
   const duties = useQuery(
     api.duties.listDutiesForEvent,
     organisation && eventCode.trim()
-      ? { organisationId: organisation._id, eventCode: eventCode.trim() }
+      ? {
+          organisationId: organisation._id,
+          eventCode: eventCode.trim().toUpperCase(),
+        }
       : "skip"
   );
 
@@ -648,14 +651,14 @@ export function DutiesManagement() {
           await createTeamDuty(
             createDuty,
             organisation._id,
-            eventCode.trim(),
+            eventCode.trim().toUpperCase(),
             args
           );
         } else {
           await createPositionDuty(
             createDuty,
             organisation._id,
-            eventCode.trim(),
+            eventCode.trim().toUpperCase(),
             args
           );
         }

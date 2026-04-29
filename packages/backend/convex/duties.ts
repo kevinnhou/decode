@@ -4,6 +4,7 @@ import type { MutationCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
 import { getAuthUser, requireRole, requireUserProfile } from "./auth";
 import { allianceColourValidator, delegationTypeValidator } from "./schema";
+import { normaliseCode } from "./utils/normaliseCode";
 
 async function assertScoutingConflictDuty(
   ctx: MutationCtx,
@@ -138,16 +139,15 @@ export const listDutiesForEvent = query({
       throw new ConvexError("Organisation mismatch");
     }
 
-    if (!args.eventCode.trim()) {
+    const eventCode = normaliseCode(args.eventCode);
+    if (!eventCode) {
       return [];
     }
 
     const duties = await ctx.db
       .query("scoutingDuties")
       .withIndex("by_org_and_event", (q) =>
-        q
-          .eq("organisationId", args.organisationId)
-          .eq("eventCode", args.eventCode.trim())
+        q.eq("organisationId", args.organisationId).eq("eventCode", eventCode)
       )
       .collect();
 
@@ -182,7 +182,8 @@ export const listMyDuties = query({
       return null;
     }
 
-    if (!args.eventCode.trim()) {
+    const eventCode = normaliseCode(args.eventCode);
+    if (!eventCode) {
       return [];
     }
 
@@ -191,7 +192,7 @@ export const listMyDuties = query({
       .withIndex("by_org_event_scout", (q) =>
         q
           .eq("organisationId", profile.organisationId)
-          .eq("eventCode", args.eventCode.trim())
+          .eq("eventCode", eventCode)
           .eq("scout", authUser._id)
       )
       .collect();
@@ -261,7 +262,8 @@ export const createDuty = mutation({
       throw new ConvexError("Organisation mismatch");
     }
 
-    if (!args.eventCode.trim()) {
+    const eventCode = normaliseCode(args.eventCode);
+    if (!eventCode) {
       throw new ConvexError("Event code is required");
     }
 
@@ -270,7 +272,7 @@ export const createDuty = mutation({
 
     await assertScoutingConflictDuty(ctx, {
       organisationId: args.organisationId,
-      eventCode: args.eventCode.trim(),
+      eventCode,
       scoutUserId: args.scout,
       delegationType: args.delegationType,
       teamNumber: args.teamNumber,
@@ -282,7 +284,7 @@ export const createDuty = mutation({
 
     return await ctx.db.insert("scoutingDuties", {
       organisationId: args.organisationId,
-      eventCode: args.eventCode.trim(),
+      eventCode,
       scout: args.scout,
       assignedBy: authUser._id,
       delegationType: args.delegationType,

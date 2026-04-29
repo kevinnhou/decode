@@ -386,7 +386,9 @@ function SettingsTab({
 
   const teamsMapResult = useQuery(
     api.teams.getTeamsMapForEvent,
-    watchedEventCode?.trim() ? { eventCode: watchedEventCode.trim() } : "skip"
+    watchedEventCode?.trim()
+      ? { eventCode: watchedEventCode.trim().toUpperCase() }
+      : "skip"
   );
 
   const backendMapCount = teamsMapResult?.map
@@ -414,7 +416,7 @@ function SettingsTab({
         return;
       }
 
-      const eventCode = form.getValues("eventCode")?.trim();
+      const eventCode = form.getValues("eventCode")?.trim().toUpperCase();
       if (!eventCode) {
         toast.error("Set an event code before importing a team map");
         return;
@@ -500,6 +502,9 @@ function SettingsTab({
                           field.onBlur();
                           saveConfigOnBlur();
                         }}
+                        onChange={(e) =>
+                          field.onChange(e.target.value.toUpperCase())
+                        }
                       />
                     </FormControl>
                     <FormMessage />

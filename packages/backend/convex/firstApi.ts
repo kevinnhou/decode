@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 import { action, mutation, query } from "./_generated/server";
+import { normaliseCode } from "./utils/normaliseCode";
 
 const FIRST_API_BASE = "https://frc-api.firstinspires.org/v3.0";
 
@@ -32,12 +33,11 @@ export const getTeamForPosition = query({
   },
   returns: v.union(v.number(), v.null()),
   async handler(ctx, args) {
+    const eventCode = normaliseCode(args.eventCode);
     const schedule = await ctx.db
       .query("firstApiSchedule")
       .withIndex("by_event_match", (q) =>
-        q
-          .eq("eventCode", args.eventCode.trim())
-          .eq("matchNumber", args.matchNumber)
+        q.eq("eventCode", eventCode).eq("matchNumber", args.matchNumber)
       )
       .unique();
 
@@ -76,16 +76,17 @@ export const saveScheduleBatch = mutation({
   },
   returns: v.null(),
   async handler(ctx, args) {
+    const eventCode = normaliseCode(args.eventCode);
     const existing = await ctx.db
       .query("firstApiSchedule")
-      .withIndex("by_eventCode", (q) => q.eq("eventCode", args.eventCode))
+      .withIndex("by_eventCode", (q) => q.eq("eventCode", eventCode))
       .collect();
 
     const existingByMatch = new Map(existing.map((e) => [e.matchNumber, e]));
 
     for (const match of args.matches) {
       const doc = {
-        eventCode: args.eventCode,
+        eventCode,
         matchNumber: match.matchNumber,
         matchType: match.matchType ?? "qual",
         red1: match.red1,
@@ -129,7 +130,8 @@ export const fetchAndCacheEventSchedule = action({
       );
     }
 
-    const url = `${FIRST_API_BASE}/${args.season}/schedule/${args.eventCode}?tournamentLevel=qual`;
+    const eventCode = normaliseCode(args.eventCode);
+    const url = `${FIRST_API_BASE}/${args.season}/schedule/${eventCode}?tournamentLevel=qual`;
     const res = await fetch(url, {
       headers: { Authorization: auth },
     });
@@ -174,7 +176,7 @@ export const fetchAndCacheEventSchedule = action({
     });
 
     await ctx.runMutation(api.firstApi.saveScheduleBatch, {
-      eventCode: args.eventCode.trim(),
+      eventCode,
       matches,
       cachedAt: Date.now(),
     });

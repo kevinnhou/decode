@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireRole, resolveUserProfile } from "./auth";
+import { normaliseCode } from "./utils/normaliseCode";
 
 /**
  * Saves (upserts) a team number → name map for the given event, scoped to the
@@ -20,13 +21,14 @@ export const saveTeamsMap = mutation({
   returns: v.id("teamMaps"),
   async handler(ctx, args) {
     const { authUser, profile } = await requireRole(ctx, "leadScout");
+    const eventCode = normaliseCode(args.eventCode);
 
     const existing = await ctx.db
       .query("teamMaps")
       .withIndex("by_org_event", (q) =>
         q
           .eq("organisationId", profile.organisationId)
-          .eq("eventCode", args.eventCode)
+          .eq("eventCode", eventCode)
       )
       .unique();
 
@@ -41,7 +43,7 @@ export const saveTeamsMap = mutation({
 
     return await ctx.db.insert("teamMaps", {
       organisationId: profile.organisationId,
-      eventCode: args.eventCode,
+      eventCode,
       map: args.map,
       importedBy: authUser._id,
       importedAt: Date.now(),
@@ -80,7 +82,8 @@ export const getTeamsMapForEvent = query({
       return null;
     }
 
-    if (!args.eventCode.trim()) {
+    const eventCode = normaliseCode(args.eventCode);
+    if (!eventCode) {
       return null;
     }
 
@@ -89,7 +92,7 @@ export const getTeamsMapForEvent = query({
       .withIndex("by_org_event", (q) =>
         q
           .eq("organisationId", profile.organisationId)
-          .eq("eventCode", args.eventCode)
+          .eq("eventCode", eventCode)
       )
       .unique();
   },

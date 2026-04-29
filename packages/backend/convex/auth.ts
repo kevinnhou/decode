@@ -9,6 +9,7 @@ import type { QueryCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
 import authConfig from "./auth.config";
 import { roleValidator } from "./schema";
+import { normaliseCode } from "./utils/normaliseCode";
 
 // biome-ignore lint/style/noNonNullAssertion: PASS
 const siteUrl = process.env.SITE_URL!;
@@ -277,9 +278,11 @@ export const joinOrganisation = mutation({
       throw new ConvexError("You already belong to an organisation.");
     }
 
+    const inviteCode = normaliseCode(args.inviteCode);
+
     const org = await ctx.db
       .query("organisations")
-      .withIndex("by_inviteCode", (q) => q.eq("inviteCode", args.inviteCode))
+      .withIndex("by_inviteCode", (q) => q.eq("inviteCode", inviteCode))
       .unique();
 
     if (!org) {

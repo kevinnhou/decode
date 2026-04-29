@@ -8,6 +8,7 @@ import {
   matchStageValidator,
   sourceValidator,
 } from "./schema";
+import { normaliseCode } from "./utils/normaliseCode";
 
 /**
  * Submit an FTC match scouting record.
@@ -55,13 +56,14 @@ export const submitMatchFTC = mutation({
   },
   async handler(ctx, args) {
     const { profile } = await requireUserProfile(ctx);
+    const eventCode = normaliseCode(args.eventCode);
 
     // attach attribution
     const now = Date.now();
     const submissionId = await ctx.db.insert("matchSubmissions", {
       organisationId: profile.organisationId,
       competitionType: "FTC",
-      eventCode: args.eventCode,
+      eventCode,
       eventName: args.eventName,
       teamNumber: args.teamNumber,
       scoutUserId: profile.userId,
@@ -185,6 +187,7 @@ export const submitMatch = mutation({
   },
   async handler(ctx, args) {
     const { profile } = await requireUserProfile(ctx);
+    const eventCode = normaliseCode(args.eventCode);
 
     const inputMode = args.periodData !== undefined ? "form" : "field";
 
@@ -192,7 +195,7 @@ export const submitMatch = mutation({
     const submissionId = await ctx.db.insert("matchSubmissions", {
       organisationId: profile.organisationId,
       competitionType: "FRC",
-      eventCode: args.eventCode,
+      eventCode,
       eventName: args.eventName,
       teamNumber: args.teamNumber,
       scoutUserId: profile.userId,
@@ -263,13 +266,14 @@ export const submitPit = mutation({
   },
   async handler(ctx, args) {
     const { profile } = await requireUserProfile(ctx);
+    const eventCode = normaliseCode(args.eventCode);
 
     // attach attribution
     const now = Date.now();
     const submissionId = await ctx.db.insert("pitSubmissions", {
       organisationId: profile.organisationId,
       competitionType: args.competitionType,
-      eventCode: args.eventCode,
+      eventCode,
       eventName: args.eventName,
       teamNumber: args.teamNumber,
       scoutUserId: profile.userId,
@@ -326,13 +330,14 @@ export const getMatchSubmissions = mutation({
   },
   async handler(ctx, args) {
     const { profile } = await requireUserProfile(ctx);
+    const eventCode = normaliseCode(args.eventCode);
 
     const submissions = await ctx.db
       .query("matchSubmissions")
       .withIndex("by_org_and_event", (q) =>
         q
           .eq("organisationId", profile.organisationId)
-          .eq("eventCode", args.eventCode)
+          .eq("eventCode", eventCode)
       )
       .collect();
 
@@ -353,13 +358,14 @@ export const getPitSubmissions = mutation({
   },
   async handler(ctx, args) {
     const { profile } = await requireUserProfile(ctx);
+    const eventCode = normaliseCode(args.eventCode);
 
     const submissions = await ctx.db
       .query("pitSubmissions")
       .withIndex("by_org_and_event", (q) =>
         q
           .eq("organisationId", profile.organisationId)
-          .eq("eventCode", args.eventCode)
+          .eq("eventCode", eventCode)
       )
       .collect();
 
@@ -381,13 +387,14 @@ export const getPitSubmissionCounts = query({
   },
   async handler(ctx, args) {
     const { profile } = await requireUserProfile(ctx);
+    const eventCode = normaliseCode(args.eventCode);
 
     const submissions = await ctx.db
       .query("pitSubmissions")
       .withIndex("by_org_and_event", (q) =>
         q
           .eq("organisationId", profile.organisationId)
-          .eq("eventCode", args.eventCode)
+          .eq("eventCode", eventCode)
       )
       .collect();
 
