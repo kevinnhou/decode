@@ -139,7 +139,7 @@ export function FieldHeatmapCard({
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <MapPin className="size-4 text-muted-foreground" />
-            Field scoring map
+            Field Scoring Map
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -157,14 +157,12 @@ export function FieldHeatmapCard({
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <MapPin className="size-4 text-muted-foreground" />
-            Field scoring map
+            Field Scoring Map
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-muted-foreground text-sm">
-            No field submissions with map data yet. Heat maps only use taps that
-            include field coordinates; form-only matches still appear in the
-            charts above.
+            No field submissions with map data yet.
           </p>
         </CardContent>
       </Card>
@@ -180,7 +178,7 @@ export function FieldHeatmapCard({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="flex items-center gap-2 text-sm">
             <MapPin className="size-4 text-muted-foreground" />
-            Field scoring map
+            Field Scoring Map
             <span className="font-normal text-muted-foreground text-xs">
               ({data.fieldSpatialMatchCount} match
               {data.fieldSpatialMatchCount !== 1 ? "es" : ""} with map data)
