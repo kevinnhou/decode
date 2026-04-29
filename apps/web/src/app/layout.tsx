@@ -10,8 +10,8 @@ import { generateMetadata, generateStructuredData } from "@/lib/metadata";
 import { Header } from "~/header";
 import Providers from "~/providers";
 import { RootTransition } from "~/root-transition";
-
 import { AppSidebar } from "~/sidebar/app";
+import { SerwistProvider } from "./serwist";
 
 export const viewport: Viewport = {
   themeColor: [
@@ -60,19 +60,21 @@ export default async function RootLayout({
         />
       </head>
       <body className="select-none overflow-hidden">
-        <Providers convexToken={convexToken}>
-          <RootTransition>
-            <SidebarProvider className="flex h-full flex-col">
-              <Header />
-              <div className="flex flex-1 overflow-hidden">
-                <AppSidebar />
-                <SidebarInset className="overflow-y-auto">
-                  {children}
-                </SidebarInset>
-              </div>
-            </SidebarProvider>
-          </RootTransition>
-        </Providers>
+        <SerwistProvider swUrl="/serwist/sw.js">
+          <Providers convexToken={convexToken}>
+            <RootTransition>
+              <SidebarProvider className="flex h-full flex-col">
+                <Header />
+                <div className="flex flex-1 overflow-hidden">
+                  <AppSidebar />
+                  <SidebarInset className="overflow-y-auto">
+                    {children}
+                  </SidebarInset>
+                </div>
+              </SidebarProvider>
+            </RootTransition>
+          </Providers>
+        </SerwistProvider>
       </body>
     </html>
   );

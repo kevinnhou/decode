@@ -58,3 +58,7 @@ dev-dist
 .dev.vars*
 
 .open-next
+
+
+public/sw*
+public/swe-worker*
