@@ -58,7 +58,7 @@ function PositionCell({
       </p>
       <div className="mt-1 min-h-10 space-y-0.5">
         {slotDuties.length === 0 ? (
-          <p className="truncate font-semibold text-foreground text-sm">—</p>
+          <p className="truncate font-semibold text-foreground text-sm">-</p>
         ) : (
           slotDuties.map((duty) => {
             const name = scoutNames.get(duty.scout) ?? duty.scout.slice(0, 8);

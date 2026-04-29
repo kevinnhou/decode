@@ -581,9 +581,9 @@ function TeamProfileBody({
         ? "s/match"
         : "match";
   const shootingSpeedDisplay =
-    shootingSpeed === undefined ? "—" : String(shootingSpeed);
+    shootingSpeed === undefined ? "-" : String(shootingSpeed);
   const scoringPointsDisplay =
-    avgScoringPoints === null ? "—" : String(avgScoringPoints);
+    avgScoringPoints === null ? "-" : String(avgScoringPoints);
   const allNotes = matchSubs
     .filter((s) => s.notes?.trim())
     .map((s) => ({ matchNumber: s.matchNumber, note: s.notes ?? "" }));

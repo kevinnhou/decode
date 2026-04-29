@@ -12,6 +12,11 @@ import {
   FormMessage,
 } from "@decode/ui/components/form";
 import { Input } from "@decode/ui/components/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@decode/ui/components/input-otp";
 import { Logo } from "@decode/ui/components/logo";
 import { toast } from "@decode/ui/components/sonner";
 import { useForm } from "@decode/ui/lib/react-hook-form";
@@ -19,7 +24,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "convex/react";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 
 type Mode = "join" | "create";
@@ -28,7 +33,8 @@ const joinSchema = z.object({
   inviteCode: z
     .string()
     .min(1, "Invite code is required")
-    .max(8, "Invite code is 8 characters"),
+    .max(8, "Invite code is 8 characters")
+    .transform((s) => s.trim().toUpperCase()),
 });
 
 const createSchema = z.object({
@@ -42,6 +48,18 @@ type CreateValues = z.infer<typeof createSchema>;
 export default function OnboardingPage() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("join");
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("needOrganisation") !== "1") {
+      return;
+    }
+    toast.error("You need to join an organisation first.");
+    router.replace("/onboarding");
+  }, [router]);
 
   const joinOrg = useMutation(api.auth.joinOrganisation);
   const createOrg = useMutation(api.auth.createOrganisation);
@@ -58,7 +76,7 @@ export default function OnboardingPage() {
 
   async function onJoin(values: JoinValues) {
     try {
-      const result = await joinOrg({ inviteCode: values.inviteCode.trim() });
+      const result = await joinOrg({ inviteCode: values.inviteCode });
       toast.success(`Joined ${result.orgName}`);
       router.push("/scout");
       router.refresh();
@@ -124,16 +142,29 @@ export default function OnboardingPage() {
                       <FormItem>
                         <FormLabel>Invite Code</FormLabel>
                         <FormControl>
-                          <Input
-                            className="font-mono uppercase tracking-widest"
+                          <InputOTP
+                            containerClassName="w-full justify-center sm:justify-start"
                             maxLength={8}
-                            placeholder="ABCD1234"
-                            {...field}
-                          />
+                            name={field.name}
+                            onBlur={field.onBlur}
+                            onChange={(value: string) =>
+                              field.onChange(value.toUpperCase())
+                            }
+                            ref={field.ref}
+                            value={field.value ?? ""}
+                          >
+                            <InputOTPGroup className="font-mono">
+                              <InputOTPSlot index={0} />
+                              <InputOTPSlot index={1} />
+                              <InputOTPSlot index={2} />
+                              <InputOTPSlot index={3} />
+                              <InputOTPSlot index={4} />
+                              <InputOTPSlot index={5} />
+                              <InputOTPSlot index={6} />
+                              <InputOTPSlot index={7} />
+                            </InputOTPGroup>
+                          </InputOTP>
                         </FormControl>
-                        <FormDescription className="text-xs">
-                          Available from your team admin.
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}

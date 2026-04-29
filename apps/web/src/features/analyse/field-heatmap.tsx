@@ -320,7 +320,7 @@ export function FieldHeatmapCard({
         {selectedCell !== null && selectedCell.count > 0 ? (
           <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
             <p className="mb-2 font-medium">
-              Cell ({selectedCell.col + 1}, {selectedCell.row + 1}) —{" "}
+              Cell ({selectedCell.col + 1}, {selectedCell.row + 1}) -{" "}
               {selectedCell.count} weighted hit
               {selectedCell.count !== 1 ? "s" : ""}
             </p>

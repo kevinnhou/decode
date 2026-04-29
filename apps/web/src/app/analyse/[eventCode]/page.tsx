@@ -42,7 +42,7 @@ function SpatialMapBadge({
   matchCount?: number;
 }) {
   if (!hasMatchData) {
-    return <span className="text-muted-foreground">—</span>;
+    return <span className="text-muted-foreground">-</span>;
   }
   if (typeof matchCount === "number" && matchCount > 0) {
     return (
@@ -56,7 +56,7 @@ function SpatialMapBadge({
       </Badge>
     );
   }
-  return <span className="text-muted-foreground">—</span>;
+  return <span className="text-muted-foreground">-</span>;
 }
 
 function TeamRow({
@@ -110,7 +110,7 @@ function TeamRow({
             {team.pitCount}
           </Badge>
         ) : (
-          <span className="text-muted-foreground">—</span>
+          <span className="text-muted-foreground">-</span>
         )}
       </TableCell>
       <TableCell className="text-center">
@@ -126,7 +126,7 @@ function TeamRow({
             <span className="ml-1 text-muted-foreground text-xs">{unit}</span>
           </>
         ) : (
-          <span className="text-muted-foreground">—</span>
+          <span className="text-muted-foreground">-</span>
         )}
       </TableCell>
       <TableCell className="text-right font-mono text-sm">
@@ -138,7 +138,7 @@ function TeamRow({
             </span>
           </>
         ) : (
-          <span className="text-muted-foreground">—</span>
+          <span className="text-muted-foreground">-</span>
         )}
       </TableCell>
       <TableCell className="text-right">

@@ -205,7 +205,7 @@ function ScoutedBadge({ count }: { count: number | undefined }) {
   if (!count) {
     return (
       <span className="ml-2 shrink-0 rounded-full px-1.5 py-0.5 text-[10px] text-muted-foreground/40">
-        —
+        -
       </span>
     );
   }

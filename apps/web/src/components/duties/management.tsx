@@ -6,6 +6,13 @@ import { api } from "@decode/backend/convex/_generated/api";
 import type { Id } from "@decode/backend/convex/_generated/dataModel";
 import { Button } from "@decode/ui/components/button";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@decode/ui/components/context-menu";
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -29,6 +36,8 @@ import {
 import { cn } from "@decode/ui/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import {
+  ArrowDown,
+  ArrowUp,
   Check,
   LayoutGrid,
   List as ListIcon,
@@ -50,6 +59,8 @@ type CreateArgs = {
   alliancePosition?: number;
 };
 
+type OrgRole = "admin" | "leadScout" | "scout";
+
 function getInitials(name: string): string {
   return name
     .split(" ")
@@ -57,6 +68,15 @@ function getInitials(name: string): string {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+}
+
+function scoutHasAssignmentForEvent(
+  allDuties: Duty[],
+  scoutUserId: string
+): boolean {
+  return allDuties.some(
+    (d) => d.scout === scoutUserId && d.deletedAt === undefined
+  );
 }
 
 type AssignmentChipProps = {
@@ -118,6 +138,9 @@ type ScoutRowProps = {
     position: number
   ) => Promise<void>;
   onAssignTeam: (scoutId: string, teamNumber: number) => Promise<void>;
+  canManageRoles: boolean;
+  currentUserId: string | undefined;
+  onUpdateRole: (targetUserId: string, newRole: OrgRole) => Promise<void>;
 };
 
 function ScoutRow({
@@ -129,46 +152,141 @@ function ScoutRow({
   assignDisabledReason,
   onAssignPosition,
   onAssignTeam,
+  canManageRoles,
+  currentUserId,
+  onUpdateRole,
 }: ScoutRowProps) {
-  return (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="flex items-start gap-3">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary text-xs">
-          {getInitials(scout.displayName)}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="font-medium text-sm leading-none">
-              {scout.displayName}
-            </p>
-            <span className="rounded-full border px-1.5 py-0.5 text-muted-foreground text-xs capitalize">
-              {scout.role === "leadScout" ? "Lead Scout" : scout.role}
-            </span>
-          </div>
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {duties.length === 0 ? (
-              <p className="text-muted-foreground text-xs">No assignments</p>
-            ) : (
-              duties.map((duty) => (
-                <AssignmentChip
-                  duty={duty}
-                  key={duty._id}
-                  onDelete={onDelete}
-                  onToggleActive={onToggleActive}
-                />
-              ))
-            )}
-          </div>
-        </div>
-        <QuickAssignPopover
-          disabled={assignDisabled}
-          disabledReason={assignDisabledReason}
-          onAssignPosition={onAssignPosition}
-          onAssignTeam={onAssignTeam}
-          scout={scout}
-        />
+  const isSelf = scout.userId === currentUserId;
+  const role = scout.role as OrgRole;
+
+  const cardInner = (
+    <>
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary text-xs">
+        {getInitials(scout.displayName)}
       </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="font-medium text-sm leading-none">
+            {scout.displayName}
+          </p>
+          <span className="rounded-full border px-1.5 py-0.5 text-muted-foreground text-xs capitalize">
+            {scout.role === "leadScout" ? "Lead Scout" : scout.role}
+          </span>
+        </div>
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {duties.length === 0 ? (
+            <p className="text-muted-foreground text-xs">No assignments</p>
+          ) : (
+            duties.map((duty) => (
+              <AssignmentChip
+                duty={duty}
+                key={duty._id}
+                onDelete={onDelete}
+                onToggleActive={onToggleActive}
+              />
+            ))
+          )}
+        </div>
+      </div>
+      <QuickAssignPopover
+        disabled={Boolean(assignDisabled || duties.length > 0)}
+        disabledReason={
+          // biome-ignore lint/nursery/noLeakedRender: PASS
+          duties.length > 0
+            ? "This scout already has an assignment for this event"
+            : assignDisabledReason
+        }
+        onAssignPosition={onAssignPosition}
+        onAssignTeam={onAssignTeam}
+        scout={scout}
+      />
+    </>
+  );
+
+  const card = (
+    <div className="rounded-lg border bg-card p-4">
+      <div className="flex items-start gap-3">{cardInner}</div>
     </div>
+  );
+
+  if (!canManageRoles) {
+    return card;
+  }
+
+  const showPromoteScout = !isSelf && role === "scout";
+  const showPromoteLead = !isSelf && role === "leadScout";
+  const showDemoteAdmin = !isSelf && role === "admin";
+  const showDemoteLead = !isSelf && role === "leadScout";
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>{card}</ContextMenuTrigger>
+      <ContextMenuContent className="w-56">
+        {isSelf ? (
+          <ContextMenuItem disabled variant="default">
+            You cannot change your own role
+          </ContextMenuItem>
+        ) : (
+          <>
+            {showPromoteScout || showPromoteLead ? (
+              <>
+                {showPromoteScout ? (
+                  <ContextMenuItem
+                    onSelect={async () => {
+                      await onUpdateRole(scout.userId, "leadScout");
+                    }}
+                  >
+                    <ArrowUp className="size-4" />
+                    Promote to Lead Scout
+                  </ContextMenuItem>
+                ) : null}
+                {showPromoteLead ? (
+                  <ContextMenuItem
+                    onSelect={async () => {
+                      await onUpdateRole(scout.userId, "admin");
+                    }}
+                  >
+                    <ArrowUp className="size-4" />
+                    Promote to Admin
+                  </ContextMenuItem>
+                ) : null}
+                {showDemoteAdmin || showDemoteLead ? (
+                  <ContextMenuSeparator />
+                ) : null}
+              </>
+            ) : null}
+            {showDemoteAdmin ? (
+              <ContextMenuItem
+                onSelect={async () => {
+                  await onUpdateRole(scout.userId, "leadScout");
+                }}
+              >
+                <ArrowDown className="size-4" />
+                Demote to Lead Scout
+              </ContextMenuItem>
+            ) : null}
+            {showDemoteLead ? (
+              <ContextMenuItem
+                onSelect={async () => {
+                  await onUpdateRole(scout.userId, "scout");
+                }}
+              >
+                <ArrowDown className="size-4" />
+                Demote to scout
+              </ContextMenuItem>
+            ) : null}
+            {showPromoteScout ||
+            showPromoteLead ||
+            showDemoteAdmin ||
+            showDemoteLead ? null : (
+              <ContextMenuItem disabled>
+                No role changes available
+              </ContextMenuItem>
+            )}
+          </>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 
@@ -216,7 +334,13 @@ function PositionSlotDialog({
       : [];
 
   const assignedIds = new Set(dutiesOnSlot.map((d) => d.scout));
-  const availableScouts = scouts.filter((s) => !assignedIds.has(s.userId));
+  const availableScouts = scouts.filter(
+    (s) =>
+      !(
+        assignedIds.has(s.userId) ||
+        scoutHasAssignmentForEvent(duties, s.userId)
+      )
+  );
 
   function toggleSelected(scoutId: string) {
     setSelectedToAdd((prev) => {
@@ -340,7 +464,8 @@ function PositionSlotDialog({
             </Label>
             {availableScouts.length === 0 ? (
               <p className="text-muted-foreground text-sm">
-                Everyone in your organisation is already on this slot.
+                Everyone who can be added already has an assignment for this
+                event or is already on this slot.
               </p>
             ) : (
               <ul className="max-h-[min(50vh,20rem)] space-y-2 overflow-y-auto pr-1">
@@ -625,17 +750,42 @@ export function DutiesManagement() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
   const organisation = useQuery(api.auth.getOrganisation);
+  const myProfile = useQuery(api.auth.getCurrentUserProfile);
   const scouts = useQuery(api.duties.getScoutsForOrg);
   const duties = useQuery(
     api.duties.listDutiesForEvent,
     organisation && eventCode.trim()
-      ? { organisationId: organisation._id, eventCode: eventCode.trim() }
+      ? {
+          organisationId: organisation._id,
+          eventCode: eventCode.trim().toUpperCase(),
+        }
       : "skip"
   );
 
   const createDuty = useMutation(api.duties.createDuty);
   const updateDuty = useMutation(api.duties.updateDuty);
   const deleteDuty = useMutation(api.duties.deleteDuty);
+  const updateUserRole = useMutation(api.auth.updateUserRole);
+
+  const handleUpdateRole = useCallback(
+    async (targetUserId: string, newRole: OrgRole) => {
+      try {
+        await updateUserRole({ targetUserId, newRole });
+        const label =
+          newRole === "leadScout"
+            ? "Lead scout"
+            : newRole === "admin"
+              ? "Admin"
+              : "Scout";
+        toast.success(`Role updated to ${label}`);
+      } catch (error) {
+        const msg =
+          error instanceof Error ? error.message : "Failed to update role";
+        toast.error(msg);
+      }
+    },
+    [updateUserRole]
+  );
 
   const handleCreate = useCallback(
     async (args: CreateArgs, options?: { silent?: boolean }) => {
@@ -648,14 +798,14 @@ export function DutiesManagement() {
           await createTeamDuty(
             createDuty,
             organisation._id,
-            eventCode.trim(),
+            eventCode.trim().toUpperCase(),
             args
           );
         } else {
           await createPositionDuty(
             createDuty,
             organisation._id,
-            eventCode.trim(),
+            eventCode.trim().toUpperCase(),
             args
           );
         }
@@ -731,6 +881,8 @@ export function DutiesManagement() {
 
       {hasEventCode ? (
         <AssignmentContent
+          canManageRoles={myProfile?.role === "admin"}
+          currentUserId={myProfile?.userId}
           duties={duties ?? []}
           dutiesByScout={dutiesByScout}
           isCreateOpen={isCreateOpen}
@@ -739,6 +891,7 @@ export function DutiesManagement() {
           onCreateOpenChange={setIsCreateOpen}
           onDelete={handleDelete}
           onToggleActive={handleToggleActive}
+          onUpdateRole={handleUpdateRole}
           onViewModeChange={setViewMode}
           scoutNames={scoutNames}
           scouts={scouts ?? []}
@@ -764,6 +917,9 @@ type AssignmentContentProps = {
   onCreate: (args: CreateArgs, options?: { silent?: boolean }) => Promise<void>;
   onToggleActive: (duty: Duty) => void;
   onDelete: (dutyId: Id<"scoutingDuties">) => void;
+  canManageRoles: boolean;
+  currentUserId: string | undefined;
+  onUpdateRole: (targetUserId: string, newRole: OrgRole) => Promise<void>;
 };
 
 function AssignmentContent({
@@ -778,6 +934,9 @@ function AssignmentContent({
   onCreate,
   onToggleActive,
   onDelete,
+  canManageRoles,
+  currentUserId,
+  onUpdateRole,
 }: AssignmentContentProps) {
   const [slotDialog, setSlotDialog] = useState<SlotTarget | null>(null);
 
@@ -877,12 +1036,15 @@ function AssignmentContent({
               {...(isLoadingDuties
                 ? { assignDisabledReason: "Loading assignments…" as const }
                 : {})}
+              canManageRoles={canManageRoles}
+              currentUserId={currentUserId}
               duties={dutiesByScout.get(scout.userId) ?? []}
               key={scout.userId}
               onAssignPosition={onAssignPosition}
               onAssignTeam={onAssignTeam}
               onDelete={onDelete}
               onToggleActive={onToggleActive}
+              onUpdateRole={onUpdateRole}
               scout={scout}
             />
           ))}

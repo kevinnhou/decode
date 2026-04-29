@@ -308,7 +308,7 @@ function FrcFieldInputSummary({ events }: { events: FrcFieldEvent[] }) {
           <p className="mb-2 text-muted-foreground text-xs">Field map</p>
           <div className="relative w-full overflow-hidden rounded-lg border bg-muted/20">
             <Image
-              alt="FRC field — event positions"
+              alt="FRC Field"
               className="w-full select-none"
               height={800}
               src="/frc-field.webp"
@@ -478,7 +478,7 @@ function SubmissionCard({
         {!isFtc && (sub.autoPath?.length ?? 0) > 0 ? (
           <div>
             <p className="mb-1 text-muted-foreground text-xs">
-              Auto Path — {sub.autoPath?.length ?? 0} point
+              Auto Path {sub.autoPath?.length ?? 0} point
               {(sub.autoPath?.length ?? 0) !== 1 ? "s" : ""} recorded
             </p>
           </div>

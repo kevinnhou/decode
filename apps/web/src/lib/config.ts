@@ -1,5 +1,9 @@
 import type { SpreadsheetConfigSchema } from "@/schema/scouting";
 
+function normaliseCode(value: string): string {
+  return value.trim().toUpperCase();
+}
+
 function getItem<T>(key: string, defaultValue: T): T {
   if (typeof window === "undefined") {
     return defaultValue;
@@ -61,11 +65,22 @@ export function getSpreadsheetConfigRevision(): number {
 }
 
 export function getConfig(): SpreadsheetConfigSchema | null {
-  return getItem(SPREADSHEET_CONFIG_KEY, null);
+  const raw = getItem<SpreadsheetConfigSchema | null>(
+    SPREADSHEET_CONFIG_KEY,
+    null
+  );
+  if (!raw) {
+    return null;
+  }
+  return { ...raw, eventCode: normaliseCode(raw.eventCode) };
 }
 
 export function setConfig(config: SpreadsheetConfigSchema): void {
-  setItem(SPREADSHEET_CONFIG_KEY, config);
+  const next: SpreadsheetConfigSchema = {
+    ...config,
+    eventCode: normaliseCode(config.eventCode),
+  };
+  setItem(SPREADSHEET_CONFIG_KEY, next);
   bumpSpreadsheetConfigRevision();
 }
 

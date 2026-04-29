@@ -36,8 +36,6 @@ import {
   Users,
   X,
 } from "lucide-react";
-import type { Route } from "next";
-import { useRouter } from "next/navigation";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useShortcuts } from "@/hooks/use-shortcuts";
@@ -388,7 +386,9 @@ function SettingsTab({
 
   const teamsMapResult = useQuery(
     api.teams.getTeamsMapForEvent,
-    watchedEventCode?.trim() ? { eventCode: watchedEventCode.trim() } : "skip"
+    watchedEventCode?.trim()
+      ? { eventCode: watchedEventCode.trim().toUpperCase() }
+      : "skip"
   );
 
   const backendMapCount = teamsMapResult?.map
@@ -416,7 +416,7 @@ function SettingsTab({
         return;
       }
 
-      const eventCode = form.getValues("eventCode")?.trim();
+      const eventCode = form.getValues("eventCode")?.trim().toUpperCase();
       if (!eventCode) {
         toast.error("Set an event code before importing a team map");
         return;
@@ -502,6 +502,9 @@ function SettingsTab({
                           field.onBlur();
                           saveConfigOnBlur();
                         }}
+                        onChange={(e) =>
+                          field.onChange(e.target.value.toUpperCase())
+                        }
                       />
                     </FormControl>
                     <FormMessage />
@@ -961,7 +964,6 @@ function OrganisationTab({
 }
 
 export default function ProfilePage() {
-  const router = useRouter();
   const user = useQuery(api.auth.getCurrentUser);
   const profile = useQuery(api.auth.getCurrentUserProfile);
   const organisation = useQuery(api.auth.getOrganisation);
@@ -975,19 +977,18 @@ export default function ProfilePage() {
 
   async function handleSignOut() {
     await authClient.signOut();
-    router.push("/" as Route);
-    router.refresh();
+    window.location.href = "/";
   }
 
   async function handleDeleteAccount() {
     try {
       await deleteAccountMutation();
       await authClient.deleteUser();
-      router.push("/" as Route);
-      router.refresh();
     } catch {
       toast.error("Failed to delete account. Please try again.");
+      return;
     }
+    window.location.href = "/";
   }
 
   if (!(user && profile)) {

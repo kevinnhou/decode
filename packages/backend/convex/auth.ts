@@ -9,6 +9,7 @@ import type { QueryCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
 import authConfig from "./auth.config";
 import { roleValidator } from "./schema";
+import { normaliseCode } from "./utils/normaliseCode";
 
 // biome-ignore lint/style/noNonNullAssertion: PASS
 const siteUrl = process.env.SITE_URL!;
@@ -277,9 +278,11 @@ export const joinOrganisation = mutation({
       throw new ConvexError("You already belong to an organisation.");
     }
 
+    const inviteCode = normaliseCode(args.inviteCode);
+
     const org = await ctx.db
       .query("organisations")
-      .withIndex("by_inviteCode", (q) => q.eq("inviteCode", args.inviteCode))
+      .withIndex("by_inviteCode", (q) => q.eq("inviteCode", inviteCode))
       .unique();
 
     if (!org) {
@@ -410,14 +413,16 @@ export const getOrganisationMembers = query({
  *
  * @param ctx - The Convex query context
  * @param _args - No arguments
- * @returns Organisation details or null
- * @throws ConvexError if not authenticated or no profile exists
+ * @returns Organisation details, or null if not signed in, no profile yet (e.g. onboarding), or org row missing
  */
 export const getOrganisation = query({
   args: {},
   returns: v.any(),
   async handler(ctx, _args) {
-    const { profile } = await requireUserProfile(ctx);
+    const profile = await resolveUserProfile(ctx);
+    if (!profile) {
+      return null;
+    }
     const organisation = await ctx.db.get(profile.organisationId);
     return organisation;
   },
