@@ -282,7 +282,7 @@ export default function MatchScouting() {
           eventCode: config.eventCode,
           payload: valid.data,
         });
-        toast.info("Saved offline — will sync when connected");
+        toast.info("Saved offline, will sync when connected");
         form.reset(getInitialFtcFormValues());
         setPeriodData({ ...INITIAL_FTC_PERIOD_DATA });
         setFieldEvents([]);
@@ -291,7 +291,23 @@ export default function MatchScouting() {
         return;
       }
 
-      const result = await submitMatch(valid.data, config.eventCode);
+      let result: Awaited<ReturnType<typeof submitMatch>>;
+      try {
+        result = await submitMatch(valid.data, config.eventCode);
+      } catch {
+        await enqueueSubmission({
+          type: "ftc-match",
+          eventCode: config.eventCode,
+          payload: valid.data,
+        });
+        toast.warning("Network error, queued for retry");
+        form.reset(getInitialFtcFormValues());
+        setPeriodData({ ...INITIAL_FTC_PERIOD_DATA });
+        setFieldEvents([]);
+        timer.reset();
+        setPageState("meta");
+        return;
+      }
 
       if (result.success) {
         toast.success(result.message);
@@ -306,7 +322,7 @@ export default function MatchScouting() {
           eventCode: config.eventCode,
           payload: valid.data,
         });
-        toast.warning("Network error — queued for retry");
+        toast.warning("Network error, queued for retry");
         form.reset(getInitialFtcFormValues());
         setPeriodData({ ...INITIAL_FTC_PERIOD_DATA });
         setFieldEvents([]);

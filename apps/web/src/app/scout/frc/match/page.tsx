@@ -173,7 +173,7 @@ export default function MatchScouting() {
           eventCode: config.eventCode,
           payload: valid.data,
         });
-        toast.info("Saved offline — will sync when connected");
+        toast.info("Saved offline, will sync when connected");
         form.reset(
           activeDuty
             ? getFrcFormValuesFromDuty(activeDuty, teamsMap)
@@ -190,12 +190,37 @@ export default function MatchScouting() {
         return;
       }
 
-      const result = await submitMatch(
-        valid.data,
-        config.eventCode,
-        config.spreadsheetId,
-        config.sheetId
-      );
+      let result: Awaited<ReturnType<typeof submitMatch>>;
+      try {
+        result = await submitMatch(
+          valid.data,
+          config.eventCode,
+          config.spreadsheetId,
+          config.sheetId
+        );
+      } catch {
+        // server action layer
+        await enqueueSubmission({
+          type: "frc-match",
+          eventCode: config.eventCode,
+          payload: valid.data,
+        });
+        toast.warning("Network error, queued for retry");
+        form.reset(
+          activeDuty
+            ? getFrcFormValuesFromDuty(activeDuty, teamsMap)
+            : getInitialFrcFormValues()
+        );
+        setPeriodData(INITIAL_PERIOD_DATA);
+        setFrcFieldEvents([]);
+        setAutoPath([]);
+        scoringTimer.reset();
+        feedingTimer.reset();
+        defenseTimer.reset();
+        timer.reset();
+        setPageState("meta");
+        return;
+      }
 
       if (result.success) {
         toast.success(result.message);
@@ -218,7 +243,7 @@ export default function MatchScouting() {
           eventCode: config.eventCode,
           payload: valid.data,
         });
-        toast.warning("Network error — queued for retry");
+        toast.warning("Network error, queued for retry");
         form.reset(
           activeDuty
             ? getFrcFormValuesFromDuty(activeDuty, teamsMap)

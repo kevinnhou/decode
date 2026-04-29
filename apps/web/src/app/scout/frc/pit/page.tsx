@@ -334,34 +334,31 @@ export default function PitScouting() {
 
         if (isNavigatorOffline) {
           await enqueueSubmission({ type: "pit", payload: pitArgs });
-          toast.info("Saved offline — will sync when connected");
+          toast.info("Saved offline, will sync when connected");
           onReset();
           return;
         }
 
-        const result = await submitPit(pitArgs);
+        let result: Awaited<ReturnType<typeof submitPit>>;
+        try {
+          result = await submitPit(pitArgs);
+        } catch {
+          // server action layer
+          await enqueueSubmission({ type: "pit", payload: pitArgs });
+          toast.warning("Network error, queued for retry");
+          onReset();
+          return;
+        }
 
         if (result.success) {
           toast.success(result.message);
           onReset();
         } else if (isNetworkErrorMessage(result.message)) {
           await enqueueSubmission({ type: "pit", payload: pitArgs });
-          toast.warning("Network error — queued for retry");
+          toast.warning("Network error, queued for retry");
           onReset();
         } else {
           toast.error(result.message);
-        }
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Failed to submit pit scouting";
-        if (isNetworkErrorMessage(message)) {
-          await enqueueSubmission({ type: "pit", payload: pitArgs });
-          toast.warning("Network error — queued for retry");
-          onReset();
-        } else {
-          toast.error(message);
         }
       } finally {
         setIsSubmitting(false);

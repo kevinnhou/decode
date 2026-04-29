@@ -20,15 +20,21 @@ self.addEventListener("sync", (event: SyncEvent) => {
     return;
   }
   event.waitUntil(
-    self.clients.matchAll({ type: "window" }).then((clients) =>
-      Promise.all(
+    self.clients.matchAll({ type: "window" }).then((clients) => {
+      if (clients.length === 0) {
+        // no open windows to handle the flush
+        return Promise.reject(
+          new Error("No window clients available to flush queue")
+        );
+      }
+      return Promise.all(
         clients.map((client) =>
           client.postMessage({ type: "FLUSH_QUEUE" } satisfies {
             type: string;
           })
         )
-      )
-    )
+      );
+    })
   );
 });
 

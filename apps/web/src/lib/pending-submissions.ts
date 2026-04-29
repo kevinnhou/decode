@@ -10,6 +10,8 @@ const PENDING_SUBMISSIONS_STORE = "pendingSubmissions";
 const QUEUE_CHANGED_EVENT = "decode-pending-queue-changed";
 const FLUSH_SUBMISSIONS_TAG = "flush-submissions";
 
+export const MAX_SUBMISSION_ATTEMPTS = 5;
+
 function notifyQueueChanged(): void {
   if (typeof window === "undefined") {
     return;

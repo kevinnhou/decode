@@ -10,6 +10,7 @@ import type {
 } from "@/lib/pending-submissions";
 import {
   getAllPendingSubmissions,
+  MAX_SUBMISSION_ATTEMPTS,
   markSubmissionFailed,
   removeSubmission,
   subscribePendingQueueChanged,
@@ -131,14 +132,18 @@ export function useSyncQueue(): {
 
     flushing.current = true;
     setIsFlushing(true);
-    const before = await getAllPendingSubmissions();
     try {
       const pending = await getAllPendingSubmissions();
       setPendingCount(pending.length);
 
       const submitters = { submitMatchFrc, submitMatchFtc, submitPitMut };
 
-      for (const item of pending) {
+      const retryable = pending.filter(
+        (item) => item.attempts < MAX_SUBMISSION_ATTEMPTS
+      );
+      const beforeRetryableCount = retryable.length;
+
+      for (const item of retryable) {
         try {
           await pushOnePendingItem(item, submitters);
           await removeSubmission(item.id);
@@ -150,10 +155,20 @@ export function useSyncQueue(): {
       }
 
       const remaining = await getAllPendingSubmissions();
+      const remainingRetryable = remaining.filter(
+        (item) => item.attempts < MAX_SUBMISSION_ATTEMPTS
+      );
       setPendingCount(remaining.length);
 
-      if (before.length > 0 && remaining.length === 0) {
-        toast.success("All offline submissions synced");
+      if (beforeRetryableCount > 0 && remainingRetryable.length === 0) {
+        const stuck = remaining.length - remainingRetryable.length;
+        if (stuck === 0) {
+          toast.success("All offline submissions synced");
+        } else {
+          toast.warning(
+            `${stuck} submission${stuck === 1 ? "" : "s"} could not be synced after ${MAX_SUBMISSION_ATTEMPTS} attempts`
+          );
+        }
       }
     } finally {
       flushing.current = false;

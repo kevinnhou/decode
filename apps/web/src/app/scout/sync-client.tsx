@@ -21,7 +21,7 @@ export function SyncClient() {
       />
       <span className="text-muted-foreground">
         {pendingCount} submission{pendingCount === 1 ? "" : "s"} saved offline
-        {isFlushing ? " — syncing…" : ". They upload when you're online."}
+        {isFlushing ? ", syncing…" : ". They upload when you're online."}
       </span>
     </output>
   );

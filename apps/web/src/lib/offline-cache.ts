@@ -17,6 +17,10 @@ function openDb(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onerror = () => reject(req.error);
     req.onsuccess = () => resolve(req.result);
+    req.onblocked = () =>
+      reject(
+        new Error("IndexedDB upgrade blocked, close other tabs and try again")
+      );
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
