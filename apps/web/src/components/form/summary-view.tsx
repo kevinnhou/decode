@@ -70,7 +70,7 @@ export function SummaryView({
 }: SummaryViewProps) {
   const climbLevel = form.watch("climbLevel");
   const climbLabel =
-    FRC_CLIMB_LEVELS.find((l) => l.value === climbLevel)?.label ?? "—";
+    FRC_CLIMB_LEVELS.find((l) => l.value === climbLevel)?.label ?? "-";
 
   return (
     <div className="space-y-6">

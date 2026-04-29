@@ -334,7 +334,7 @@ function PitRow({
               )
             ) : (
               <span className="capitalize">
-                {val !== undefined ? String(val) : "—"}
+                {val !== undefined ? String(val) : "-"}
               </span>
             )}
           </TableCell>
@@ -444,7 +444,7 @@ function PitComparisonTable({
                     ))}
                   </div>
                 ) : (
-                  <span className="text-muted-foreground">—</span>
+                  <span className="text-muted-foreground">-</span>
                 )}
               </TableCell>
             ))}
