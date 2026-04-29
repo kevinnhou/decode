@@ -3,6 +3,7 @@ import type { Metadata, Route } from "next";
 import { redirect } from "next/navigation";
 import { fetchAuthQuery, isAuthenticated } from "@/lib/convex";
 import { generateMetadata as genMeta } from "@/lib/metadata";
+import { SyncClient } from "./sync-client";
 
 export const metadata: Metadata = genMeta({
   title: "Scout",
@@ -28,5 +29,10 @@ export default async function ScoutLayout({
     redirect("/onboarding" as Route);
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <SyncClient />
+      {children}
+    </>
+  );
 }

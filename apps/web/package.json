@@ -39,11 +39,14 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@serwist/turbopack": "^9.5.7",
     "@tailwindcss/postcss": "^4.1.10",
     "@types/node": "^20",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
+    "esbuild": "^0.28.0",
     "schema-dts": "^1.1.5",
+    "serwist": "^9.5.7",
     "tailwindcss": "^4.1.10",
     "typescript": "^5"
   }

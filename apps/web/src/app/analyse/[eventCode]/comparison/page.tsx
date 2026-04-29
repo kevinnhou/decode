@@ -170,7 +170,9 @@ function TeamSelector({
             <Input
               className="h-9 w-28 text-sm"
               min={1}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) =>
+                setInput((e.target as unknown as { value: string }).value)
+              }
               placeholder="Add team #"
               type="number"
               value={input}

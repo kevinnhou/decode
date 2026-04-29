@@ -43,6 +43,8 @@ import {
   getFtcFormValuesFromDuty,
   getInitialFtcFormValues,
 } from "@/lib/form/utils";
+import { isNetworkErrorMessage } from "@/lib/network-error";
+import { enqueueSubmission } from "@/lib/pending-submissions";
 import type {
   FieldSchema,
   FtcMatchSubmissionSchema,
@@ -271,10 +273,56 @@ export default function MatchScouting() {
 
     setIsSubmitting(true);
     try {
-      const result = await submitMatch(payload, config.eventCode);
+      const isNavigatorOffline =
+        typeof navigator !== "undefined" && !navigator.onLine;
+
+      if (isNavigatorOffline) {
+        await enqueueSubmission({
+          type: "ftc-match",
+          eventCode: config.eventCode,
+          payload: valid.data,
+        });
+        toast.info("Saved offline, will sync when connected");
+        form.reset(getInitialFtcFormValues());
+        setPeriodData({ ...INITIAL_FTC_PERIOD_DATA });
+        setFieldEvents([]);
+        timer.reset();
+        setPageState("meta");
+        return;
+      }
+
+      let result: Awaited<ReturnType<typeof submitMatch>>;
+      try {
+        result = await submitMatch(valid.data, config.eventCode);
+      } catch {
+        await enqueueSubmission({
+          type: "ftc-match",
+          eventCode: config.eventCode,
+          payload: valid.data,
+        });
+        toast.warning("Network error, queued for retry");
+        form.reset(getInitialFtcFormValues());
+        setPeriodData({ ...INITIAL_FTC_PERIOD_DATA });
+        setFieldEvents([]);
+        timer.reset();
+        setPageState("meta");
+        return;
+      }
 
       if (result.success) {
         toast.success(result.message);
+        form.reset(getInitialFtcFormValues());
+        setPeriodData({ ...INITIAL_FTC_PERIOD_DATA });
+        setFieldEvents([]);
+        timer.reset();
+        setPageState("meta");
+      } else if (isNetworkErrorMessage(result.message)) {
+        await enqueueSubmission({
+          type: "ftc-match",
+          eventCode: config.eventCode,
+          payload: valid.data,
+        });
+        toast.warning("Network error, queued for retry");
         form.reset(getInitialFtcFormValues());
         setPeriodData({ ...INITIAL_FTC_PERIOD_DATA });
         setFieldEvents([]);

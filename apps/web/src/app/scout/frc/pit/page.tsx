@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/complexity/noExcessiveCognitiveComplexity: PASS */
 "use client";
 
 import { api } from "@decode/backend/convex/_generated/api";
@@ -27,6 +28,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "convex/react";
 import { ChevronLeft, ChevronRight, UploadIcon, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useIsOnline } from "@/hooks/use-is-online";
 import { useTeamsMap } from "@/hooks/use-teams-map";
 import { getConfig } from "@/lib/config";
 import {
@@ -37,6 +39,8 @@ import {
 } from "@/lib/form/constants";
 import type { PhotoPreview } from "@/lib/form/types";
 import { formatNumberFieldProps } from "@/lib/form/utils";
+import { isNetworkErrorMessage } from "@/lib/network-error";
+import { enqueueSubmission } from "@/lib/pending-submissions";
 import { type FrcPitFormSchema, frcPitFormSchema } from "@/schema/scouting";
 import { TeamCombobox } from "~/form/team-combobox";
 import { setPitSectionsState } from "~/sidebar/pit-sections";
@@ -89,6 +93,7 @@ export default function PitScouting() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoPreviewsRef = useRef(photoPreviews);
   photoPreviewsRef.current = photoPreviews;
+  const isOnline = useIsOnline();
 
   const pitEventCode = getConfig()?.eventCode ?? "";
   const teamsMap = useTeamsMap();
@@ -124,9 +129,15 @@ export default function PitScouting() {
   const isLastSection = activeSectionIndex === PIT_SECTION_CONFIG.length - 1;
 
   const handlePhotoUpload = useCallback(
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Photo upload with validation and error handling
     async (files: FileList | null) => {
       if (!files || files.length === 0) {
+        return;
+      }
+
+      if (!isOnline) {
+        toast.error(
+          "Photo upload requires a connection. Connect to Wi‑Fi to add photos."
+        );
         return;
       }
 
@@ -207,7 +218,7 @@ export default function PitScouting() {
         setIsUploading(false);
       }
     },
-    [form]
+    [form, isOnline]
   );
 
   const handleRemovePhoto = useCallback(
@@ -271,80 +282,93 @@ export default function PitScouting() {
     []
   );
 
-  const handleContinue = useCallback(
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Form submission with validation and data transformation
-    async () => {
-      const config = getConfig();
-      const eventCode = config?.eventCode?.trim() || "UNKNOWN";
+  const handleContinue = useCallback(async () => {
+    const config = getConfig();
+    const eventCode = config?.eventCode?.trim() || "UNKNOWN";
 
-      if (isLastSection) {
-        const isValid = await form.trigger();
-        if (!isValid) {
-          toast.error("Please fix validation errors before submitting");
+    if (isLastSection) {
+      const isValid = await form.trigger();
+      if (!isValid) {
+        toast.error("Please fix validation errors before submitting");
+        return;
+      }
+
+      setIsSubmitting(true);
+      const values = form.getValues();
+      const pitArgs = {
+        competitionType: "FRC" as const,
+        eventCode,
+        eventName: undefined,
+        teamNumber: values.teamNumber,
+        source: "web" as const,
+        robotDimensions:
+          values.robotDimensions?.length ||
+          values.robotDimensions?.width ||
+          values.robotDimensions?.height
+            ? {
+                length: values.robotDimensions.length ?? 0,
+                width: values.robotDimensions.width ?? 0,
+                height: values.robotDimensions.height ?? 0,
+              }
+            : undefined,
+        drivetrainType: values.drivetrainType,
+        photos:
+          values.photos && values.photos.length > 0 ? values.photos : undefined,
+        notes: values.notes || undefined,
+        hopperCapacity: values.hopperCapacity,
+        shootingSpeed: values.shootingSpeed,
+        intakeMethods:
+          values.intakeMethods && values.intakeMethods.length > 0
+            ? values.intakeMethods
+            : undefined,
+        canPassTrench: values.canPassTrench,
+        canCrossBump: values.canCrossBump,
+        maxClimbLevel: values.maxClimbLevel,
+        autoCapabilities: values.autoCapabilities || undefined,
+        weight: values.weight,
+      };
+
+      try {
+        const isNavigatorOffline =
+          typeof navigator !== "undefined" && !navigator.onLine;
+
+        if (isNavigatorOffline) {
+          await enqueueSubmission({ type: "pit", payload: pitArgs });
+          toast.info("Saved offline, will sync when connected");
+          onReset();
           return;
         }
 
-        setIsSubmitting(true);
+        let result: Awaited<ReturnType<typeof submitPit>>;
         try {
-          const values = form.getValues();
-          const result = await submitPit({
-            competitionType: "FRC",
-            eventCode,
-            eventName: undefined,
-            teamNumber: values.teamNumber,
-            source: "web",
-            robotDimensions:
-              values.robotDimensions?.length ||
-              values.robotDimensions?.width ||
-              values.robotDimensions?.height
-                ? {
-                    length: values.robotDimensions.length ?? 0,
-                    width: values.robotDimensions.width ?? 0,
-                    height: values.robotDimensions.height ?? 0,
-                  }
-                : undefined,
-            drivetrainType: values.drivetrainType,
-            photos:
-              values.photos && values.photos.length > 0
-                ? values.photos
-                : undefined,
-            notes: values.notes || undefined,
-            hopperCapacity: values.hopperCapacity,
-            shootingSpeed: values.shootingSpeed,
-            intakeMethods:
-              values.intakeMethods && values.intakeMethods.length > 0
-                ? values.intakeMethods
-                : undefined,
-            canPassTrench: values.canPassTrench,
-            canCrossBump: values.canCrossBump,
-            maxClimbLevel: values.maxClimbLevel,
-            autoCapabilities: values.autoCapabilities || undefined,
-            weight: values.weight,
-          });
-
-          if (result.success) {
-            toast.success(result.message);
-            onReset();
-          } else {
-            toast.error(result.message);
-          }
-        } catch (error) {
-          const message =
-            error instanceof Error
-              ? error.message
-              : "Failed to submit pit scouting";
-          toast.error(message);
-        } finally {
-          setIsSubmitting(false);
+          result = await submitPit(pitArgs);
+        } catch {
+          // server action layer
+          await enqueueSubmission({ type: "pit", payload: pitArgs });
+          toast.warning("Network error, queued for retry");
+          onReset();
+          return;
         }
-      } else {
-        setActiveSectionIndex((prev) =>
-          Math.min(prev + 1, PIT_SECTION_CONFIG.length - 1)
-        );
+
+        if (result.success) {
+          toast.success(result.message);
+          onReset();
+        } else if (isNetworkErrorMessage(result.message)) {
+          await enqueueSubmission({ type: "pit", payload: pitArgs });
+          toast.warning("Network error, queued for retry");
+          onReset();
+        } else {
+          toast.error(result.message);
+        }
+      } finally {
+        setIsSubmitting(false);
       }
-    },
-    [isLastSection, form, onReset]
-  );
+    } else {
+      setActiveSectionIndex((prev) =>
+        Math.min(prev + 1, PIT_SECTION_CONFIG.length - 1)
+      );
+    }
+  }, [isLastSection, form, onReset]);
 
   const handlePrevious = useCallback(() => {
     setActiveSectionIndex((prev) => Math.max(prev - 1, 0));
@@ -531,7 +555,7 @@ export default function PitScouting() {
                   <input
                     accept="image/*"
                     className="hidden"
-                    disabled={isUploading}
+                    disabled={isUploading || !isOnline}
                     multiple
                     onChange={(e) => {
                       handlePhotoUpload(e.target.files);
@@ -542,7 +566,7 @@ export default function PitScouting() {
                   />
                   <Button
                     className="w-full"
-                    disabled={isUploading}
+                    disabled={isUploading || !isOnline}
                     onClick={() => fileInputRef.current?.click()}
                     type="button"
                     variant="outline"
@@ -550,6 +574,11 @@ export default function PitScouting() {
                     <UploadIcon className="mr-2 size-4" />
                     {isUploading ? "Uploading..." : "Upload Photos"}
                   </Button>
+                  {isOnline ? null : (
+                    <p className="text-muted-foreground text-xs">
+                      Photo upload requires an internet connection.
+                    </p>
+                  )}
                 </div>
               </div>
             </Section>
