@@ -43,7 +43,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const convexToken = await getToken();
+  const convexToken = await getToken().catch(() => null);
 
   return (
     <html
