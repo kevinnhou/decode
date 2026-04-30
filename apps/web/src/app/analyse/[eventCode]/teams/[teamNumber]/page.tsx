@@ -685,9 +685,6 @@ function TeamProfileBody({
                 <p className="text-muted-foreground text-sm">
                   No pit scouting data submitted for this team yet.
                 </p>
-                <p className="text-muted-foreground text-xs">
-                  Submit pit data to see robot specs, photos and notes here.
-                </p>
               </div>
             </div>
           )}

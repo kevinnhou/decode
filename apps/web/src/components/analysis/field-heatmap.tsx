@@ -187,7 +187,6 @@ export function FieldHeatmapCard({
           </CardTitle>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-xs">Period</span>
               <Select
                 onValueChange={(value: string) => {
                   setPeriodFilter(value as HeatmapPeriodFilter);

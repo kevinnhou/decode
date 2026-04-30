@@ -76,7 +76,7 @@ export function PerPeriodChart({
   if (!hasData) {
     return (
       <div className="flex h-48 items-center justify-center text-muted-foreground text-sm">
-        No period data available
+        No data available
       </div>
     );
   }
