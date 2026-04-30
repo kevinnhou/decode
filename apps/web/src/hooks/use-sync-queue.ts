@@ -4,6 +4,7 @@ import { api } from "@decode/backend/convex/_generated/api";
 import { toast } from "@decode/ui/components/sonner";
 import { useMutation } from "convex/react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ftcMatchTagsFromFieldEvents } from "@/lib/form/utils";
 import type {
   PendingSubmissionRecord,
   QueuedPitPayload,
@@ -60,7 +61,10 @@ function ftcPayloadToConvexArgs(
     teleopMade: pd?.teleop.made ?? 0,
     teleopMissed: pd?.teleop.missed ?? 0,
     ftcPeriodData: pd,
-    tags: [] as string[],
+    tags: ftcMatchTagsFromFieldEvents(
+      payload.inputMode,
+      payload.ftcFieldEvents
+    ),
     fieldEvents: payload.ftcFieldEvents,
   };
 }

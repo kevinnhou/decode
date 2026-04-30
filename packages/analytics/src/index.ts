@@ -33,7 +33,10 @@ export {
   type FtcPeriodMakes,
   ftcDefenseFlag,
   ftcPeriodMakes,
+  ftcPeriodMisses,
   ftcTotalMakes,
+  ftcTotalMisses,
+  ftcTotalShots,
 } from "./ftc-quantitative";
 export { type BinnedHeatmap, binHeatmap, type HeatmapBin } from "./heatmap";
 export { type ParsedMatchSubmission, parseMatchSubmission } from "./parse";

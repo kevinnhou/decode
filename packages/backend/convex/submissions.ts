@@ -102,6 +102,7 @@ const frcFieldEventValidator = v.object({
     v.literal("SHIFT_2"),
     v.literal("SHIFT_3"),
     v.literal("SHIFT_4"),
+    v.literal("SHIFT_5"),
     v.literal("END_GAME")
   ),
   eventType: v.union(

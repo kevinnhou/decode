@@ -698,9 +698,6 @@ function SubmissionCard({
           <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
             {isFtc === true && draftFtc !== null ? (
               <div className="space-y-2">
-                <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-                  Period makes
-                </p>
                 <FtcPeriodDraftEditor onChange={setDraftFtc} value={draftFtc} />
               </div>
             ) : null}
@@ -774,9 +771,6 @@ function SubmissionCard({
             {isFtc ? (
               sub.ftcPeriodData !== undefined && sub.ftcPeriodData !== null ? (
                 <div>
-                  <p className="mb-2 text-muted-foreground text-xs">
-                    Period makes
-                  </p>
                   <FtcPeriodDataTable pd={sub.ftcPeriodData} />
                 </div>
               ) : null
@@ -784,9 +778,6 @@ function SubmissionCard({
 
             {!isFtc && sub.inputMode === "form" && sub.periodData ? (
               <div>
-                <p className="mb-2 text-muted-foreground text-xs">
-                  Period Data
-                </p>
                 <PeriodDataTable pd={sub.periodData} />
               </div>
             ) : null}

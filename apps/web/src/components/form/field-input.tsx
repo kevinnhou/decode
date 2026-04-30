@@ -36,9 +36,14 @@ const EVENT_TYPES = [
   "autonomous_missed",
   "teleop_made",
   "teleop_missed",
+  "defense",
 ] as const;
 
 type EventType = (typeof EVENT_TYPES)[number];
+
+function ftcFieldEventButtonLabel(type: string): string {
+  return type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+}
 
 interface PendingEvent {
   x: number;
@@ -78,7 +83,6 @@ export function FieldInput({
   const [pendingEvent, setPendingEvent] = useState<PendingEvent | null>(null);
   const [dialogEventType, setDialogEventType] =
     useState<EventType>("teleop_made");
-  const [dialogCount, setDialogCount] = useState<number>(1);
   const imageRef = useRef<HTMLDivElement>(null);
 
   const isTimerStarted = timerState !== "idle";
@@ -92,7 +96,7 @@ export function FieldInput({
     }
     return isAutonomous
       ? (["autonomous_made", "autonomous_missed"] as const)
-      : (["teleop_made", "teleop_missed"] as const);
+      : (["teleop_made", "teleop_missed", "defense"] as const);
   }, [isTimerStarted, isAutonomous]);
 
   useEffect(() => {
@@ -135,28 +139,29 @@ export function FieldInput({
 
     setPendingEvent({ x: normalizedX, y: normalizedY });
     setDialogEventType(defaultEventType);
-    setDialogCount(1);
   }
 
-  function handleDialogConfirm() {
+  function commitPendingEvent(eventType: EventType, shotCount: number) {
     if (!pendingEvent) {
       return;
     }
 
+    const isDefenseEvent = eventType === "defense";
+    const count = isDefenseEvent ? 0 : shotCount;
     const newEvent: FieldEventSchema = {
-      event: dialogEventType,
+      event: eventType,
       coordinates: { x: pendingEvent.x, y: pendingEvent.y },
       timestamp: getEventTimestamp(),
-      count: dialogCount,
+      count,
     };
 
     const newEvents = [...events, newEvent];
     onEventsChange(newEvents);
 
-    const formKey = EVENT_TO_FORM_KEY[dialogEventType];
+    const formKey = EVENT_TO_FORM_KEY[eventType];
     if (formKey) {
       const currentValue = (form.getValues(formKey) as number) ?? 0;
-      form.setValue(formKey, currentValue + dialogCount, {
+      form.setValue(formKey, currentValue + shotCount, {
         shouldValidate: true,
       });
     }
@@ -195,10 +200,14 @@ export function FieldInput({
             (event.coordinates.x / ORIGINAL_IMAGE_WIDTH) * 100;
           const topPercent =
             (event.coordinates.y / ORIGINAL_IMAGE_HEIGHT) * 100;
+          const isDefense = event.event === "defense";
+          const markerClass = isDefense
+            ? "border-amber-500 bg-amber-500/50"
+            : "border-red-500 bg-red-500/50";
 
           return (
             <div
-              className="-translate-x-1/2 -translate-y-1/2 pointer-events-none absolute size-4 rounded-full border-2 border-red-500 bg-red-500/50"
+              className={`-translate-x-1/2 -translate-y-1/2 pointer-events-none absolute size-4 rounded-full border-2 ${markerClass}`}
               key={`${event.timestamp}-${event.coordinates.x}-${event.coordinates.y}-${index}`}
               style={{
                 left: `${leftPercent}%`,
@@ -218,59 +227,65 @@ export function FieldInput({
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {availableEventTypes.map((type) => {
-                  const label = type
-                    .replace(/_/g, " ")
-                    .replace(/\b\w/g, (l) => l.toUpperCase());
-                  const isActive = dialogEventType === type;
+                {availableEventTypes
+                  .filter((t) => t !== "defense")
+                  .map((type) => {
+                    const label = ftcFieldEventButtonLabel(type);
+                    const isActive = dialogEventType === type;
 
-                  return (
-                    <Button
-                      className="h-11 w-full justify-center rounded-xl text-sm sm:text-base"
-                      key={type}
-                      onClick={() => setDialogEventType(type)}
-                      type="button"
-                      variant={isActive ? "default" : "outline"}
-                    >
-                      {label}
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <FormLabel className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-                Count
-              </FormLabel>
-              <div className="flex flex-col gap-3">
-                <div className="grid grid-cols-3 gap-2">
-                  {[1, 2, 3].map((amount) => {
-                    const isActive = dialogCount === amount;
                     return (
                       <Button
-                        className="h-11 w-full justify-center rounded-xl font-mono text-sm"
-                        key={amount}
-                        onClick={() => setDialogCount(amount)}
+                        className="h-11 w-full justify-center rounded-xl text-sm sm:text-base"
+                        key={type}
+                        onClick={() => {
+                          setDialogEventType(type);
+                        }}
                         type="button"
                         variant={isActive ? "default" : "outline"}
                       >
-                        {amount}
+                        {label}
                       </Button>
                     );
                   })}
+              </div>
+              {availableEventTypes.some((t) => t === "defense") && (
+                <Button
+                  className="h-11 w-full justify-center rounded-xl text-sm sm:text-base"
+                  onClick={() => {
+                    commitPendingEvent("defense", 0);
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  {ftcFieldEventButtonLabel("defense")}
+                </Button>
+              )}
+            </div>
+            {dialogEventType !== "defense" && (
+              <div className="space-y-2">
+                <FormLabel className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                  Count
+                </FormLabel>
+                <div className="flex flex-col gap-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    {[1, 2, 3].map((amount) => (
+                      <Button
+                        className="h-11 w-full justify-center rounded-xl font-mono text-sm"
+                        key={amount}
+                        onClick={() =>
+                          commitPendingEvent(dialogEventType, amount)
+                        }
+                        type="button"
+                        variant="outline"
+                      >
+                        {amount}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
-          <DialogFooter className="mt-3 flex w-full">
-            <Button
-              className="w-full"
-              onClick={handleDialogConfirm}
-              type="button"
-            >
-              Add Event
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -280,7 +295,6 @@ export function FieldInput({
 // --- FRC Field Input ---
 
 const HOLD_THRESHOLD_MS = 250;
-/** Minimum field-coordinate distance between consecutive auto path samples while shift-dragging. */
 const AUTO_PATH_SAMPLE_MIN = 28;
 const FRC_ORIGINAL_IMAGE_WIDTH = 2547;
 const FRC_ORIGINAL_IMAGE_HEIGHT = 2547;
@@ -301,7 +315,7 @@ function tryReleasePointerCapture(
       target.releasePointerCapture(pointerId);
     }
   } catch {
-    // Pointer capture may already be released.
+    //
   }
 }
 

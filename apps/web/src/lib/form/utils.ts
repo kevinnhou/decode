@@ -200,3 +200,14 @@ export function aggregateFieldEvents(events: FieldSchema): {
     }
   );
 }
+
+export function ftcMatchTagsFromFieldEvents(
+  inputMode: "form" | "field",
+  fieldEvents: FieldSchema | undefined
+): string[] {
+  if (inputMode !== "field" || !fieldEvents?.length) {
+    return [];
+  }
+  const hasDefense = fieldEvents.some((e) => e.event === "defense");
+  return hasDefense ? ["defense"] : [];
+}

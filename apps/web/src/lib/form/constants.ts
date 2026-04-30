@@ -18,6 +18,7 @@ export const FRC_PERIOD_TO_KEY: Record<FrcPeriod, keyof FrcPeriodDataMap> = {
   SHIFT_2: "shift2",
   SHIFT_3: "shift3",
   SHIFT_4: "shift4",
+  SHIFT_5: "shift4",
   END_GAME: "endGame",
 };
 
@@ -76,6 +77,7 @@ export type FrcPeriod =
   | "SHIFT_2"
   | "SHIFT_3"
   | "SHIFT_4"
+  | "SHIFT_5"
   | "END_GAME";
 
 export const FTC_INITIAL_TIME_SECONDS = 165;
@@ -117,6 +119,31 @@ const FRC_AUTO_END = 20;
 const FRC_TELEOP_START = FRC_AUTO_END + FRC_POST_AUTO_DOWNTIME_SECONDS;
 const FRC_MATCH_END = FRC_TELEOP_START + FRC_TELEOP_WALL_SECONDS;
 
+const FRC_ALLIANCE_SHIFT_WALL_SECONDS_REMAINING = [130, 105, 80, 55] as const;
+const FRC_ENDGAME_WALL_SECONDS_REMAINING = 30;
+
+function frcMatchElapsedAtTeleopWallRemaining(
+  wallSecondsRemaining: number
+): number {
+  return FRC_TELEOP_START + (FRC_TELEOP_WALL_SECONDS - wallSecondsRemaining);
+}
+
+const FRC_SHIFT_1_END = frcMatchElapsedAtTeleopWallRemaining(
+  FRC_ALLIANCE_SHIFT_WALL_SECONDS_REMAINING[0]
+);
+const FRC_SHIFT_2_END = frcMatchElapsedAtTeleopWallRemaining(
+  FRC_ALLIANCE_SHIFT_WALL_SECONDS_REMAINING[1]
+);
+const FRC_SHIFT_3_END = frcMatchElapsedAtTeleopWallRemaining(
+  FRC_ALLIANCE_SHIFT_WALL_SECONDS_REMAINING[2]
+);
+const FRC_SHIFT_4_END = frcMatchElapsedAtTeleopWallRemaining(
+  FRC_ALLIANCE_SHIFT_WALL_SECONDS_REMAINING[3]
+);
+const FRC_ENDGAME_START = frcMatchElapsedAtTeleopWallRemaining(
+  FRC_ENDGAME_WALL_SECONDS_REMAINING
+);
+
 export const FRC_PERIOD_BOUNDARIES: {
   start: number;
   end: number;
@@ -128,24 +155,17 @@ export const FRC_PERIOD_BOUNDARIES: {
     end: FRC_TELEOP_START,
     period: "DOWNTIME",
   },
-  { start: FRC_TELEOP_START, end: FRC_TELEOP_START + 25, period: "SHIFT_1" },
+  { start: FRC_TELEOP_START, end: FRC_SHIFT_1_END, period: "SHIFT_1" },
+  { start: FRC_SHIFT_1_END, end: FRC_SHIFT_2_END, period: "SHIFT_2" },
+  { start: FRC_SHIFT_2_END, end: FRC_SHIFT_3_END, period: "SHIFT_3" },
+  { start: FRC_SHIFT_3_END, end: FRC_SHIFT_4_END, period: "SHIFT_4" },
   {
-    start: FRC_TELEOP_START + 25,
-    end: FRC_TELEOP_START + 50,
-    period: "SHIFT_2",
+    start: FRC_SHIFT_4_END,
+    end: FRC_ENDGAME_START,
+    period: "SHIFT_5",
   },
   {
-    start: FRC_TELEOP_START + 50,
-    end: FRC_TELEOP_START + 75,
-    period: "SHIFT_3",
-  },
-  {
-    start: FRC_TELEOP_START + 75,
-    end: FRC_TELEOP_START + 100,
-    period: "SHIFT_4",
-  },
-  {
-    start: FRC_TELEOP_START + 100,
+    start: FRC_ENDGAME_START,
     end: FRC_MATCH_END,
     period: "END_GAME",
   },
