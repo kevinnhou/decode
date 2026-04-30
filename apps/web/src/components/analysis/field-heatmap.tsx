@@ -30,6 +30,7 @@ import {
 type HeatmapPeriodFilter =
   | "all"
   | "AUTO"
+  | "DOWNTIME"
   | "TRANSITION"
   | "SHIFT_1"
   | "SHIFT_2"
@@ -65,7 +66,7 @@ const FRC_PERIOD_OPTIONS: { value: HeatmapPeriodFilter; label: string }[] = [
   ...(
     [
       "AUTO",
-      "TRANSITION",
+      "DOWNTIME",
       "SHIFT_1",
       "SHIFT_2",
       "SHIFT_3",

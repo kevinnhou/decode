@@ -120,7 +120,7 @@ const PERIOD_DISPLAY: Record<keyof PeriodData, string> = {
   shift3: "S3",
   shift4: "S4",
   endGame: "Endgame",
-  transition: "Transition",
+  transition: "Downtime",
 };
 
 function PeriodDataTable({ pd }: { pd: PeriodData }) {
@@ -806,7 +806,7 @@ function SubmissionCard({
               sub.fieldEvents.length > 0 ? (
                 <div>
                   <p className="mb-2 text-muted-foreground text-xs">
-                    Field Events ({sub.fieldEvents.length})
+                    ({sub.fieldEvents.length})
                   </p>
                   <FtcFieldEventsList events={sub.fieldEvents} />
                 </div>

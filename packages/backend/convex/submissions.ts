@@ -96,6 +96,7 @@ const frcFieldEventValidator = v.object({
   duration: v.number(),
   period: v.union(
     v.literal("AUTO"),
+    v.literal("DOWNTIME"),
     v.literal("TRANSITION"),
     v.literal("SHIFT_1"),
     v.literal("SHIFT_2"),

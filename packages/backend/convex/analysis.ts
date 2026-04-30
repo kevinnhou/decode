@@ -768,6 +768,7 @@ export const getMatchSubmissionsForMatch = query({
 const heatmapPeriodFilterValidator = v.union(
   v.literal("all"),
   v.literal("AUTO"),
+  v.literal("DOWNTIME"),
   v.literal("TRANSITION"),
   v.literal("SHIFT_1"),
   v.literal("SHIFT_2"),

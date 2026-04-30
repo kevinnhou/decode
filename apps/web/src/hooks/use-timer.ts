@@ -11,7 +11,7 @@ import {
 
 function getFrcPeriodFromElapsed(elapsedSeconds: number): FrcPeriod {
   for (const { end, period } of FRC_PERIOD_BOUNDARIES) {
-    if (elapsedSeconds <= end) {
+    if (elapsedSeconds < end) {
       return period;
     }
   }
@@ -29,8 +29,8 @@ export function getFrcPeriodProgress(elapsedSeconds: number): {
   if (!bounds) {
     return {
       period: "END_GAME",
-      periodDuration: 30,
-      elapsedInPeriod: 30,
+      periodDuration: 40,
+      elapsedInPeriod: 40,
       timeRemainingInPeriod: 0,
     };
   }
@@ -599,6 +599,7 @@ export function usePeriodActionTimer(): UsePeriodActionTimerReturn {
     setElapsedSeconds(0);
   }, []);
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: PASS
   const tick = useCallback((matchElapsed: number) => {
     lastMatchElapsedRef.current = matchElapsed;
 
@@ -606,9 +607,18 @@ export function usePeriodActionTimer(): UsePeriodActionTimerReturn {
       return;
     }
 
+    const currentPeriod = getFrcPeriodFromElapsed(matchElapsed);
+
     if (pendingStartRef.current) {
+      if (currentPeriod === "DOWNTIME") {
+        activeStartElapsedRef.current = null;
+        activePeriodRef.current = null;
+        pendingStartRef.current = false;
+        setElapsedSeconds(0);
+        return;
+      }
       activeStartElapsedRef.current = matchElapsed;
-      activePeriodRef.current = getFrcPeriodFromElapsed(matchElapsed);
+      activePeriodRef.current = currentPeriod;
       pendingStartRef.current = false;
       setElapsedSeconds(0);
       return;
@@ -618,10 +628,15 @@ export function usePeriodActionTimer(): UsePeriodActionTimerReturn {
       activeStartElapsedRef.current === null ||
       activePeriodRef.current === null
     ) {
+      if (currentPeriod === "DOWNTIME" || currentPeriod === "AUTO") {
+        setElapsedSeconds(0);
+        return;
+      }
+      activeStartElapsedRef.current = matchElapsed;
+      activePeriodRef.current = currentPeriod;
+      setElapsedSeconds(0);
       return;
     }
-
-    const currentPeriod = getFrcPeriodFromElapsed(matchElapsed);
 
     if (activePeriodRef.current !== currentPeriod) {
       const bounds = FRC_PERIOD_BOUNDARIES.find(
@@ -637,6 +652,13 @@ export function usePeriodActionTimer(): UsePeriodActionTimerReturn {
         });
       }
 
+      if (currentPeriod === "DOWNTIME") {
+        activeStartElapsedRef.current = null;
+        activePeriodRef.current = null;
+        setElapsedSeconds(0);
+        return;
+      }
+
       activeStartElapsedRef.current = boundaryElapsed;
       activePeriodRef.current = currentPeriod;
       setElapsedSeconds(matchElapsed - boundaryElapsed);
@@ -647,15 +669,27 @@ export function usePeriodActionTimer(): UsePeriodActionTimerReturn {
   }, []);
 
   const flush = useCallback((): { period: FrcPeriod; duration: number }[] => {
-    if (
-      !isRunningRef.current ||
-      activeStartElapsedRef.current === null ||
-      activePeriodRef.current === null
-    ) {
+    if (!isRunningRef.current) {
       return [];
     }
 
     const matchElapsed = lastMatchElapsedRef.current;
+
+    if (
+      activeStartElapsedRef.current === null ||
+      activePeriodRef.current === null
+    ) {
+      const result = [...completedSegmentsRef.current];
+      isRunningRef.current = false;
+      activeStartElapsedRef.current = null;
+      activePeriodRef.current = null;
+      completedSegmentsRef.current = [];
+      pendingStartRef.current = false;
+      setIsRunning(false);
+      setElapsedSeconds(0);
+      return result;
+    }
+
     const finalDuration = matchElapsed - activeStartElapsedRef.current;
 
     if (finalDuration > 0) {

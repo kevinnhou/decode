@@ -676,10 +676,7 @@ export default function MatchScouting() {
       <Form {...form}>
         <div className="space-y-6">
           <div className="space-y-1">
-            <h2 className="font-semibold text-lg">Summary</h2>
-            <p className="text-muted-foreground text-sm">
-              Review your data then submit.
-            </p>
+            <h2 className="font-semibold text-lg">Match Summary</h2>
           </div>
 
           <SummaryStats periodData={summaryPeriodData} />
@@ -689,7 +686,6 @@ export default function MatchScouting() {
             name="notes"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Notes</FormLabel>
                 <FormControl>
                   <Textarea
                     className="resize-none"

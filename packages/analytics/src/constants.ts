@@ -10,7 +10,7 @@ export const FTC_HEATMAP_SCORING_EVENTS = [
 
 export const FRC_PERIOD_ORDER = [
   "AUTO",
-  "TRANSITION",
+  "DOWNTIME",
   "SHIFT_1",
   "SHIFT_2",
   "SHIFT_3",

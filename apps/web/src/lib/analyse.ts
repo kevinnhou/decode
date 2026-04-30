@@ -2,7 +2,7 @@ import type { ChartConfig } from "@decode/ui/components/chart";
 
 export const CHART_PERIODS = [
   "AUTO",
-  "TRANSITION",
+  "DOWNTIME",
   "SHIFT_1",
   "SHIFT_2",
   "SHIFT_3",
@@ -19,7 +19,8 @@ export const CLIMB_LABELS: Record<number, string> = {
 
 export const PERIOD_LABELS_SHORT: Record<string, string> = {
   AUTO: "Auto",
-  TRANSITION: "Trans.",
+  DOWNTIME: "Down",
+  TRANSITION: "Down",
   SHIFT_1: "S1",
   SHIFT_2: "S2",
   SHIFT_3: "S3",
@@ -29,7 +30,8 @@ export const PERIOD_LABELS_SHORT: Record<string, string> = {
 
 export const PERIOD_LABELS: Record<string, string> = {
   AUTO: "Auto",
-  TRANSITION: "Trans.",
+  DOWNTIME: "Downtime",
+  TRANSITION: "Downtime",
   SHIFT_1: "Shift 1",
   SHIFT_2: "Shift 2",
   SHIFT_3: "Shift 3",
@@ -39,6 +41,7 @@ export const PERIOD_LABELS: Record<string, string> = {
 
 export const PERIOD_TO_PD_KEY: Record<string, string> = {
   AUTO: "auto",
+  DOWNTIME: "transition",
   TRANSITION: "transition",
   SHIFT_1: "shift1",
   SHIFT_2: "shift2",

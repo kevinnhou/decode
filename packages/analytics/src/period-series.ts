@@ -15,7 +15,7 @@ function periodTotalsFromFormSub(
   totals: Record<string, number>
 ): void {
   totals.AUTO = (totals.AUTO ?? 0) + periodData.auto.scoring;
-  totals.TRANSITION = (totals.TRANSITION ?? 0) + periodData.transition.scoring;
+  totals.DOWNTIME = (totals.DOWNTIME ?? 0) + periodData.transition.scoring;
   totals.SHIFT_1 = (totals.SHIFT_1 ?? 0) + periodData.shift1.scoring;
   totals.SHIFT_2 = (totals.SHIFT_2 ?? 0) + periodData.shift2.scoring;
   totals.SHIFT_3 = (totals.SHIFT_3 ?? 0) + periodData.shift3.scoring;

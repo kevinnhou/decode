@@ -44,7 +44,7 @@ export function perPeriodScoringFromPeriodData(
 ): PerPeriodMap {
   return {
     AUTO: periodData.auto.scoring,
-    TRANSITION: periodData.transition.scoring,
+    DOWNTIME: periodData.transition.scoring,
     SHIFT_1: periodData.shift1.scoring,
     SHIFT_2: periodData.shift2.scoring,
     SHIFT_3: periodData.shift3.scoring,
@@ -58,12 +58,16 @@ export function perPeriodScoringFromFieldEvents(
 ): PerPeriodMap {
   const result: PerPeriodMap = {};
   for (const period of FRC_PERIOD_ORDER) {
-    result[period] = events.filter(
-      (e) =>
-        e.period === period &&
-        e.eventType === "shooting" &&
-        e.action === "scoring"
-    ).length;
+    result[period] = events.filter((e) => {
+      const evp = e.period as string;
+      const matchesPeriod =
+        period === "DOWNTIME"
+          ? evp === "DOWNTIME" || evp === "TRANSITION"
+          : evp === period;
+      return (
+        matchesPeriod && e.eventType === "shooting" && e.action === "scoring"
+      );
+    }).length;
   }
   return result;
 }
@@ -92,7 +96,7 @@ export function addPerPeriodFromFrcSubmission(
 export function emptyFrcPerPeriodTotals(): PerPeriodMap {
   return {
     AUTO: 0,
-    TRANSITION: 0,
+    DOWNTIME: 0,
     SHIFT_1: 0,
     SHIFT_2: 0,
     SHIFT_3: 0,
@@ -178,9 +182,12 @@ export function frcFuelPointsForMatch(
     const events = sub.frcFieldEvents.filter(
       (e) => e.eventType === "shooting" && e.action === "scoring"
     );
-    const byPeriod: Partial<Record<FrcPeriod, number>> = {};
+    const byPeriod: Partial<Record<FrcPeriod, number>> &
+      Record<string, number> = {};
     for (const e of events) {
-      byPeriod[e.period] = (byPeriod[e.period] ?? 0) + 1;
+      const p = e.period as string;
+      const key = p === "TRANSITION" ? "DOWNTIME" : p;
+      byPeriod[key] = (byPeriod[key] ?? 0) + 1;
     }
     const auto = byPeriod.AUTO ?? 0;
     const shiftPts = shiftPointsFromFuel(
@@ -189,9 +196,9 @@ export function frcFuelPointsForMatch(
       byPeriod.SHIFT_3 ?? 0,
       byPeriod.SHIFT_4 ?? 0
     );
-    const transition = byPeriod.TRANSITION ?? 0;
+    const downtime = byPeriod.DOWNTIME ?? 0;
     const endGame = byPeriod.END_GAME ?? 0;
-    return auto + shiftPts + transition + endGame;
+    return auto + shiftPts + downtime + endGame;
   }
   return 0;
 }

@@ -10,7 +10,15 @@ import {
 import { FormLabel } from "@decode/ui/components/form";
 import type { UseFormReturn } from "@decode/ui/lib/react-hook-form";
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { FtcPeriod, TimerState } from "@/lib/form/constants";
 import type {
   FieldEventSchema,
@@ -272,6 +280,8 @@ export function FieldInput({
 // --- FRC Field Input ---
 
 const HOLD_THRESHOLD_MS = 250;
+/** Minimum field-coordinate distance between consecutive auto path samples while shift-dragging. */
+const AUTO_PATH_SAMPLE_MIN = 28;
 const FRC_ORIGINAL_IMAGE_WIDTH = 2547;
 const FRC_ORIGINAL_IMAGE_HEIGHT = 2547;
 
@@ -282,22 +292,47 @@ const FRC_EVENT_TYPES: FrcFieldEventType[] = [
   "climb",
 ];
 
-interface PendingFrcHold {
-  x: number;
-  y: number;
-  startTimestamp: string;
-  startTimeMs: number;
+function tryReleasePointerCapture(
+  target: HTMLElement,
+  pointerId: number
+): void {
+  try {
+    if (target.hasPointerCapture(pointerId)) {
+      target.releasePointerCapture(pointerId);
+    }
+  } catch {
+    // Pointer capture may already be released.
+  }
 }
 
 interface FrcFieldInputProps {
   fieldEvents: FrcFieldEvent[];
   autoPath: FrcAutoPath;
   onFieldEventsChange: (events: FrcFieldEvent[]) => void;
-  onAutoPathChange: (path: FrcAutoPath) => void;
+  onAutoPathChange: Dispatch<SetStateAction<FrcAutoPath>>;
   getEventTimestamp: () => string;
   getCurrentPeriod: () => FrcPeriod;
   timerState: TimerState;
 }
+
+type PendingFrcPointer =
+  | null
+  | ({
+      pointerId: number;
+    } & (
+      | {
+          variant: "action";
+          x: number;
+          y: number;
+          startTimestamp: string;
+          startTimeMs: number;
+        }
+      | {
+          variant: "path";
+          lastX: number;
+          lastY: number;
+        }
+    ));
 
 export function FrcFieldInput({
   fieldEvents,
@@ -308,7 +343,9 @@ export function FrcFieldInput({
   getCurrentPeriod,
   timerState,
 }: FrcFieldInputProps) {
-  const [pendingHold, setPendingHold] = useState<PendingFrcHold | null>(null);
+  const [pendingPointer, setPendingPointer] = useState<PendingFrcPointer>(null);
+  const pendingPointerRef = useRef<PendingFrcPointer>(null);
+  pendingPointerRef.current = pendingPointer;
   const [pendingHoldForDialog, setPendingHoldForDialog] = useState<{
     x: number;
     y: number;
@@ -329,6 +366,8 @@ export function FrcFieldInput({
   const imageRef = useRef<HTMLDivElement>(null);
 
   const isTimerStarted = timerState !== "idle" && timerState !== "finished";
+  const isPostAutoDowntime =
+    isTimerStarted && getCurrentPeriod() === "DOWNTIME";
   const isAutoPeriod = useMemo(
     () => isTimerStarted && getCurrentPeriod() === "AUTO",
     [isTimerStarted, getCurrentPeriod]
@@ -348,8 +387,8 @@ export function FrcFieldInput({
   }, []);
 
   const handlePointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      if (!isTimerStarted) {
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isTimerStarted || isPostAutoDowntime) {
         return;
       }
       e.preventDefault();
@@ -357,59 +396,175 @@ export function FrcFieldInput({
       if (!coords) {
         return;
       }
-      setPendingHold({
+
+      const inAuto = getCurrentPeriod() === "AUTO";
+      const usePathGesture = inAuto && e.shiftKey;
+
+      if (usePathGesture) {
+        const point: FrcAutoPathPoint = {
+          coordinates: { x: coords.x, y: coords.y },
+          timestamp: getEventTimestamp(),
+        };
+        onAutoPathChange((prev) => [...prev, point]);
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setPendingPointer({
+          pointerId: e.pointerId,
+          variant: "path",
+          lastX: coords.x,
+          lastY: coords.y,
+        });
+        return;
+      }
+
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setPendingPointer({
+        pointerId: e.pointerId,
+        variant: "action",
         x: coords.x,
         y: coords.y,
         startTimestamp: getEventTimestamp(),
         startTimeMs: Date.now(),
       });
     },
-    [isTimerStarted, getCoords, getEventTimestamp]
+    [
+      isTimerStarted,
+      isPostAutoDowntime,
+      getCoords,
+      getEventTimestamp,
+      getCurrentPeriod,
+      onAutoPathChange,
+    ]
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (
+        pendingPointer?.variant !== "path" ||
+        e.pointerId !== pendingPointer.pointerId
+      ) {
+        return;
+      }
+      if (getCurrentPeriod() !== "AUTO") {
+        return;
+      }
+      const nextCoords = getCoords(e.clientX, e.clientY);
+      if (!nextCoords) {
+        return;
+      }
+      const dx = nextCoords.x - pendingPointer.lastX;
+      const dy = nextCoords.y - pendingPointer.lastY;
+      if (dx * dx + dy * dy < AUTO_PATH_SAMPLE_MIN * AUTO_PATH_SAMPLE_MIN) {
+        return;
+      }
+      const point: FrcAutoPathPoint = {
+        coordinates: { x: nextCoords.x, y: nextCoords.y },
+        timestamp: getEventTimestamp(),
+      };
+      onAutoPathChange((prev) => [...prev, point]);
+      setPendingPointer({
+        ...pendingPointer,
+        lastX: nextCoords.x,
+        lastY: nextCoords.y,
+      });
+    },
+    [
+      pendingPointer,
+      getCoords,
+      getEventTimestamp,
+      getCurrentPeriod,
+      onAutoPathChange,
+    ]
   );
 
   const handlePointerUp = useCallback(
-    (e: React.PointerEvent) => {
-      if (!pendingHold) {
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: PASS
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const pending = pendingPointer;
+      if (!pending || e.pointerId !== pending.pointerId) {
         return;
       }
       e.preventDefault();
-      const durationMs = Date.now() - pendingHold.startTimeMs;
+      const target = e.currentTarget;
+
+      if (pending.variant === "path") {
+        const endCoords = getCoords(e.clientX, e.clientY);
+        if (endCoords) {
+          const dx = endCoords.x - pending.lastX;
+          const dy = endCoords.y - pending.lastY;
+          if (dx * dx + dy * dy > 4) {
+            onAutoPathChange((prev) => [
+              ...prev,
+              {
+                coordinates: { x: endCoords.x, y: endCoords.y },
+                timestamp: getEventTimestamp(),
+              },
+            ]);
+          }
+        }
+        tryReleasePointerCapture(target, pending.pointerId);
+        setPendingPointer(null);
+        return;
+      }
+
+      const durationMs = Date.now() - pending.startTimeMs;
       const endTimestamp = getEventTimestamp();
       const period = getCurrentPeriod();
+      if (period === "DOWNTIME") {
+        tryReleasePointerCapture(target, pending.pointerId);
+        setPendingPointer(null);
+        return;
+      }
+      const inAuto = period === "AUTO";
 
-      if (durationMs >= HOLD_THRESHOLD_MS) {
-        setPendingHold(null);
+      const openEventDialog = !inAuto || durationMs >= HOLD_THRESHOLD_MS;
+
+      if (openEventDialog) {
         setDialogEventType("shooting");
         setDialogAction("scoring");
         setDialogSource("floor");
         setDialogClimbLevel(1);
         setPendingHoldForDialog({
-          x: pendingHold.x,
-          y: pendingHold.y,
-          startTimestamp: pendingHold.startTimestamp,
+          x: pending.x,
+          y: pending.y,
+          startTimestamp: pending.startTimestamp,
           endTimestamp,
-          durationMs,
+          durationMs: Math.max(durationMs, 1),
           period,
         });
-      } else if (isAutoPeriod) {
-        const point: FrcAutoPathPoint = {
-          coordinates: { x: pendingHold.x, y: pendingHold.y },
-          timestamp: pendingHold.startTimestamp,
-        };
-        onAutoPathChange([...autoPath, point]);
-        setPendingHold(null);
-      } else {
-        setPendingHold(null);
       }
+
+      tryReleasePointerCapture(target, pending.pointerId);
+      setPendingPointer(null);
     },
     [
-      pendingHold,
+      pendingPointer,
+      getCoords,
       getEventTimestamp,
       getCurrentPeriod,
-      isAutoPeriod,
-      autoPath,
       onAutoPathChange,
     ]
+  );
+
+  const handlePointerGestureEnd = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const current = pendingPointerRef.current;
+      if (!current || e.pointerId !== current.pointerId) {
+        return;
+      }
+      tryReleasePointerCapture(e.currentTarget, e.pointerId);
+      setPendingPointer(null);
+    },
+    []
+  );
+
+  const handleLostPointerCapture = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const current = pendingPointerRef.current;
+      if (current?.pointerId === e.pointerId) {
+        setPendingPointer(null);
+      }
+    },
+    []
   );
 
   const handleDialogConfirm = useCallback(() => {
@@ -453,10 +608,11 @@ export function FrcFieldInput({
     <div>
       {/** biome-ignore lint/a11y/useSemanticElements: PASS */}
       <div
-        className="relative w-full cursor-crosshair overflow-hidden rounded-lg border"
-        onPointerCancel={() => setPendingHold(null)}
+        className="relative w-full cursor-crosshair touch-none overflow-hidden rounded-lg border"
+        onLostPointerCapture={handleLostPointerCapture}
+        onPointerCancel={handlePointerGestureEnd}
         onPointerDown={handlePointerDown}
-        onPointerLeave={() => setPendingHold(null)}
+        onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         ref={imageRef}
         role="button"
@@ -470,9 +626,11 @@ export function FrcFieldInput({
           width={1200}
         />
         <p className="absolute right-0 bottom-0 left-0 z-10 bg-background/80 px-4 py-2 text-muted-foreground text-sm backdrop-blur-sm">
-          {isAutoPeriod
-            ? "Tap to add AUTO path points. Hold to record an event."
-            : "Hold on the field to record an event (shooting, intake, defense, climb)."}
+          {isPostAutoDowntime
+            ? "NO INPUT DURING THIS PERIOD"
+            : isAutoPeriod
+              ? "AUTO: shift+drag for robot path. Hold (no shift) for timed event."
+              : "tap, drag or hold for timed event (shift is ignored)."}
         </p>
         {fieldEvents.map((ev, i) => {
           const leftPercent =
