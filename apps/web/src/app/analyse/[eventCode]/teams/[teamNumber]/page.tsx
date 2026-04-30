@@ -4,6 +4,8 @@ import {
   frcFuelPointsForMatch,
   frcScoringSummaryForMatch,
   ftcTotalMakes,
+  ftcTotalMisses,
+  ftcTotalShots,
   type MatchSubmissionSlice,
 } from "@decode/analytics";
 import { api } from "@decode/backend/convex/_generated/api";
@@ -27,6 +29,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   ClipboardList,
+  Crosshair,
   Gauge,
   GitCompareArrows,
   ImageIcon,
@@ -77,7 +80,9 @@ type MatchSub = {
     teleop: { made: number; missed: number };
   };
   autonomousMade?: number;
+  autonomousMissed?: number;
   teleopMade?: number;
+  teleopMissed?: number;
   fieldEvents?: Array<{ event: string; count: number }>;
   notes?: string;
   scoutName: string;
@@ -558,6 +563,24 @@ function useTeamMetrics(
             10
         ) / 10
       : 0;
+  const avgFtcMissed =
+    competitionType === "FTC" && matchCount > 0 && matchSubs
+      ? Math.round(
+          (matchSubs.reduce((s, m) => {
+            const row = m as MatchSubmissionSlice;
+            return s + ftcTotalMisses(row);
+          }, 0) /
+            matchCount) *
+            10
+        ) / 10
+      : 0;
+  const totalFtcShots =
+    competitionType === "FTC" && matchSubs
+      ? matchSubs.reduce((s, m) => {
+          const row = m as MatchSubmissionSlice;
+          return s + ftcTotalShots(row);
+        }, 0)
+      : 0;
   const scoringPointValues =
     competitionType === "FRC"
       ? (matchSubs?.map((m) =>
@@ -573,7 +596,13 @@ function useTeamMetrics(
           (validScores.reduce((a, b) => a + b, 0) / validScores.length) * 10
         ) / 10
       : null;
-  return { matchCount, avgScoring, avgScoringPoints };
+  return {
+    matchCount,
+    avgScoring,
+    avgScoringPoints,
+    avgFtcMissed,
+    totalFtcShots,
+  };
 }
 
 function TeamProfileBody({
@@ -592,17 +621,14 @@ function TeamProfileBody({
   onEditPit?: () => void;
 }) {
   const shootingSpeed = pitData?.shootingSpeed;
-  const { matchCount, avgScoring, avgScoringPoints } = useTeamMetrics(
-    matchSubs,
-    shootingSpeed,
-    competitionType
-  );
-  const scoringUnit =
-    competitionType === "FTC"
-      ? "makes/match"
-      : matchSubs[0]?.inputMode === "form"
-        ? "s/match"
-        : "match";
+  const {
+    matchCount,
+    avgScoring,
+    avgScoringPoints,
+    avgFtcMissed,
+    totalFtcShots,
+  } = useTeamMetrics(matchSubs, shootingSpeed, competitionType);
+  const scoringUnit = matchSubs[0]?.inputMode === "form" ? "s/match" : "match";
   const shootingSpeedDisplay =
     shootingSpeed === undefined ? "-" : String(shootingSpeed);
   const scoringPointsDisplay =
@@ -648,18 +674,42 @@ function TeamProfileBody({
                   </div>
                 </>
               ) : null}
-              <div className="px-4">
-                <MetricCard
-                  icon={Target}
-                  label={
-                    competitionType === "FTC"
-                      ? "Avg Makes per Match"
-                      : "Avg Scoring Activity"
-                  }
-                  sub={scoringUnit}
-                  value={avgScoring}
-                />
-              </div>
+              {competitionType === "FTC" ? (
+                <>
+                  <div className="border-b px-4 last:border-b-0">
+                    <MetricCard
+                      icon={XCircle}
+                      label="Avg Missed"
+                      sub="misses/match"
+                      value={avgFtcMissed}
+                    />
+                  </div>
+                  <div className="border-b px-4 last:border-b-0">
+                    <MetricCard
+                      icon={Target}
+                      label="Avg Made"
+                      sub="makes/match"
+                      value={avgScoring}
+                    />
+                  </div>
+                  <div className="px-4">
+                    <MetricCard
+                      icon={Crosshair}
+                      label="Total Shots"
+                      value={totalFtcShots}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="px-4">
+                  <MetricCard
+                    icon={Target}
+                    label="Avg Scoring Activity"
+                    sub={scoringUnit}
+                    value={avgScoring}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

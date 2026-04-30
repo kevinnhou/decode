@@ -30,11 +30,52 @@ export function ftcPeriodMakes(sub: {
   return { auto, teleop };
 }
 
+export function ftcPeriodMisses(sub: {
+  ftcPeriodData?: FtcPeriodDataDoc | null;
+  autonomousMissed?: number;
+  teleopMissed?: number;
+  fieldEvents?: FtcFieldEventDoc[] | null;
+}): FtcPeriodMakes {
+  if (sub.ftcPeriodData) {
+    return {
+      auto: sub.ftcPeriodData.auto.missed,
+      teleop: sub.ftcPeriodData.teleop.missed,
+    };
+  }
+  let auto = sub.autonomousMissed ?? 0;
+  let teleop = sub.teleopMissed ?? 0;
+  if (auto === 0 && teleop === 0 && sub.fieldEvents) {
+    for (const e of sub.fieldEvents) {
+      if (e.event === "autonomous_missed") {
+        auto += e.count;
+      }
+      if (e.event === "teleop_missed") {
+        teleop += e.count;
+      }
+    }
+  }
+  return { auto, teleop };
+}
+
 export function ftcTotalMakes(
   sub: Parameters<typeof ftcPeriodMakes>[0]
 ): number {
   const { auto, teleop } = ftcPeriodMakes(sub);
   return auto + teleop;
+}
+
+export function ftcTotalMisses(
+  sub: Parameters<typeof ftcPeriodMisses>[0]
+): number {
+  const { auto, teleop } = ftcPeriodMisses(sub);
+  return auto + teleop;
+}
+
+export function ftcTotalShots(
+  sub: Parameters<typeof ftcPeriodMakes>[0] &
+    Parameters<typeof ftcPeriodMisses>[0]
+): number {
+  return ftcTotalMakes(sub) + ftcTotalMisses(sub);
 }
 
 export function ftcDefenseFlag(sub: { tags?: string[] | null }): number {
