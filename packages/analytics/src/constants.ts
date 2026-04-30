@@ -15,6 +15,7 @@ export const FRC_PERIOD_ORDER = [
   "SHIFT_2",
   "SHIFT_3",
   "SHIFT_4",
+  "SHIFT_5",
   "END_GAME",
 ] as const;
 

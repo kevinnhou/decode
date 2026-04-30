@@ -49,6 +49,7 @@ export function perPeriodScoringFromPeriodData(
     SHIFT_2: periodData.shift2.scoring,
     SHIFT_3: periodData.shift3.scoring,
     SHIFT_4: periodData.shift4.scoring,
+    SHIFT_5: 0,
     END_GAME: periodData.endGame.scoring,
   };
 }
@@ -101,6 +102,7 @@ export function emptyFrcPerPeriodTotals(): PerPeriodMap {
     SHIFT_2: 0,
     SHIFT_3: 0,
     SHIFT_4: 0,
+    SHIFT_5: 0,
     END_GAME: 0,
   };
 }
@@ -194,7 +196,7 @@ export function frcFuelPointsForMatch(
       byPeriod.SHIFT_1 ?? 0,
       byPeriod.SHIFT_2 ?? 0,
       byPeriod.SHIFT_3 ?? 0,
-      byPeriod.SHIFT_4 ?? 0
+      (byPeriod.SHIFT_4 ?? 0) + (byPeriod.SHIFT_5 ?? 0)
     );
     const downtime = byPeriod.DOWNTIME ?? 0;
     const endGame = byPeriod.END_GAME ?? 0;

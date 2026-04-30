@@ -120,6 +120,7 @@ export const frcPeriodSchema = z.enum([
   "SHIFT_2",
   "SHIFT_3",
   "SHIFT_4",
+  "SHIFT_5",
   "END_GAME",
 ]);
 

@@ -7,6 +7,7 @@ export const CHART_PERIODS = [
   "SHIFT_2",
   "SHIFT_3",
   "SHIFT_4",
+  "SHIFT_5",
   "END_GAME",
 ] as const;
 
@@ -25,6 +26,7 @@ export const PERIOD_LABELS_SHORT: Record<string, string> = {
   SHIFT_2: "S2",
   SHIFT_3: "S3",
   SHIFT_4: "S4",
+  SHIFT_5: "S5",
   END_GAME: "End",
 };
 
@@ -36,6 +38,7 @@ export const PERIOD_LABELS: Record<string, string> = {
   SHIFT_2: "Shift 2",
   SHIFT_3: "Shift 3",
   SHIFT_4: "Shift 4",
+  SHIFT_5: "Shift 5",
   END_GAME: "End",
 };
 
@@ -47,6 +50,7 @@ export const PERIOD_TO_PD_KEY: Record<string, string> = {
   SHIFT_2: "shift2",
   SHIFT_3: "shift3",
   SHIFT_4: "shift4",
+  SHIFT_5: "shift4",
   END_GAME: "endGame",
 };
 

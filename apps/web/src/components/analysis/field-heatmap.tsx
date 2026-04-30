@@ -36,6 +36,7 @@ type HeatmapPeriodFilter =
   | "SHIFT_2"
   | "SHIFT_3"
   | "SHIFT_4"
+  | "SHIFT_5"
   | "END_GAME"
   | "TELEOP";
 
@@ -71,6 +72,7 @@ const FRC_PERIOD_OPTIONS: { value: HeatmapPeriodFilter; label: string }[] = [
       "SHIFT_2",
       "SHIFT_3",
       "SHIFT_4",
+      "SHIFT_5",
       "END_GAME",
     ] as const
   ).map((p) => ({

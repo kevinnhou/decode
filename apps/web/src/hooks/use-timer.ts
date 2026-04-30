@@ -29,8 +29,8 @@ export function getFrcPeriodProgress(elapsedSeconds: number): {
   if (!bounds) {
     return {
       period: "END_GAME",
-      periodDuration: 40,
-      elapsedInPeriod: 40,
+      periodDuration: 30,
+      elapsedInPeriod: 30,
       timeRemainingInPeriod: 0,
     };
   }
