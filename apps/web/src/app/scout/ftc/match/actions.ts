@@ -4,6 +4,7 @@ import { api } from "@decode/backend/convex/_generated/api";
 import { z } from "zod";
 import { fetchAuthMutation, isAuthenticated } from "@/lib/convex";
 import type { SubmissionResult } from "@/lib/form/types";
+import { ftcMatchTagsFromFieldEvents } from "@/lib/form/utils";
 import {
   type FtcMatchSubmissionSchema,
   ftcMatchSubmissionSchema,
@@ -38,7 +39,10 @@ export async function submitMatch(
       teleopMade: pd?.teleop.made ?? 0,
       teleopMissed: pd?.teleop.missed ?? 0,
       ftcPeriodData: pd,
-      tags: [],
+      tags: ftcMatchTagsFromFieldEvents(
+        validatedData.inputMode,
+        validatedData.ftcFieldEvents
+      ),
       fieldEvents: validatedData.ftcFieldEvents,
     });
 

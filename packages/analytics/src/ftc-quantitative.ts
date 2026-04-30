@@ -78,9 +78,19 @@ export function ftcTotalShots(
   return ftcTotalMakes(sub) + ftcTotalMisses(sub);
 }
 
-export function ftcDefenseFlag(sub: { tags?: string[] | null }): number {
+export function ftcDefenseFlag(sub: {
+  tags?: string[] | null;
+  fieldEvents?: FtcFieldEventDoc[] | null;
+}): number {
   const tags = sub.tags ?? [];
-  return tags.some((t) => t.toLowerCase() === "defense") ? 1 : 0;
+  if (tags.some((t) => t.toLowerCase() === "defense")) {
+    return 1;
+  }
+  const evs = sub.fieldEvents;
+  if (evs?.some((e) => e.event === "defense")) {
+    return 1;
+  }
+  return 0;
 }
 
 export function computeFtcPerPeriodAverages(

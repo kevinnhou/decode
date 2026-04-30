@@ -48,11 +48,11 @@ export function EventsList({ events, onRemoveEvent }: EventsListProps) {
             return (
               <div
                 className="group flex items-center justify-between gap-2 rounded px-2 py-1.5 text-xs transition-colors"
-                key={event.event}
+                key={`${index}-${event.timestamp}-${event.coordinates.x}-${event.event}`}
               >
                 <div className="rounded bg-primary/10 px-1.5 py-0.5 font-medium text-primary">
                   {eventLabel}
-                  {event.count > 1 && (
+                  {event.event !== "defense" && event.count > 1 && (
                     <span className="text-muted-foreground">
                       {" "}
                       \ {event.count}
