@@ -30,6 +30,7 @@ import {
   Gauge,
   GitCompareArrows,
   ImageIcon,
+  Pencil,
   Target,
   TrendingUp,
   Wrench,
@@ -41,8 +42,9 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
-import { FieldHeatmapCard } from "@/features/analyse/field-heatmap";
-import { PerPeriodChart } from "@/features/analyse/per-period-chart";
+import { EditPit } from "@/components/analysis/edit-pit";
+import { FieldHeatmapCard } from "@/components/analysis/field-heatmap";
+import { PerPeriodChart } from "@/components/analysis/per-period-chart";
 import {
   type AnalyseCompetitionType,
   CLIMB_LABELS,
@@ -249,9 +251,11 @@ function PhotoPreview({
 function PitCard({
   pit,
   competitionType,
+  onEditPit,
 }: {
   pit: PitSub;
   competitionType: AnalyseCompetitionType;
+  onEditPit?: () => void;
 }) {
   const intakeMethods = pit.intakeMethods ?? [];
   const metrics = [
@@ -287,12 +291,12 @@ function PitCard({
     <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
       <div className="flex flex-1 flex-col gap-0">
         <div className="border-b px-4 py-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
                 <Wrench className="size-5 text-muted-foreground" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="font-semibold text-sm">Pit Data</span>
                 {typeof pit.submissionCount === "number" &&
                 pit.submissionCount > 1 ? (
@@ -302,22 +306,39 @@ function PitCard({
                 ) : null}
               </div>
             </div>
-            {Array.isArray(pit.photoUrls) && pit.photoUrls.length > 0 ? (
-              <PhotoPreview
-                photoUrls={pit.photoUrls}
-                renderTrigger={(onOpen) => (
-                  <Button
-                    onClick={onOpen}
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    <ImageIcon className="mr-1.5 size-4" />
-                    View photos ({pit.photoUrls?.length ?? 0})
-                  </Button>
-                )}
-              />
-            ) : null}
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              {onEditPit ? (
+                <Button
+                  className="h-8 gap-1.5 px-2.5"
+                  onClick={onEditPit}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <Pencil className="size-3.5" />
+                  <span className="text-xs">Edit</span>
+                </Button>
+              ) : null}
+              {Array.isArray(pit.photoUrls) && pit.photoUrls.length > 0 ? (
+                <PhotoPreview
+                  photoUrls={pit.photoUrls}
+                  renderTrigger={(onOpen) => (
+                    <Button
+                      className="h-8"
+                      onClick={onOpen}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      <ImageIcon className="mr-1.5 size-3.5" />
+                      <span className="text-xs">
+                        Photos ({pit.photoUrls?.length ?? 0})
+                      </span>
+                    </Button>
+                  )}
+                />
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -561,12 +582,14 @@ function TeamProfileBody({
   eventCode,
   teamNumber,
   competitionType,
+  onEditPit,
 }: {
   matchSubs: MatchSub[];
   pitData: PitSub | null;
   eventCode: string;
   teamNumber: number;
   competitionType: AnalyseCompetitionType;
+  onEditPit?: () => void;
 }) {
   const shootingSpeed = pitData?.shootingSpeed;
   const { matchCount, avgScoring, avgScoringPoints } = useTeamMetrics(
@@ -643,7 +666,11 @@ function TeamProfileBody({
 
         <div className="min-w-0 flex-1">
           {pitData ? (
-            <PitCard competitionType={competitionType} pit={pitData} />
+            <PitCard
+              competitionType={competitionType}
+              onEditPit={onEditPit}
+              pit={pitData}
+            />
           ) : (
             <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
               <div className="border-b px-4 py-3">
@@ -742,6 +769,13 @@ export default function TeamProfile() {
     competitionType,
   }) as PitSub | null | undefined;
 
+  const pitSubsList = useQuery(api.analysis.getTeamPitSubmissions, {
+    eventCode,
+    teamNumber,
+    competitionType,
+  });
+  const [pitEditOpen, setPitEditOpen] = useState(false);
+
   const teamsMap = useQuery(api.teams.getTeamsMapForEvent, { eventCode });
   const teamName =
     teamsMap && typeof teamsMap === "object" && "map" in teamsMap
@@ -749,6 +783,11 @@ export default function TeamProfile() {
       : null;
 
   const isLoading = matchSubs === undefined || pitData === undefined;
+
+  let onEditPit: (() => void) | undefined;
+  if ((pitSubsList?.length ?? 0) > 0) {
+    onEditPit = () => setPitEditOpen(true);
+  }
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -831,10 +870,18 @@ export default function TeamProfile() {
           competitionType={competitionType}
           eventCode={eventCode}
           matchSubs={matchSubs ?? []}
+          onEditPit={onEditPit}
           pitData={pitData ?? null}
           teamNumber={teamNumber}
         />
       )}
+      <EditPit
+        competitionType={competitionType}
+        eventCode={eventCode}
+        onOpenChange={setPitEditOpen}
+        open={pitEditOpen}
+        teamNumber={teamNumber}
+      />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   sumDefenseEventSeconds,
 } from "@decode/analytics";
 import { api } from "@decode/backend/convex/_generated/api";
+import type { Id } from "@decode/backend/convex/_generated/dataModel";
 import { Badge } from "@decode/ui/components/badge";
 import { Button } from "@decode/ui/components/button";
 import {
@@ -16,15 +17,27 @@ import {
   CardHeader,
   CardTitle,
 } from "@decode/ui/components/card";
+import { Input } from "@decode/ui/components/input";
+import { Label } from "@decode/ui/components/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@decode/ui/components/select";
 import { Separator } from "@decode/ui/components/separator";
 import { Skeleton } from "@decode/ui/components/skeleton";
+import { toast } from "@decode/ui/components/sonner";
+import { Textarea } from "@decode/ui/components/textarea";
 import { cn } from "@decode/ui/lib/utils";
-import { useQuery } from "convex/react";
-import { ArrowLeft, ClipboardList } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
+import { ArrowLeft, ClipboardList, Loader2, Pencil } from "lucide-react";
 import type { Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
+import { type ChangeEvent, useState } from "react";
 import {
   type AnalyseCompetitionType,
   formatDuration,
@@ -83,6 +96,11 @@ type MatchSub = {
   notes?: string;
   scoutName: string;
   createdAt: number;
+  autonomousMade?: number;
+  autonomousMissed?: number;
+  teleopMade?: number;
+  teleopMissed?: number;
+  tags?: string[];
 };
 
 const PERIOD_ORDER: (keyof PeriodData)[] = [
@@ -385,7 +403,111 @@ function FieldEventsList({ events }: { events: FrcFieldEvent[] }) {
   );
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: PASS
+function clonePeriodData(pd: PeriodData): PeriodData {
+  return JSON.parse(JSON.stringify(pd)) as PeriodData;
+}
+
+function PeriodDataFormEditor({
+  value,
+  onChange,
+}: {
+  value: PeriodData;
+  onChange: (next: PeriodData) => void;
+}) {
+  const rows = PERIOD_ORDER.map((key) => ({ key, val: value[key] }));
+  return (
+    <div className="overflow-x-auto rounded-lg border bg-card">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b text-left text-muted-foreground text-xs">
+            <th className="px-2 py-2 font-normal">Period</th>
+            <th className="px-1 py-2 text-right font-normal">Scr (s)</th>
+            <th className="px-1 py-2 text-right font-normal">Fd (s)</th>
+            <th className="px-2 py-2 text-right font-normal">Def (s)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(({ key, val }) => (
+            <tr className="border-b" key={key}>
+              <td className="px-2 py-1 text-xs">{PERIOD_DISPLAY[key]}</td>
+              {(["scoring", "feeding", "defense"] as const).map((field) => (
+                <td className="p-1" key={field}>
+                  <Input
+                    className="h-8 font-mono text-xs"
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      const raw = e.target.value;
+                      const n = Number.parseFloat(raw);
+                      let num = 0;
+                      if (raw !== "" && Number.isFinite(n)) {
+                        num = n;
+                      }
+                      onChange({
+                        ...value,
+                        [key]: { ...value[key], [field]: num },
+                      });
+                    }}
+                    value={String(val[field])}
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function FtcPeriodDraftEditor({
+  value,
+  onChange,
+}: {
+  value: NonNullable<MatchSub["ftcPeriodData"]>;
+  onChange: (next: NonNullable<MatchSub["ftcPeriodData"]>) => void;
+}) {
+  const rows = [
+    { label: "Auto made", period: "auto" as const, field: "made" as const },
+    {
+      label: "Auto missed",
+      period: "auto" as const,
+      field: "missed" as const,
+    },
+    {
+      label: "Teleop made",
+      period: "teleop" as const,
+      field: "made" as const,
+    },
+    {
+      label: "Teleop missed",
+      period: "teleop" as const,
+      field: "missed" as const,
+    },
+  ];
+  return (
+    <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 sm:grid-cols-2">
+      {rows.map((r) => (
+        <div className="space-y-1" key={`${r.period}-${r.field}`}>
+          <Label className="text-xs">{r.label}</Label>
+          <Input
+            className="h-8 font-mono text-xs"
+            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+              const n = Number.parseInt(e.target.value, 10);
+              const num = Number.isFinite(n) ? n : 0;
+              onChange({
+                ...value,
+                [r.period]: { ...value[r.period], [r.field]: num },
+              });
+            }}
+            type="number"
+            value={value[r.period][r.field]}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: edit form + read-only branches
 function SubmissionCard({
   sub,
   eventCode,
@@ -396,101 +518,319 @@ function SubmissionCard({
   competitionType: AnalyseCompetitionType;
 }) {
   const isFtc = competitionType === "FTC";
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const updateMatchSubmission = useMutation(
+    api.submissions.updateMatchSubmission
+  );
+
+  const [draftPd, setDraftPd] = useState<PeriodData | null>(null);
+  const [draftFtc, setDraftFtc] = useState<NonNullable<
+    MatchSub["ftcPeriodData"]
+  > | null>(null);
+  const [draftNotes, setDraftNotes] = useState("");
+  const [draftClimbLevel, setDraftClimbLevel] = useState("0");
+  const [draftClimbDuration, setDraftClimbDuration] = useState("0");
+
+  const beginEdit = () => {
+    if (!isFtc && sub.inputMode === "form" && sub.periodData) {
+      setDraftPd(clonePeriodData(sub.periodData));
+    } else {
+      setDraftPd(null);
+    }
+    if (isFtc) {
+      const base =
+        sub.ftcPeriodData ??
+        ({
+          auto: {
+            made: sub.autonomousMade ?? 0,
+            missed: sub.autonomousMissed ?? 0,
+          },
+          teleop: {
+            made: sub.teleopMade ?? 0,
+            missed: sub.teleopMissed ?? 0,
+          },
+        } satisfies NonNullable<MatchSub["ftcPeriodData"]>);
+      setDraftFtc({
+        auto: { ...base.auto },
+        teleop: { ...base.teleop },
+      });
+    } else {
+      setDraftFtc(null);
+    }
+    setDraftNotes(sub.notes ?? "");
+    setDraftClimbLevel(String(sub.climbLevel ?? 0));
+    setDraftClimbDuration(String(sub.climbDuration ?? 0));
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    setDraftPd(null);
+    setDraftFtc(null);
+  };
+
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: FRC vs FTC save payloads
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const id = sub._id as Id<"matchSubmissions">;
+      if (isFtc) {
+        await updateMatchSubmission({
+          matchSubmissionId: id,
+          notes: draftNotes.trim() === "" ? undefined : draftNotes,
+          ...(draftFtc ? { ftcPeriodData: draftFtc } : {}),
+        });
+      } else {
+        const climbLevelRaw = Number.parseInt(draftClimbLevel, 10);
+        const climbLevel = (
+          Number.isFinite(climbLevelRaw)
+            ? Math.max(0, Math.min(3, climbLevelRaw))
+            : 0
+        ) as 0 | 1 | 2 | 3;
+        const climbDurRaw = Number.parseFloat(draftClimbDuration);
+        const climbDuration = Number.isFinite(climbDurRaw) ? climbDurRaw : 0;
+        await updateMatchSubmission({
+          matchSubmissionId: id,
+          notes: draftNotes.trim() === "" ? undefined : draftNotes,
+          climbLevel,
+          climbDuration,
+          ...(sub.inputMode === "form" && draftPd
+            ? { periodData: draftPd }
+            : {}),
+        });
+      }
+      toast.success("Submission updated.");
+      setEditing(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
-          <Link
-            className="font-mono font-semibold hover:underline"
-            href={
-              withAnalyseCompetition(
-                `/analyse/${eventCode}/teams/${sub.teamNumber}`,
-                competitionType
-              ) as Route
-            }
-          >
-            Team {sub.teamNumber}
-          </Link>
-          <Badge
-            className={`text-xs ${
-              sub.allianceColour === "Red"
-                ? "bg-red-500/10 text-red-600 dark:text-red-400"
-                : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-            }`}
-            variant="outline"
-          >
-            {sub.allianceColour}
-          </Badge>
-          <Badge className="text-xs capitalize" variant="outline">
-            {sub.inputMode}
-          </Badge>
-          {!isFtc && sub.climbLevel !== undefined && sub.climbLevel > 0 ? (
-            <Badge className="text-xs" variant="secondary">
-              Climb L{sub.climbLevel}
-              {sub.climbDuration !== undefined
-                ? ` · ${formatDuration(sub.climbDuration)}`
-                : null}
+      <CardHeader className="border-b pb-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <CardTitle className="flex flex-wrap items-center gap-2 text-sm leading-snug">
+            <Link
+              className="font-mono font-semibold hover:underline"
+              href={
+                withAnalyseCompetition(
+                  `/analyse/${eventCode}/teams/${sub.teamNumber}`,
+                  competitionType
+                ) as Route
+              }
+            >
+              Team {sub.teamNumber}
+            </Link>
+            <Badge
+              className={`text-xs ${
+                sub.allianceColour === "Red"
+                  ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                  : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+              }`}
+              variant="outline"
+            >
+              {sub.allianceColour}
             </Badge>
-          ) : null}
-          <span className="ml-auto font-normal text-muted-foreground text-xs">
-            Scouted by {sub.scoutName}
-          </span>
-        </CardTitle>
+            <Badge className="text-xs capitalize" variant="outline">
+              {sub.inputMode}
+            </Badge>
+            {!isFtc && sub.climbLevel !== undefined && sub.climbLevel > 0 ? (
+              <Badge className="text-xs" variant="secondary">
+                Climb L{sub.climbLevel}
+                {sub.climbDuration !== undefined
+                  ? ` · ${formatDuration(sub.climbDuration)}`
+                  : null}
+              </Badge>
+            ) : null}
+          </CardTitle>
+          <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+            <span className="text-muted-foreground text-xs sm:text-right">
+              Scouted by {sub.scoutName}
+            </span>
+            {editing ? (
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  disabled={saving}
+                  onClick={cancelEdit}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  disabled={saving}
+                  onClick={handleSave}
+                  size="sm"
+                  type="button"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                      Saving…
+                    </>
+                  ) : (
+                    "Save"
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                className="h-8 gap-1.5 self-end"
+                onClick={beginEdit}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                <Pencil className="size-3.5" />
+                Edit
+              </Button>
+            )}
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {isFtc ? (
-          sub.ftcPeriodData !== undefined && sub.ftcPeriodData !== null ? (
-            <div>
-              <p className="mb-2 text-muted-foreground text-xs">Period makes</p>
-              <FtcPeriodDataTable pd={sub.ftcPeriodData} />
-            </div>
-          ) : null
-        ) : null}
-
-        {!isFtc && sub.inputMode === "form" && sub.periodData ? (
-          <div>
-            <p className="mb-2 text-muted-foreground text-xs">Period Data</p>
-            <PeriodDataTable pd={sub.periodData} />
-          </div>
-        ) : null}
-
-        {!isFtc && sub.inputMode === "field" && sub.frcFieldEvents ? (
-          <div>
-            <p className="mb-2 text-muted-foreground text-xs">Field input</p>
-            <FrcFieldInputSummary events={sub.frcFieldEvents} />
-          </div>
-        ) : null}
-
-        {isFtc ? (
-          sub.inputMode === "field" &&
-          sub.fieldEvents !== undefined &&
-          sub.fieldEvents.length > 0 ? (
-            <div>
-              <p className="mb-2 text-muted-foreground text-xs">
-                Field Events ({sub.fieldEvents.length})
+      <CardContent className="space-y-4 pt-4">
+        {editing ? (
+          <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
+            {isFtc === true && draftFtc !== null ? (
+              <div className="space-y-2">
+                <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                  Period makes
+                </p>
+                <FtcPeriodDraftEditor onChange={setDraftFtc} value={draftFtc} />
+              </div>
+            ) : null}
+            {!isFtc && sub.inputMode === "form" && draftPd ? (
+              <div className="space-y-2">
+                <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                  Period data (seconds)
+                </p>
+                <PeriodDataFormEditor onChange={setDraftPd} value={draftPd} />
+              </div>
+            ) : null}
+            {isFtc ? null : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs" htmlFor={`climb-lvl-${sub._id}`}>
+                    Climb level
+                  </Label>
+                  <Select
+                    onValueChange={setDraftClimbLevel}
+                    value={draftClimbLevel}
+                  >
+                    <SelectTrigger id={`climb-lvl-${sub._id}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">None</SelectItem>
+                      <SelectItem value="1">Level 1</SelectItem>
+                      <SelectItem value="2">Level 2</SelectItem>
+                      <SelectItem value="3">Level 3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs" htmlFor={`climb-dur-${sub._id}`}>
+                    Climb duration (s)
+                  </Label>
+                  <Input
+                    id={`climb-dur-${sub._id}`}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      setDraftClimbDuration(e.target.value)
+                    }
+                    type="number"
+                    value={draftClimbDuration}
+                  />
+                </div>
+              </div>
+            )}
+            {!isFtc && sub.inputMode === "field" ? (
+              <p className="rounded-md border border-dashed bg-background/80 px-3 py-2 text-muted-foreground text-xs leading-relaxed">
+                Field taps are not editable here. You can still adjust climb and
+                notes.
               </p>
-              <FtcFieldEventsList events={sub.fieldEvents} />
+            ) : null}
+            <div className="space-y-1.5">
+              <Label className="text-xs" htmlFor={`notes-${sub._id}`}>
+                Notes
+              </Label>
+              <Textarea
+                className="min-h-[72px] resize-y"
+                id={`notes-${sub._id}`}
+                onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                  setDraftNotes(e.target.value)
+                }
+                rows={3}
+                value={draftNotes}
+              />
             </div>
-          ) : null
-        ) : null}
-
-        {!isFtc && (sub.autoPath?.length ?? 0) > 0 ? (
-          <div>
-            <p className="mb-1 text-muted-foreground text-xs">
-              Auto Path {sub.autoPath?.length ?? 0} point
-              {(sub.autoPath?.length ?? 0) !== 1 ? "s" : ""} recorded
-            </p>
           </div>
-        ) : null}
+        ) : (
+          <>
+            {isFtc ? (
+              sub.ftcPeriodData !== undefined && sub.ftcPeriodData !== null ? (
+                <div>
+                  <p className="mb-2 text-muted-foreground text-xs">
+                    Period makes
+                  </p>
+                  <FtcPeriodDataTable pd={sub.ftcPeriodData} />
+                </div>
+              ) : null
+            ) : null}
 
-        {sub.notes ? (
-          <div>
-            <Separator className="mb-3" />
-            <p className="mb-1 text-muted-foreground text-xs">Notes</p>
-            <p className="text-sm">{sub.notes}</p>
-          </div>
-        ) : null}
+            {!isFtc && sub.inputMode === "form" && sub.periodData ? (
+              <div>
+                <p className="mb-2 text-muted-foreground text-xs">
+                  Period Data
+                </p>
+                <PeriodDataTable pd={sub.periodData} />
+              </div>
+            ) : null}
+
+            {!isFtc && sub.inputMode === "field" && sub.frcFieldEvents ? (
+              <div>
+                <p className="mb-2 text-muted-foreground text-xs">
+                  Field input
+                </p>
+                <FrcFieldInputSummary events={sub.frcFieldEvents} />
+              </div>
+            ) : null}
+
+            {isFtc ? (
+              sub.inputMode === "field" &&
+              sub.fieldEvents !== undefined &&
+              sub.fieldEvents.length > 0 ? (
+                <div>
+                  <p className="mb-2 text-muted-foreground text-xs">
+                    Field Events ({sub.fieldEvents.length})
+                  </p>
+                  <FtcFieldEventsList events={sub.fieldEvents} />
+                </div>
+              ) : null
+            ) : null}
+
+            {!isFtc && (sub.autoPath?.length ?? 0) > 0 ? (
+              <div>
+                <p className="mb-1 text-muted-foreground text-xs">
+                  Auto Path {sub.autoPath?.length ?? 0} point
+                  {(sub.autoPath?.length ?? 0) !== 1 ? "s" : ""} recorded
+                </p>
+              </div>
+            ) : null}
+
+            {sub.notes ? (
+              <div>
+                <Separator className="mb-3" />
+                <p className="mb-1 text-muted-foreground text-xs">Notes</p>
+                <p className="text-sm">{sub.notes}</p>
+              </div>
+            ) : null}
+          </>
+        )}
       </CardContent>
     </Card>
   );

@@ -232,6 +232,101 @@ export const getTeamPitData = query({
   },
 });
 
+/**
+ * Returns all pit submissions for a team at an event, newest first, with per-photo URLs for editing.
+ *
+ * @param ctx - The Convex query context
+ * @param args.eventCode - The event code
+ * @param args.teamNumber - The team number
+ * @param args.competitionType - Optional `FRC` (default) or `FTC`
+ */
+export const getTeamPitSubmissions = query({
+  args: {
+    eventCode: v.string(),
+    teamNumber: v.number(),
+    competitionType: v.optional(competitionTypeValidator),
+  },
+  returns: v.any(),
+  async handler(ctx, args) {
+    const { profile } = await requireUserProfile(ctx);
+    const competitionType = args.competitionType ?? "FRC";
+
+    const submissions = await ctx.db
+      .query("pitSubmissions")
+      .withIndex("by_org_event_team", (q) =>
+        q
+          .eq("organisationId", profile.organisationId)
+          .eq("eventCode", normaliseCode(args.eventCode))
+          .eq("teamNumber", args.teamNumber)
+      )
+      .collect();
+
+    const typedSubs = submissions.filter(
+      (s) => s.competitionType === competitionType
+    );
+    const sorted = typedSubs.sort((a, b) => b.createdAt - a.createdAt);
+
+    const out: {
+      _id: (typeof submissions)[number]["_id"];
+      scoutName: string;
+      createdAt: number;
+      updatedAt: number;
+      teamNumber: number;
+      competitionType: string;
+      robotDimensions?: {
+        length: number;
+        width: number;
+        height: number;
+      };
+      drivetrainType?: "swerve" | "tank" | "other";
+      weight?: number;
+      photos: string[];
+      photoItems: { storageId: string; url: string | null }[];
+      notes?: string;
+      canShootDeep?: boolean;
+      hopperCapacity?: number;
+      shootingSpeed?: number;
+      intakeMethods?: ("floor" | "depot" | "outpost")[];
+      canPassTrench?: boolean;
+      canCrossBump?: boolean;
+      maxClimbLevel?: 0 | 1 | 2 | 3;
+      autoCapabilities?: string;
+    }[] = [];
+
+    for (const s of sorted) {
+      const photoItems: { storageId: string; url: string | null }[] = [];
+      for (const id of s.photos ?? []) {
+        const url = await ctx.storage.getUrl(id as `${string}_${string}`);
+        photoItems.push({ storageId: id, url });
+      }
+      out.push({
+        _id: s._id,
+        scoutName: s.scoutName,
+        createdAt: s.createdAt,
+        updatedAt: s.updatedAt,
+        teamNumber: s.teamNumber,
+        competitionType: s.competitionType,
+        robotDimensions: s.robotDimensions,
+        drivetrainType: s.drivetrainType,
+        weight: s.weight,
+        photos: s.photos ?? [],
+        photoItems,
+        notes: s.notes,
+        canShootDeep: s.canShootDeep,
+        hopperCapacity: s.hopperCapacity,
+        shootingSpeed: s.shootingSpeed,
+        intakeMethods: s.intakeMethods,
+        canPassTrench: s.canPassTrench,
+        canCrossBump: s.canCrossBump,
+        maxClimbLevel: s.maxClimbLevel,
+        autoCapabilities: s.autoCapabilities,
+      });
+    }
+
+    return out;
+  },
+});
+
 function avgNumeric(
   subs: { weight?: number }[],
   key: "weight"
