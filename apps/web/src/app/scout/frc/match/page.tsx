@@ -61,7 +61,7 @@ import { frcMatchSubmissionSchema } from "@/schema/scouting";
 import { FrcEventsList } from "~/form/events-list";
 import { FrcFieldInput } from "~/form/field-input";
 import { MatchPeriodBar } from "~/form/match-period-bar";
-import { MatchTimerFRC } from "~/form/match-timer";
+import { formatFrcPeriodLabel, MatchTimerFRC } from "~/form/match-timer";
 import { PeriodSlide } from "~/form/period-slide";
 import { SummaryView } from "~/form/summary-view";
 import { TeamCombobox } from "~/form/team-combobox";
@@ -330,28 +330,46 @@ export default function MatchScouting() {
   );
 
   const toggleScoringTimer = useCallback(() => {
+    if (timer.getCurrentPeriod() === "DOWNTIME") {
+      if (scoringTimer.isRunning) {
+        handleTimerStop(scoringTimer.flush, "scoring");
+      }
+      return;
+    }
     if (scoringTimer.isRunning) {
       handleTimerStop(scoringTimer.flush, "scoring");
     } else {
       scoringTimer.start();
     }
-  }, [scoringTimer, handleTimerStop]);
+  }, [timer, scoringTimer, handleTimerStop]);
 
   const toggleFeedingTimer = useCallback(() => {
+    if (timer.getCurrentPeriod() === "DOWNTIME") {
+      if (feedingTimer.isRunning) {
+        handleTimerStop(feedingTimer.flush, "feeding");
+      }
+      return;
+    }
     if (feedingTimer.isRunning) {
       handleTimerStop(feedingTimer.flush, "feeding");
     } else {
       feedingTimer.start();
     }
-  }, [feedingTimer, handleTimerStop]);
+  }, [timer, feedingTimer, handleTimerStop]);
 
   const toggleDefenseTimer = useCallback(() => {
+    if (timer.getCurrentPeriod() === "DOWNTIME") {
+      if (defenseTimer.isRunning) {
+        handleTimerStop(defenseTimer.flush, "defense");
+      }
+      return;
+    }
     if (defenseTimer.isRunning) {
       handleTimerStop(defenseTimer.flush, "defense");
     } else {
       defenseTimer.start();
     }
-  }, [defenseTimer, handleTimerStop]);
+  }, [timer, defenseTimer, handleTimerStop]);
 
   const toggleMatchTimer = useCallback(() => {
     if (timer.state === "running") {
@@ -756,7 +774,7 @@ export default function MatchScouting() {
             <div className="space-y-6">
               <div className="space-y-2">
                 <p className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
-                  {progress.period} ·{" "}
+                  {formatFrcPeriodLabel(progress.period)} ·{" "}
                   {timer.formatTime(progress.timeRemainingInPeriod)} left
                 </p>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -789,7 +807,7 @@ export default function MatchScouting() {
           <div className="space-y-6">
             <div className="space-y-2">
               <p className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
-                {progress.period} ·{" "}
+                {formatFrcPeriodLabel(progress.period)} ·{" "}
                 {timer.formatTime(progress.timeRemainingInPeriod)} left
               </p>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -800,6 +818,7 @@ export default function MatchScouting() {
               </div>
             </div>
             <PeriodSlide
+              actionTimersDisabled={currentPeriod === "DOWNTIME"}
               defenseTimer={defenseTimer}
               feedingTimer={feedingTimer}
               form={form}
@@ -822,7 +841,7 @@ export default function MatchScouting() {
         <div className="space-y-6">
           <div className="space-y-2">
             <p className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
-              {progress.period} ·{" "}
+              {formatFrcPeriodLabel(progress.period)} ·{" "}
               {timer.formatTime(progress.timeRemainingInPeriod)} left
             </p>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">

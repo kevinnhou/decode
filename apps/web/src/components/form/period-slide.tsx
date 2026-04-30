@@ -38,6 +38,7 @@ interface ActionTimerProps {
   isRunning: boolean;
   elapsedSeconds: number;
   shortcutKey?: string;
+  disabled?: boolean;
   onStart: () => void;
   onStop: () => void;
 }
@@ -47,6 +48,7 @@ function ActionTimer({
   isRunning,
   elapsedSeconds,
   shortcutKey,
+  disabled = false,
   onStart,
   onStop,
 }: ActionTimerProps) {
@@ -54,11 +56,17 @@ function ActionTimer({
     <button
       className={cn(
         "relative flex w-full flex-col gap-4 overflow-hidden rounded-xl border-2 p-5 text-left transition-all duration-200",
-        isRunning
-          ? "border-primary bg-primary/5 hover:bg-primary/10 active:scale-[0.98]"
-          : "border-border bg-muted/20 hover:bg-muted/30 active:scale-[0.98]"
+        disabled
+          ? "cursor-not-allowed border-border bg-muted/10 opacity-50"
+          : isRunning
+            ? "border-primary bg-primary/5 hover:bg-primary/10 active:scale-[0.98]"
+            : "border-border bg-muted/20 hover:bg-muted/30 active:scale-[0.98]"
       )}
+      disabled={disabled}
       onClick={() => {
+        if (disabled) {
+          return;
+        }
         if (isRunning) {
           onStop();
         } else {
@@ -117,6 +125,8 @@ interface ActionTimerControls {
 
 interface PeriodSlideProps {
   period: FrcPeriod;
+  /** When true (FRC post-auto downtime), action timers do not accept input. */
+  actionTimersDisabled?: boolean;
   onPeriodDataChange: (
     updater: (prev: FrcPeriodDataMap) => FrcPeriodDataMap
   ) => void;
@@ -129,6 +139,7 @@ interface PeriodSlideProps {
 
 export function PeriodSlide({
   period,
+  actionTimersDisabled = false,
   onPeriodDataChange,
   scoringTimer,
   feedingTimer,
@@ -168,6 +179,7 @@ export function PeriodSlide({
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <ActionTimer
+          disabled={actionTimersDisabled}
           elapsedSeconds={scoringTimer.elapsedSeconds}
           isRunning={scoringTimer.isRunning}
           label="Scoring"
@@ -176,6 +188,7 @@ export function PeriodSlide({
           shortcutKey={shortcuts?.scoring}
         />
         <ActionTimer
+          disabled={actionTimersDisabled}
           elapsedSeconds={feedingTimer.elapsedSeconds}
           isRunning={feedingTimer.isRunning}
           label="Feeding"
@@ -184,6 +197,7 @@ export function PeriodSlide({
           shortcutKey={shortcuts?.feeding}
         />
         <ActionTimer
+          disabled={actionTimersDisabled}
           elapsedSeconds={defenseTimer.elapsedSeconds}
           isRunning={defenseTimer.isRunning}
           label="Defence"

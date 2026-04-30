@@ -14,7 +14,7 @@ import {
 
 const FRC_PERIODS: FrcPeriod[] = [
   "AUTO",
-  "TRANSITION",
+  "DOWNTIME",
   "SHIFT_1",
   "SHIFT_2",
   "SHIFT_3",
@@ -22,7 +22,10 @@ const FRC_PERIODS: FrcPeriod[] = [
   "END_GAME",
 ];
 
-function formatPeriodLabel(period: FrcPeriod): string {
+export function formatFrcPeriodLabel(period: FrcPeriod): string {
+  if (period === "DOWNTIME") {
+    return "DOWNTIME";
+  }
   if (period.startsWith("SHIFT_")) {
     return period.replace("SHIFT_", "S");
   }
@@ -232,13 +235,13 @@ export function MatchTimerFRC({
                     : "bg-muted/30"
               )}
               key={period}
-              title={formatPeriodLabel(period)}
+              title={formatFrcPeriodLabel(period)}
             />
           );
         })}
       </div>
       <p className="font-bold font-mono text-[10px] text-muted-foreground">
-        {formatPeriodLabel(currentPeriod)}
+        {formatFrcPeriodLabel(currentPeriod)}
       </p>
     </div>
   );

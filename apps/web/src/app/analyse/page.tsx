@@ -4,6 +4,13 @@ import { api } from "@decode/backend/convex/_generated/api";
 import { Badge } from "@decode/ui/components/badge";
 import { Button } from "@decode/ui/components/button";
 import { Input } from "@decode/ui/components/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@decode/ui/components/select";
 import { Skeleton } from "@decode/ui/components/skeleton";
 import { useQuery } from "convex/react";
 import {
@@ -148,21 +155,23 @@ export default function Analyse() {
             placeholder="Event code"
             value={goEventCode}
           />
-          <label className="flex flex-col gap-1 text-muted-foreground text-xs">
-            <span>Programme</span>
-            <select
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-              onChange={(e) =>
-                setSearchCompetitionType(
-                  e.target.value === "FTC" ? "FTC" : "FRC"
-                )
+          <div className="flex flex-col gap-1 text-muted-foreground text-xs">
+            <span className="sr-only">Competition</span>
+            <Select
+              onValueChange={(value) =>
+                setSearchCompetitionType(value === "FTC" ? "FTC" : "FRC")
               }
               value={searchCompetitionType}
             >
-              <option value="FRC">FRC</option>
-              <option value="FTC">FTC</option>
-            </select>
-          </label>
+              <SelectTrigger className="h-9 w-22 shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="FRC">FRC</SelectItem>
+                <SelectItem value="FTC">FTC</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Input
             className="w-32"
             min={1}

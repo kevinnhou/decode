@@ -1,12 +1,7 @@
 "use client";
 
 import { Button } from "@decode/ui/components/button";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-} from "@decode/ui/components/form";
+import { FormControl, FormField, FormItem } from "@decode/ui/components/form";
 import { Textarea } from "@decode/ui/components/textarea";
 import type { UseFormReturn } from "@decode/ui/lib/react-hook-form";
 import { FRC_CLIMB_LEVELS } from "@/lib/form/field-groups";
@@ -19,7 +14,7 @@ import type {
 
 const PERIOD_LABELS: Record<keyof FrcPeriodDataMap, string> = {
   auto: "AUTO",
-  transition: "Transition",
+  transition: "Downtime",
   shift1: "Shift 1",
   shift2: "Shift 2",
   shift3: "Shift 3",
@@ -74,8 +69,6 @@ export function SummaryView({
 
   return (
     <div className="space-y-6">
-      <h2 className="font-semibold text-xl">Match Summary</h2>
-
       {periodData !== undefined && (
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
@@ -133,30 +126,12 @@ export function SummaryView({
         </div>
       )}
 
-      <div className="rounded-lg border p-4">
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div>
-            <span className="text-muted-foreground text-xs">Climb Level</span>
-            <p className="font-medium">{climbLabel}</p>
-          </div>
-          <div>
-            <span className="text-muted-foreground text-xs">
-              Climb Duration
-            </span>
-            <p className="font-medium font-mono">
-              {form.watch("climbDuration")}s
-            </p>
-          </div>
-        </div>
-      </div>
-
       <div>
         <FormField
           control={form.control}
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Notes (optional)</FormLabel>
               <FormControl>
                 <Textarea
                   className="min-h-24 resize-none"
@@ -169,6 +144,19 @@ export function SummaryView({
             </FormItem>
           )}
         />
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div>
+          <p className="font-medium">{climbLabel}</p>
+        </div>
+        <div>
+          {form.watch("climbDuration") > 0 ? (
+            <p className="font-medium font-mono">
+              {form.watch("climbDuration")}s
+            </p>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">

@@ -8,6 +8,7 @@ import type { CompetitionType, FrcFieldEvent, FtcFieldEventDoc } from "./types";
 export type HeatmapPhaseFilter =
   | "all"
   | (typeof FRC_PERIOD_ORDER)[number]
+  | "TRANSITION"
   | "TELEOP";
 
 export type HeatSample = {
@@ -154,6 +155,11 @@ export function filterHeatSamplesByPhase(
   }
   if (competition === "FTC") {
     return samples.filter((s) => s.ftcPhase === phase);
+  }
+  if (phase === "DOWNTIME" || phase === "TRANSITION") {
+    return samples.filter(
+      (s) => s.frcPeriod === "DOWNTIME" || s.frcPeriod === "TRANSITION"
+    );
   }
   return samples.filter((s) => s.frcPeriod === phase);
 }

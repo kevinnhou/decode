@@ -95,7 +95,7 @@ export const FIELD_GROUPS: FieldGroup[] = [
 
 export const FRC_PERIODS = [
   { key: "auto" as const, label: "AUTO" },
-  { key: "transition" as const, label: "Transition" },
+  { key: "transition" as const, label: "Downtime" },
   { key: "shift1" as const, label: "Shift 1" },
   { key: "shift2" as const, label: "Shift 2" },
   { key: "shift3" as const, label: "Shift 3" },

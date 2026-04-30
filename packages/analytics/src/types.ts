@@ -21,7 +21,7 @@ export type FrcFieldEvent = {
   startTimestamp: string;
   endTimestamp: string;
   duration: number;
-  period: FrcPeriod;
+  period: FrcPeriod | "TRANSITION";
   eventType: string;
   action?: string;
   source?: string;

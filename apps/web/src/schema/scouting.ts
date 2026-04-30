@@ -115,7 +115,7 @@ export type FrcPitFormSchema = z.infer<typeof frcPitFormSchema>;
 
 export const frcPeriodSchema = z.enum([
   "AUTO",
-  "TRANSITION",
+  "DOWNTIME",
   "SHIFT_1",
   "SHIFT_2",
   "SHIFT_3",
@@ -124,6 +124,12 @@ export const frcPeriodSchema = z.enum([
 ]);
 
 export type FrcPeriod = z.infer<typeof frcPeriodSchema>;
+
+// previous submissions may use `TRANSITION`
+export const frcFieldEventPeriodSchema = z.union([
+  frcPeriodSchema,
+  z.literal("TRANSITION"),
+]);
 
 export const frcMatchMetaSchema = z.object({
   teamNumber: z.number().int().min(1, "Team number is required"),
@@ -173,7 +179,7 @@ export const frcFieldEventSchema = z.object({
     .string()
     .regex(/^\d{1,2}:\d{2}$/, "Timestamp must be in MM:SS format"),
   duration: z.number().min(0),
-  period: frcPeriodSchema,
+  period: frcFieldEventPeriodSchema,
   eventType: frcFieldEventTypeSchema,
   action: z.enum(["scoring", "feeding"]).optional(),
   source: z.enum(["floor", "depot", "outpost"]).optional(),
