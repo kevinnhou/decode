@@ -101,16 +101,6 @@ function ActionTimer({
         >
           {formatSeconds(elapsedSeconds)}
         </span>
-        <span
-          className={cn(
-            "rounded-md px-3 py-1.5 font-medium text-sm transition-colors",
-            isRunning
-              ? "bg-destructive text-destructive-foreground"
-              : "bg-primary text-primary-foreground"
-          )}
-        >
-          {isRunning ? "Stop" : "Start"}
-        </span>
       </div>
     </button>
   );
@@ -125,7 +115,6 @@ interface ActionTimerControls {
 
 interface PeriodSlideProps {
   period: FrcPeriod;
-  /** When true (FRC post-auto downtime), action timers do not accept input. */
   actionTimersDisabled?: boolean;
   onPeriodDataChange: (
     updater: (prev: FrcPeriodDataMap) => FrcPeriodDataMap

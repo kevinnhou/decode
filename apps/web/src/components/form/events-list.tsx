@@ -55,7 +55,7 @@ export function EventsList({ events, onRemoveEvent }: EventsListProps) {
                   {event.event !== "defense" && event.count > 1 && (
                     <span className="text-muted-foreground">
                       {" "}
-                      \ {event.count}
+                      / {event.count}
                     </span>
                   )}
                 </div>
