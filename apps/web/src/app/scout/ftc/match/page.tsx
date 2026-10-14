@@ -23,8 +23,16 @@ import {
 import { toast } from "@decode/ui/components/sonner";
 import { Textarea } from "@decode/ui/components/textarea";
 import { useForm } from "@decode/ui/lib/react-hook-form";
+import { cn } from "@decode/ui/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback, useEffect, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from "react";
 import { useInput } from "@/hooks/use-input";
 import { useMyDuties } from "@/hooks/use-my-duties";
 import { useShortcuts } from "@/hooks/use-shortcuts";
@@ -236,6 +244,7 @@ export default function MatchScouting() {
     toggleMatchTimer,
   ]);
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: onSubmit orchestrates multiple concerns
   const onSubmit = useCallback(async () => {
     const config = getConfig();
     if (!config?.eventCode) {
@@ -246,24 +255,19 @@ export default function MatchScouting() {
     const meta = form.getValues("meta");
     const notes = form.getValues("notes");
 
-    let ftcPeriodData: FtcPeriodData;
-    if (inputMode === "field") {
-      const agg = aggregateFieldEvents(fieldEvents);
-      ftcPeriodData = {
-        auto: { made: agg.autonomousMade, missed: agg.autonomousMissed },
-        teleop: { made: agg.teleopMade, missed: agg.teleopMissed },
-      };
-    } else {
-      ftcPeriodData = periodData;
-    }
-
     const payload: FtcMatchSubmissionSchema = {
       meta,
       inputMode,
-      periodData: ftcPeriodData,
+      periodData,
       ftcFieldEvents: inputMode === "field" ? fieldEvents : undefined,
       notes: notes ?? "",
     };
+
+    const notesOk = await form.trigger("notes");
+    if (!notesOk) {
+      toast.error("Please fix the highlighted fields.");
+      return;
+    }
 
     const valid = ftcMatchSubmissionSchema.safeParse(payload);
     if (!valid.success) {
@@ -335,6 +339,17 @@ export default function MatchScouting() {
       setIsSubmitting(false);
     }
   }, [form, inputMode, fieldEvents, periodData, timer]);
+
+  useLayoutEffect(() => {
+    if (pageState !== "summary" || inputMode !== "field") {
+      return;
+    }
+    const agg = aggregateFieldEvents(fieldEvents);
+    setPeriodData({
+      auto: { made: agg.autonomousMade, missed: agg.autonomousMissed },
+      teleop: { made: agg.teleopMade, missed: agg.teleopMissed },
+    });
+  }, [pageState, inputMode, fieldEvents]);
 
   const onReset = useCallback(() => {
     form.reset(getInitialFtcFormValues());
@@ -418,7 +433,10 @@ export default function MatchScouting() {
   ]);
 
   useEffect(() => {
-    if (inputMode === "field" && pageState === "running") {
+    if (
+      inputMode === "field" &&
+      (pageState === "running" || pageState === "summary")
+    ) {
       setSidebarContent(
         <div className="flex h-full max-h-[calc(100svh-var(--header-height))] flex-col overflow-hidden p-4">
           <EventsList events={fieldEvents} onRemoveEvent={handleRemoveEvent} />
@@ -660,26 +678,14 @@ export default function MatchScouting() {
     );
   }
 
-  const summaryPeriodData =
-    inputMode === "field"
-      ? (() => {
-          const agg = aggregateFieldEvents(fieldEvents);
-          return {
-            auto: { made: agg.autonomousMade, missed: agg.autonomousMissed },
-            teleop: { made: agg.teleopMade, missed: agg.teleopMissed },
-          };
-        })()
-      : periodData;
-
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <Form {...form}>
         <div className="space-y-6">
-          <div className="space-y-1">
-            <h2 className="font-semibold text-lg">Match Summary</h2>
-          </div>
-
-          <SummaryStats periodData={summaryPeriodData} />
+          <FtcSummaryStatsEditable
+            periodData={periodData}
+            setPeriodData={setPeriodData}
+          />
 
           <FormField
             control={form.control}
@@ -826,72 +832,164 @@ function CounterCard({
   );
 }
 
-function SummaryStats({
+function FtcSummaryTableMetricCell({
+  value,
+  variant,
+  onIncrement,
+  onDecrement,
+  decAriaLabel,
+  incAriaLabel,
+}: {
+  value: number;
+  variant: "made" | "missed";
+  onIncrement: () => void;
+  onDecrement: () => void;
+  decAriaLabel: string;
+  incAriaLabel: string;
+}) {
+  const isMade = variant === "made";
+  return (
+    <div className="flex justify-end">
+      <div
+        className={cn(
+          "inline-flex h-9 items-stretch overflow-hidden rounded-md border border-border bg-background shadow-xs",
+          isMade
+            ? "[--step-accent:var(--primary)]"
+            : "[--step-accent:var(--destructive)]"
+        )}
+      >
+        <Button
+          aria-label={decAriaLabel}
+          className="h-full w-9 shrink-0 rounded-none border-0 text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+          onClick={onDecrement}
+          type="button"
+          variant="ghost"
+        >
+          <span className="font-mono text-lg leading-none">−</span>
+        </Button>
+        <span
+          className={cn(
+            "flex min-w-11 items-center justify-center border-border border-x bg-muted/30 px-3 font-mono font-semibold text-sm tabular-nums",
+            isMade ? "text-primary" : "text-destructive"
+          )}
+        >
+          {value}
+        </span>
+        <Button
+          aria-label={incAriaLabel}
+          className="h-full w-9 shrink-0 rounded-none border-0 text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+          onClick={onIncrement}
+          type="button"
+          variant="ghost"
+        >
+          <span className="font-mono text-lg leading-none">+</span>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function FtcSummaryStatsEditable({
   periodData,
+  setPeriodData,
 }: {
   periodData: { auto: FtcPeriodData["auto"]; teleop: FtcPeriodData["teleop"] };
+  setPeriodData: Dispatch<
+    SetStateAction<{
+      auto: FtcPeriodData["auto"];
+      teleop: FtcPeriodData["teleop"];
+    }>
+  >;
 }) {
+  const bump = useCallback(
+    (period: "auto" | "teleop", metric: "made" | "missed", delta: number) => {
+      setPeriodData((prev) => ({
+        ...prev,
+        [period]: {
+          ...prev[period],
+          [metric]: Math.max(0, prev[period][metric] + delta),
+        },
+      }));
+    },
+    [setPeriodData]
+  );
+
   const totalMade = periodData.auto.made + periodData.teleop.made;
   const totalMissed = periodData.auto.missed + periodData.teleop.missed;
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1 rounded-xl border bg-muted/30 p-4">
-          <p className="font-mono text-muted-foreground text-xs uppercase tracking-widest">
-            Auto
-          </p>
-          <div className="mt-2 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">Made</span>
-              <span className="font-mono font-semibold tabular-nums">
-                {periodData.auto.made}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">Missed</span>
-              <span className="font-mono font-semibold tabular-nums">
-                {periodData.auto.missed}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="space-y-1 rounded-xl border bg-muted/30 p-4">
-          <p className="font-mono text-muted-foreground text-xs uppercase tracking-widest">
-            Teleop
-          </p>
-          <div className="mt-2 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">Made</span>
-              <span className="font-mono font-semibold tabular-nums">
-                {periodData.teleop.made}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">Missed</span>
-              <span className="font-mono font-semibold tabular-nums">
-                {periodData.teleop.missed}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center justify-between rounded-xl border bg-muted/50 px-4 py-3">
-        <span className="text-muted-foreground text-sm">Total</span>
-        <div className="flex gap-4">
-          <span className="text-sm">
-            <span className="font-bold font-mono tabular-nums">
-              {totalMade}
-            </span>{" "}
-            <span className="text-muted-foreground text-xs">made</span>
-          </span>
-          <span className="text-sm">
-            <span className="font-bold font-mono tabular-nums">
-              {totalMissed}
-            </span>{" "}
-            <span className="text-muted-foreground text-xs">missed</span>
-          </span>
-        </div>
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              <th className="px-4 py-3 text-left font-medium">Period</th>
+              <th className="px-3 py-3 text-right font-mono text-xs uppercase tracking-wide">
+                Made
+              </th>
+              <th className="px-3 py-3 text-right font-mono text-xs uppercase tracking-wide">
+                Missed
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b">
+              <td className="px-4 py-3 font-medium">Auto</td>
+              <td className="px-2 py-2 sm:px-3">
+                <FtcSummaryTableMetricCell
+                  decAriaLabel="Decrease auto made"
+                  incAriaLabel="Increase auto made"
+                  onDecrement={() => bump("auto", "made", -1)}
+                  onIncrement={() => bump("auto", "made", 1)}
+                  value={periodData.auto.made}
+                  variant="made"
+                />
+              </td>
+              <td className="px-2 py-2 sm:px-3">
+                <FtcSummaryTableMetricCell
+                  decAriaLabel="Decrease auto missed"
+                  incAriaLabel="Increase auto missed"
+                  onDecrement={() => bump("auto", "missed", -1)}
+                  onIncrement={() => bump("auto", "missed", 1)}
+                  value={periodData.auto.missed}
+                  variant="missed"
+                />
+              </td>
+            </tr>
+            <tr className="border-b">
+              <td className="px-4 py-3 font-medium">Teleop</td>
+              <td className="px-2 py-2 sm:px-3">
+                <FtcSummaryTableMetricCell
+                  decAriaLabel="Decrease teleop made"
+                  incAriaLabel="Increase teleop made"
+                  onDecrement={() => bump("teleop", "made", -1)}
+                  onIncrement={() => bump("teleop", "made", 1)}
+                  value={periodData.teleop.made}
+                  variant="made"
+                />
+              </td>
+              <td className="px-2 py-2 sm:px-3">
+                <FtcSummaryTableMetricCell
+                  decAriaLabel="Decrease teleop missed"
+                  incAriaLabel="Increase teleop missed"
+                  onDecrement={() => bump("teleop", "missed", -1)}
+                  onIncrement={() => bump("teleop", "missed", 1)}
+                  value={periodData.teleop.missed}
+                  variant="missed"
+                />
+              </td>
+            </tr>
+            <tr className="bg-muted/40">
+              <td className="px-4 py-3 font-medium">Total</td>
+              <td className="px-4 py-3 text-right font-mono font-semibold text-base text-primary tabular-nums sm:text-lg">
+                {totalMade}
+              </td>
+              <td className="px-4 py-3 text-right font-mono font-semibold text-base text-destructive tabular-nums sm:text-lg">
+                {totalMissed}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );

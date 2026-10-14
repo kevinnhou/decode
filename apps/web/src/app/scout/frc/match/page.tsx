@@ -156,6 +156,16 @@ export default function MatchScouting() {
       notes: notes ?? "",
     };
 
+    const fieldsValid = await form.trigger([
+      "climbLevel",
+      "climbDuration",
+      "notes",
+    ]);
+    if (!fieldsValid) {
+      toast.error("Please fix the highlighted fields.");
+      return;
+    }
+
     const valid = frcMatchSubmissionSchema.safeParse(payload);
     if (!valid.success) {
       toast.error("Validation failed. Please check your data.");
@@ -548,7 +558,10 @@ export default function MatchScouting() {
   ]);
 
   useEffect(() => {
-    if (inputMode === "field" && pageState === "running") {
+    if (
+      inputMode === "field" &&
+      (pageState === "running" || pageState === "summary")
+    ) {
       setSidebarContent(
         <div className="flex h-full max-h-[calc(100svh-var(--header-height))] flex-col overflow-hidden p-4">
           <FrcEventsList
@@ -856,6 +869,9 @@ export default function MatchScouting() {
             form={form}
             frcFieldEvents={inputMode === "field" ? frcFieldEvents : undefined}
             isSubmitting={isSubmitting}
+            onPeriodDataChange={
+              inputMode === "form" ? setPeriodData : undefined
+            }
             onReset={onReset}
             onSubmit={onSubmit}
             periodData={inputMode === "form" ? periodData : undefined}
